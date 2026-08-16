@@ -37,9 +37,13 @@ class LeadPipeline:
 
     def load_config(self) -> dict[str, Any]:
         default = load_json(Path(settings.data_dir) / "lead_config.json", {})
+        locations = default.get("locations") or default.get("location") or ["India"]
+        if isinstance(locations, str):
+            locations = [locations]
         return {
             "niches": default.get("niches", ["fitness"]),
-            "location": default.get("location", "India"),
+            "locations": locations,
+            "platform_focus": default.get("platform_focus", ""),
             "min_followers": int(default.get("min_followers", 500)),
             "max_followers": int(default.get("max_followers", 500000)),
             "target_count": int(default.get("target_count", 5)),
@@ -53,12 +57,17 @@ class LeadPipeline:
     def run(self) -> dict[str, Any]:
         config = self.load_config()
         logger.info(
-            "Lead pipeline: niches=%s location=%s target=%d",
-            config["niches"], config["location"], config["target_count"],
+            "Lead pipeline: niches=%s locations=%s target=%d",
+            config["niches"], config["locations"], config["target_count"],
         )
 
         raw_candidates = asyncio.run(
-            self.finder.discover(config["niches"], config["location"], config["target_count"] * 4)
+            self.finder.discover(
+                config["niches"],
+                config["locations"],
+                config["target_count"] * 4,
+                config["platform_focus"],
+            )
         )
         candidates = asyncio.run(self.finder.enrich_with_socials(raw_candidates))
         logger.info("Discovered %d candidates with social handles", len(candidates))
