@@ -20,6 +20,17 @@ IGNORED_DOMAINS = {
     "amazon.in", "flipkart.com", "justdial.com", "indiamart.com", "pinterest.com",
     "quora.com", "reddit.com", "medium.com", "businessinsider.com", "forbes.com",
     "economictimes.indiatimes.com", "yourstory.com", "inc42.com", "entrackr.com",
+    "tripadvisor.com", "tripadvisor.in", "zomato.com", "datagemba.com",
+    "yelp.com", "yelp.in", "urbanpro.com", "magicbricks.com", "99acres.com",
+    "housing.com", "nobroker.in", "booking.com", "restaurantguru.com",
+    "franchiseindia.com", "shopify.com", "etsy.com", "allbusiness.com",
+    "indianexpress.com", "timesofindia.indiatimes.com", "livemint.com",
+    "hindustantimes.com", "news18.com", "ndtv.com", "moneycontrol.com",
+    "groww.in", "risehq.io", "wanderlog.com", "crazymasalafood.com",
+    "webindia123.com", "duckduckgo.com", "lingoapp.com", "dineout.co.in",
+    "eazydiner.com", "swiggy.com", "grocersindia.com", "whatshot.in",
+    "socialsamosa.com", "adgully.com", "mobisn.com", "localstreet.in",
+    "exploreandmore.in", "goodthings.com", "kooapp.com", "quora.com",
 }
 
 SOCIAL_LINK_PATTERNS = {
