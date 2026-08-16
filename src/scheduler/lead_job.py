@@ -81,6 +81,8 @@ class LeadPipeline:
                 social_data = asyncio.run(social.fetch_instagram(handle))
                 if social_data.get("follower_count"):
                     candidate["follower_count"] = social_data["follower_count"]
+                elif candidate.get("follower_count"):
+                    social_data["follower_count"] = candidate["follower_count"]
 
             assessment = self.scorer.score(
                 candidate, social_data,
