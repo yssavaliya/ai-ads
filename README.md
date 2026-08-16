@@ -9,6 +9,9 @@ with free & open-source tooling only.
 
 ```
 23:59 IST daily (18:29 UTC) ──▶ daily.yml
+  0. AUTO-LEARN: scrape the business's own posts → match to previously sent
+     prompts (date + caption similarity) → score real engagement → update
+     Bayesian weights (no clicks needed)
   1. Scrape website profile (Playwright/httpx)
   2. Fetch social data + competitor posts (Apify free tier / Playwright)
   3. Audience Mapper → personas, pain points, themes
@@ -17,11 +20,28 @@ with free & open-source tooling only.
   6. Email 3 prompts via SMTP (Gmail) with 👍/👎/🔄 feedback buttons (GitHub Issues)
 
 Sunday 8 AM IST (02:30 UTC) ──▶ weekly.yml
-  Top prompts + why · audience shifts · competitor moves · next week calendar
+  Top prompts + real engagement metrics + why · audience shifts ·
+  competitor moves · next week calendar
 
 Hourly ──▶ feedback.yml
   Parse feedback issues → Bayesian weight updates → close issues
 ```
+
+## How auto-learning works (no clicks required)
+
+The system learns automatically from real post performance:
+
+1. **Daily**: the business's own Instagram/LinkedIn posts are scraped (Apify free tier)
+2. **Matching**: each post is matched to a previously sent prompt by post date
+   (posted within 5 days of the prompt) + caption/prompt token similarity
+3. **Scoring**: engagement rate = (likes + 2·comments + 3·shares + 2·saves) / reach
+4. **Benchmark**: a post is "good" if its rate ≥ the business's own 30-day median,
+   "bad" otherwise
+5. **Update**: good/bad outcomes feed the same Bayesian weight loop as manual
+   clicks (`data/weights.json`), so tomorrow's prompts favor what actually worked
+
+Manual 👍/👎/🔄 clicks in emails remain as an additional, stronger signal.
+Run the auto-learner standalone with `python scripts/run_auto_learn.py`.
 
 ## Requirements (GitHub Secrets)
 

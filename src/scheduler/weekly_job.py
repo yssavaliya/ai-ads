@@ -16,7 +16,7 @@ from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
 from src.shared.llm_client import LLMClient, extract_json_text
 from src.shared.utils import load_businesses
-from src.storage.models import Business, Prompt, SessionLocal
+from src.storage.models import Business, Engagement, Prompt, SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,14 @@ class WeeklyPipeline:
                 .all()
             )
 
-            report = self._build_report(biz, prompts, business)
+            engagement_rows = (
+                db.query(Prompt, Engagement)
+                .join(Engagement, Engagement.prompt_id == Prompt.id)
+                .filter(Prompt.business_id == biz.id, Prompt.sent_at >= week_start)
+                .all()
+            )
+
+            report = self._build_report(biz, prompts, business, engagement_rows)
             email_ok = self.email.send_weekly_report(business, report)
             logger.info("Weekly report for %s sent=%s", name, email_ok)
             return {"business": name, "email_sent": email_ok, "prompts_analyzed": len(prompts)}
@@ -68,7 +75,11 @@ class WeeklyPipeline:
         return results
 
     def _build_report(
-        self, biz: Business, prompts: list[Prompt], business_config: dict[str, Any]
+        self,
+        biz: Business,
+        prompts: list[Prompt],
+        business_config: dict[str, Any],
+        engagement_rows: list[tuple[Prompt, Engagement]] | None = None,
     ) -> dict[str, Any]:
         prompt_data = [
             {
@@ -80,6 +91,18 @@ class WeeklyPipeline:
             }
             for p in prompts
         ]
+        engagement_data = [
+            {
+                "prompt_id": p.id,
+                "feedback": p.feedback.value if p.feedback else None,
+                "likes": e.likes,
+                "comments": e.comments,
+                "shares": e.shares,
+                "saves": e.saves,
+                "reach": e.reach,
+            }
+            for p, e in (engagement_rows or [])
+        ]
         weights = self.weights.get_weights(biz.id)
 
         prompt = f"""
@@ -90,6 +113,9 @@ Business:
 
 Prompts sent this week (with predicted virality + user feedback):
 {json.dumps(prompt_data, indent=2, default=str)[:8000]}
+
+REAL engagement measured from the business's own posts (auto-learned):
+{json.dumps(engagement_data, indent=2, default=str)[:6000]}
 
 Learned weights (topic/format/segment -> weight):
 {json.dumps(weights, indent=2, default=str)[:4000]}

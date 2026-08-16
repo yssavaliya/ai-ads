@@ -134,6 +134,7 @@ class SocialScraper:
                     "video_views": item.get("videoViewCount") or 0,
                     "url": item.get("url") or "",
                     "posted_at": item.get("timestamp") or item.get("postedAt") or None,
+                    "platform": "instagram",
                 }
             )
         return {
@@ -161,6 +162,7 @@ class SocialScraper:
                     "shares": item.get("sharesCount") or 0,
                     "url": item.get("url") or "",
                     "posted_at": item.get("postedAt") or item.get("date") or None,
+                    "platform": "linkedin",
                 }
             )
         return {
