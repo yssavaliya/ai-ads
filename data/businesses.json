@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "name": "Acme Fitness",
+    "website_url": "https://example.com",
+    "instagram_handle": "acmefitness",
+    "linkedin_handle": "acme-fitness",
+    "twitter_handle": "",
+    "email": "owner@acmefitness.com",
+    "timezone": "Asia/Kolkata",
+    "virality_threshold": 75,
+    "prompt_types": ["educational", "storytelling", "social_proof"],
+    "is_active": true
+  }
+]

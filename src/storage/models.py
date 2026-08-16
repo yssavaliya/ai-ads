@@ -1,0 +1,248 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from enum import Enum
+from typing import Any
+
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    Enum as SQLEnum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    create_engine,
+    event,
+)
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    relationship,
+    sessionmaker,
+)
+
+from src.shared.config import settings
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class PromptType(str, Enum):
+    EDUCATIONAL = "educational"
+    STORYTELLING = "storytelling"
+    SOCIAL_PROOF = "social_proof"
+    PROMOTIONAL = "promotional"
+    ENGAGEMENT = "engagement"
+    BEHIND_SCENES = "behind_scenes"
+    USER_GENERATED = "user_generated"
+    TREND_JACKING = "trend_jacking"
+
+
+class FeedbackType(str, Enum):
+    GOOD = "good"
+    BAD = "bad"
+    REGENERATE = "regenerate"
+
+
+class Platform(str, Enum):
+    INSTAGRAM = "instagram"
+    LINKEDIN = "linkedin"
+    TWITTER = "twitter"
+    FACEBOOK = "facebook"
+    TIKTOK = "tiktok"
+
+
+class Business(Base):
+    __tablename__ = "businesses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    instagram_handle: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    linkedin_handle: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    twitter_handle: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    timezone: Mapped[str] = mapped_column(String(50), default="Asia/Kolkata")
+    virality_threshold: Mapped[int] = mapped_column(Integer, default=75)
+    prompt_types: Mapped[list[str]] = mapped_column(JSON, default=lambda: [
+        "educational", "storytelling", "social_proof"
+    ])
+    profile_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    audience_personas_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    prompts: Mapped[list["Prompt"]] = relationship(back_populates="business", cascade="all, delete-orphan")
+    competitors: Mapped[list["Competitor"]] = relationship(back_populates="business", cascade="all, delete-orphan")
+    weights: Mapped[list["Weight"]] = relationship(back_populates="business", cascade="all, delete-orphan")
+
+
+class Prompt(Base):
+    __tablename__ = "prompts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    business_id: Mapped[int] = mapped_column(Integer, ForeignKey("businesses.id"), nullable=False)
+    prompt_text: Mapped[str] = mapped_column(Text, nullable=False)
+    prompt_type: Mapped[PromptType] = mapped_column(SQLEnum(PromptType), nullable=False)
+    virality_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    virality_label: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    virality_probability: Mapped[float | None] = mapped_column(Float, nullable=True)
+    key_factors: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    risks: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generation_attempt: Mapped[int] = mapped_column(Integer, default=1)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    feedback: Mapped[FeedbackType | None] = mapped_column(SQLEnum(FeedbackType), nullable=True)
+    feedback_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    github_issue_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    business: Mapped["Business"] = relationship(back_populates="prompts")
+    engagements: Mapped[list["Engagement"]] = relationship(back_populates="prompt", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("ix_prompts_business_sent", "business_id", "sent_at"),
+        Index("ix_prompts_feedback", "feedback"),
+    )
+
+
+class Engagement(Base):
+    __tablename__ = "engagements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    prompt_id: Mapped[int] = mapped_column(Integer, ForeignKey("prompts.id"), nullable=False)
+    platform: Mapped[Platform] = mapped_column(SQLEnum(Platform), nullable=False)
+    post_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    post_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    likes: Mapped[int] = mapped_column(Integer, default=0)
+    comments: Mapped[int] = mapped_column(Integer, default=0)
+    shares: Mapped[int] = mapped_column(Integer, default=0)
+    saves: Mapped[int] = mapped_column(Integer, default=0)
+    reach: Mapped[int] = mapped_column(Integer, default=0)
+    impressions: Mapped[int] = mapped_column(Integer, default=0)
+    profile_visits: Mapped[int] = mapped_column(Integer, default=0)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    prompt: Mapped["Prompt"] = relationship(back_populates="engagements")
+
+    __table_args__ = (
+        Index("ix_engagements_prompt_fetched", "prompt_id", "fetched_at"),
+        UniqueConstraint("prompt_id", "platform", "post_id", name="uq_engagement_prompt_platform_post"),
+    )
+
+
+class Competitor(Base):
+    __tablename__ = "competitors"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    business_id: Mapped[int] = mapped_column(Integer, ForeignKey("businesses.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    platform: Mapped[Platform] = mapped_column(SQLEnum(Platform), nullable=False)
+    handle: Mapped[str] = mapped_column(String(100), nullable=False)
+    profile_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    follower_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_fetched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    top_posts_json: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    business: Mapped["Business"] = relationship(back_populates="competitors")
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "platform", "handle", name="uq_competitor_business_platform_handle"),
+    )
+
+
+class Trend(Base):
+    __tablename__ = "trends"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    hashtag: Mapped[str] = mapped_column(String(100), nullable=False)
+    platform: Mapped[Platform] = mapped_column(SQLEnum(Platform), nullable=False)
+    volume: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    growth_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    related_keywords: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("hashtag", "platform", "fetched_at", name="uq_trend_hashtag_platform_date"),
+        Index("ix_trends_platform_fetched", "platform", "fetched_at"),
+    )
+
+
+class Weight(Base):
+    __tablename__ = "weights"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    business_id: Mapped[int] = mapped_column(Integer, ForeignKey("businesses.id"), nullable=False)
+    topic: Mapped[str] = mapped_column(String(100), nullable=False)
+    format: Mapped[str] = mapped_column(String(50), nullable=False)
+    audience_segment: Mapped[str] = mapped_column(String(100), nullable=False)
+    weight: Mapped[float] = mapped_column(Float, default=1.0)
+    sample_count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    business: Mapped["Business"] = relationship(back_populates="weights")
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "topic", "format", "audience_segment", name="uq_weight_business_topic_format_audience"),
+    )
+
+
+class WeeklyReport(Base):
+    __tablename__ = "weekly_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    business_id: Mapped[int] = mapped_column(Integer, ForeignKey("businesses.id"), nullable=False)
+    week_start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    week_end: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    report_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("business_id", "week_start", name="uq_weekly_report_business_week"),
+    )
+
+
+engine = create_engine(
+    f"sqlite:///{settings.database_path}",
+    connect_args={"check_same_thread": False},
+    echo=settings.log_level == "DEBUG",
+)
+
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA cache_size=10000")
+    cursor.execute("PRAGMA temp_store=MEMORY")
+    cursor.close()
+
+
+def init_db() -> None:
+    Base.metadata.create_all(bind=engine)
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
