@@ -33,46 +33,63 @@ class LeadFinder:
     (DuckDuckGo HTML — no key), Apify Instagram search (free tier), and
     social links found on each candidate's website."""
 
-    SEARCH_QUERIES_PER_NICHE = ["{niche} business {location}", "{niche} in {location}", "{niche} shop {location}"]
+    SEARCH_QUERIES_PER_NICHE = [
+        "{niche} business {location}",
+        "{niche} in {location}",
+        "{niche} shop {location}",
+    ]
+    IG_SEARCH_QUERIES_PER_NICHE = [
+        "{niche} {location} instagram",
+        "{niche} startup {location} instagram",
+    ]
     MAX_RESULTS_PER_QUERY = 8
 
     async def discover(
         self,
         niches: list[str],
-        location: str = "India",
+        locations: list[str] | str = "India",
         count: int = 10,
+        platform_focus: str = "",
     ) -> list[dict[str, Any]]:
+        if isinstance(locations, str):
+            locations = [locations]
         candidates: list[dict[str, Any]] = []
         seen: set[str] = set()
 
         for niche in niches:
-            for query_template in self.SEARCH_QUERIES_PER_NICHE:
-                query = query_template.format(niche=niche, location=location)
-                try:
-                    results = await self._search_web(query)
-                except Exception as exc:
-                    logger.warning("Search failed for %r: %s", query, exc)
-                    results = []
+            for location in locations:
+                query_templates = self.SEARCH_QUERIES_PER_NICHE
+                if platform_focus == "instagram":
+                    query_templates = query_templates + self.IG_SEARCH_QUERIES_PER_NICHE
 
-                for url, title in results:
-                    domain = self._domain(url)
-                    if not domain or domain in IGNORED_DOMAINS:
-                        continue
-                    if domain in seen:
-                        continue
-                    seen.add(domain)
-                    candidates.append(
-                        {
-                            "name": self._clean_name(title, domain),
-                            "website_url": url,
-                            "instagram_handle": "",
-                            "linkedin_handle": "",
-                            "niche": niche,
-                            "found_via": "search",
-                        }
-                    )
-                    if len(candidates) >= count:
-                        return candidates
+                for query_template in query_templates:
+                    query = query_template.format(niche=niche, location=location)
+                    try:
+                        results = await self._search_web(query)
+                    except Exception as exc:
+                        logger.warning("Search failed for %r: %s", query, exc)
+                        results = []
+
+                    for url, title in results:
+                        domain = self._domain(url)
+                        if not domain or domain in IGNORED_DOMAINS:
+                            continue
+                        if domain in seen:
+                            continue
+                        seen.add(domain)
+                        candidates.append(
+                            {
+                                "name": self._clean_name(title, domain),
+                                "website_url": url,
+                                "instagram_handle": "",
+                                "linkedin_handle": "",
+                                "niche": niche,
+                                "location": location,
+                                "found_via": "search",
+                            }
+                        )
+                        if len(candidates) >= count:
+                            return candidates
 
         if settings.apify_token:
             try:
@@ -145,6 +162,7 @@ class LeadFinder:
                         "instagram_handle": handle,
                         "linkedin_handle": "",
                         "niche": niche,
+                        "location": "",
                         "found_via": "instagram-search",
                     }
                 )
