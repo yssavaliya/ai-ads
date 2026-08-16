@@ -1,0 +1,111 @@
+name: Discover Business Leads
+
+on:
+  schedule:
+    - cron: "30 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      niches:
+        description: "Comma-separated niches (overrides config)"
+        required: false
+      target_count:
+        description: "Number of leads to generate prompts for"
+        required: false
+        default: "5"
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  leads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      LOG_LEVEL: INFO
+      DATABASE_PATH: agent.db
+      OPENCODE_COMMAND: opencode
+      OPENCODE_TIMEOUT_SECONDS: "300"
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM: ${{ secrets.SMTP_FROM }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: opencode-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            opencode-${{ runner.os }}-
+
+      - name: Install opencode
+        run: npm install -g opencode-ai
+
+      - name: Add npm global bin to PATH
+        run: echo "$(npm config get prefix)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m playwright install chromium --with-deps
+
+      - name: Override niches from dispatch input
+        if: github.event.inputs.niches != ''
+        run: |
+          python -c "
+          import json
+          cfg = json.load(open('data/lead_config.json'))
+          cfg['niches'] = [n.strip() for n in '${{ github.event.inputs.niches }}'.split(',') if n.strip()]
+          json.dump(cfg, open('data/lead_config.json', 'w'), indent=2)
+          "
+
+      - name: Override target count from dispatch input
+        if: github.event.inputs.target_count != ''
+        run: |
+          python -c "
+          import json
+          cfg = json.load(open('data/lead_config.json'))
+          cfg['target_count'] = int('${{ github.event.inputs.target_count }}')
+          json.dump(cfg, open('data/lead_config.json', 'w'), indent=2)
+          "
+
+      - name: Run lead pipeline
+        run: |
+          python -m src.scheduler.lead_job 2>&1 | while IFS= read -r line; do
+            echo "::notice::$line"
+            echo "$line"
+          done
+
+      - name: Upload prompt logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lead-prompts-${{ github.run_id }}
+          path: logs/prompts/
+          if-no-files-found: ignore
+
+      - name: Persist artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f agent.db data/leads.json data/lead_config.json 2>/dev/null || true
+          git commit -m "chore: lead discovery artifacts $(date -u +'%Y-%m-%d')" || echo "No changes to commit"
+          git push

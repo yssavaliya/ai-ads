@@ -3,7 +3,26 @@
 Analyzes businesses (website + social handles), researches audience & competitors,
 generates **viral-engineered content prompts** (scored 0-100, refined until ≥ threshold),
 and delivers them daily via email — **no auto-posting**. Runs 100% in GitHub Actions
-with free & open-source tooling only.
+with free & open-source tooling only. Can also **discover businesses automatically**
+and generate sample viral prompts for them (lead generation — no manual entry needed).
+
+## Lead discovery (no manual business entry)
+
+The platform hunts for businesses that need content help:
+
+1. **Discover**: searches web (DuckDuckGo, free, no key) + Apify Instagram search
+   for businesses in your configured niches (`data/lead_config.json`)
+2. **Enrich**: fetches each candidate's website, extracts their Instagram/LinkedIn handles
+3. **Score**: opportunity score 0-100 — active + real following + **low engagement rate**
+   = they need viral content help (score high). Too small, too big (has agency), or
+   already high-engagement → excluded
+4. **Generate**: for the top N leads, runs the full pipeline (profile → audience → trends
+   → virality gate) and produces 3 sample viral prompts each
+5. **Deliver**: saves `data/leads.json` + emails the digest with scores, reasons, and
+   sample prompts
+
+Run weekly (Monday, `leads.yml`) or manually from the Actions tab. Configure niches,
+follower range, target count, and digest email in `data/lead_config.json`.
 
 ## How it works
 
@@ -72,18 +91,18 @@ gh workflow run daily.yml
 ## Repo layout
 
 ```
-.github/workflows/   daily · weekly · feedback · onboard
-src/fetch/           website scraper, social scraper, competitor finder
-src/intelligence/    audience mapper, trend radar, virality predictor
+.github/workflows/   daily · weekly · feedback · onboard · leads
+src/fetch/           website scraper, social scraper, competitor finder, lead finder
+src/intelligence/    audience mapper, trend radar, virality predictor, lead scorer
 src/generation/      prompt forge, virality gate
 src/delivery/        email sender (SMTP), github feedback links
-src/learning/        bayesian updater, feedback processor
-src/scheduler/       daily_job, weekly_job
+src/learning/        bayesian updater, feedback processor, auto-learner
+src/scheduler/       daily_job, weekly_job, lead_job
 src/storage/         SQLite models (agent.db committed each run)
 src/shared/          config, LLM client (opencode + free APIs), utils
-templates/           daily_prompt.html, weekly_report.html, welcome.html
+templates/           daily_prompt.html, weekly_report.html, welcome.html, leads_digest.html
 prompts/             LLM prompt reference docs
-data/                businesses.json, weights.json (committed)
+data/                businesses.json, lead_config.json, weights.json (committed)
 ```
 
 ## Onboarding a business

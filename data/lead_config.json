@@ -1,0 +1,11 @@
+{
+  "niches": ["fitness", "restaurant", "real estate", "salon", "fashion boutique"],
+  "location": "India",
+  "min_followers": 500,
+  "max_followers": 500000,
+  "target_count": 5,
+  "min_opportunity_score": 60,
+  "digest_email": "",
+  "prompt_types": ["educational", "storytelling", "social_proof", "promotional"],
+  "run_weekly": true
+}
