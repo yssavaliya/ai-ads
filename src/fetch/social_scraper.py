@@ -58,6 +58,35 @@ class SocialScraper:
             logger.warning("Apify LinkedIn failed for %s: %s", handle, exc)
             return {"handle": handle, "error": str(exc), "posts": []}
 
+    async def fetch_instagram_search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Search Instagram accounts by keyword (Apify free tier)."""
+        if not self.apify_token:
+            return []
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                run_resp = await client.post(
+                    f"{self.APIFY_BASE}/acts/apify/instagram-search-scraper/run-sync-get-dataset-items",
+                    params={"token": self.apify_token},
+                    json={"searchType": "user", "search": [query], "resultsLimit": limit},
+                )
+                run_resp.raise_for_status()
+                items = run_resp.json()
+            results = []
+            for item in items:
+                results.append(
+                    {
+                        "username": item.get("username") or "",
+                        "fullName": item.get("fullName") or item.get("full_name") or "",
+                        "followersCount": item.get("followersCount") or item.get("followers_count") or 0,
+                        "externalUrl": item.get("externalUrl") or item.get("external_url") or "",
+                        "biography": item.get("biography") or "",
+                    }
+                )
+            return results
+        except Exception as exc:
+            logger.warning("Instagram search failed for %r: %s", query, exc)
+            return []
+
     async def _apify_instagram(self, handle: str, limit: int) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=120) as client:
             run_resp = await client.post(

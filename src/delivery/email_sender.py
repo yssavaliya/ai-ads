@@ -74,6 +74,12 @@ class EmailSender:
         subject = f"🚀 {business['name']} is live — here's your content intelligence setup"
         return self.send(business["email"], subject, html)
 
+    def send_lead_digest(self, to: str, leads: list[dict[str, Any]]) -> bool:
+        template = self._env.get_template("leads_digest.html")
+        html = template.render(leads=leads, date_str=self._today_str())
+        subject = f"🔍 {len(leads)} new business leads with sample viral prompts"
+        return self.send(to, subject, html)
+
     @staticmethod
     def _today_str() -> str:
         import datetime
