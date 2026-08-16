@@ -57,6 +57,16 @@ class DailyPipeline:
 
                 social_data = fetch_instagram_sync(business["instagram_handle"])
 
+            # AUTO-LEARN first: match the business's own recent posts to prompts
+            # we sent before, score real engagement, update Bayesian weights.
+            from src.learning.auto_learner import AutoLearner
+
+            auto_result = AutoLearner().run_for_business(biz.id, social_data, db)
+            logger.info(
+                "Auto-learning for %s: matched=%s learned=%s",
+                name, auto_result.get("matched"), auto_result.get("learned"),
+            )
+
             audience_map = self.audience.map_audience(
                 profile, social_data, competitors, biz.audience_personas_json
             )
