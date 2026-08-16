@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Intelligence Report</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#0f766e,#0891b2);padding:28px 32px;color:#ffffff;">
+              <h1 style="margin:0;font-size:22px;font-weight:700;">📊 Weekly Intelligence Report</h1>
+              <p style="margin:8px 0 0;font-size:14px;opacity:0.9;">{{ business.name }} · {{ date_str }}</p>
+            </td>
+          </tr>
+
+          {% if report.top_performing %}
+          <tr>
+            <td style="padding:24px 32px 8px;">
+              <h2 style="margin:0 0 12px;font-size:16px;color:#111827;">🏆 Top Performing Prompts</h2>
+              {% for t in report.top_performing %}
+              <div style="padding:12px 16px;margin-bottom:10px;background-color:#fafafa;border:1px solid #e5e7eb;border-radius:8px;">
+                <div style="font-size:13px;font-weight:600;color:#111827;">{{ t.prompt }} <span style="color:#6b7280;font-weight:400;">· score {{ t.score }} · {{ t.feedback or 'no feedback' }}</span></div>
+                <div style="font-size:13px;color:#374151;margin-top:4px;">{{ t.why }}</div>
+              </div>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if report.audience_insights %}
+          <tr>
+            <td style="padding:16px 32px 8px;">
+              <h2 style="margin:0 0 12px;font-size:16px;color:#111827;">🧠 Audience Insights</h2>
+              <ul style="margin:0;padding-left:20px;">
+                {% for i in report.audience_insights %}
+                <li style="font-size:14px;color:#374151;margin-bottom:6px;">{{ i }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if report.competitor_moves %}
+          <tr>
+            <td style="padding:16px 32px 8px;">
+              <h2 style="margin:0 0 12px;font-size:16px;color:#111827;">👀 Competitor Moves</h2>
+              <ul style="margin:0;padding-left:20px;">
+                {% for m in report.competitor_moves %}
+                <li style="font-size:14px;color:#374151;margin-bottom:6px;">{{ m }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if report.content_pillars %}
+          <tr>
+            <td style="padding:16px 32px 8px;">
+              <h2 style="margin:0 0 12px;font-size:16px;color:#111827;">🗂️ Next Week's Content Pillars</h2>
+              {% for p in report.content_pillars %}
+              <div style="padding:12px 16px;margin-bottom:10px;background-color:#fafafa;border:1px solid #e5e7eb;border-radius:8px;">
+                <div style="font-size:14px;font-weight:600;color:#0f766e;">{{ p.pillar }} <span style="color:#6b7280;font-weight:400;">· {{ p.suggested_frequency }}</span></div>
+                <div style="font-size:13px;color:#374151;margin-top:4px;">{{ p.rationale }}</div>
+              </div>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if report.calendar %}
+          <tr>
+            <td style="padding:16px 32px 8px;">
+              <h2 style="margin:0 0 12px;font-size:16px;color:#111827;">📅 Suggested Calendar</h2>
+              <ul style="margin:0;padding-left:20px;">
+                {% for d in report.calendar %}
+                <li style="font-size:14px;color:#374151;margin-bottom:6px;">{{ d }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if report.recommendations %}
+          <tr>
+            <td style="padding:16px 32px 8px;">
+              <h2 style="margin:0 0 12px;font-size:16px;color:#111827;">⚡ Optimization Recommendations</h2>
+              <ul style="margin:0;padding-left:20px;">
+                {% for r in report.recommendations %}
+                <li style="font-size:14px;color:#374151;margin-bottom:6px;">{{ r }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if report.risk_alerts %}
+          <tr>
+            <td style="padding:16px 32px;">
+              <h2 style="margin:0 0 12px;font-size:16px;color:#b91c1c;">⚠️ Risk Alerts</h2>
+              <ul style="margin:0;padding-left:20px;">
+                {% for r in report.risk_alerts %}
+                <li style="font-size:14px;color:#991b1b;margin-bottom:6px;">{{ r }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% endif %}
+
+          <tr>
+            <td style="padding:24px 32px 28px;border-top:1px solid #e5e7eb;background-color:#fafafa;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                Weekly deep-dive by the Self-Learning Content Intelligence Platform · {{ date_str }}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
