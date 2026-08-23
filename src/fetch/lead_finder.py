@@ -114,7 +114,7 @@ class LeadFinder:
                         if len(candidates) >= count:
                             break
                         domain = self._domain(url)
-                        if not domain or domain in IGNORED_DOMAINS:
+                        if not domain or self._is_ignored(domain):
                             continue
                         if domain in seen or domain in seen_recent:
                             continue
@@ -426,6 +426,15 @@ class LeadFinder:
             return (urlparse(url).netloc or "").lower().replace("www.", "")
         except ValueError:
             return ""
+
+    @staticmethod
+    def _is_ignored(domain: str) -> bool:
+        """Suffix match so subdomains (en.wikipedia.org, m.zomato.com)
+        are caught by their base domain in IGNORED_DOMAINS."""
+        return any(
+            domain == d or domain.endswith("." + d)
+            for d in IGNORED_DOMAINS
+        )
 
     @staticmethod
     def _clean_name(title: str, domain: str) -> str:

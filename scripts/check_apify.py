@@ -38,7 +38,7 @@ async def main() -> None:
     async with httpx.AsyncClient(timeout=timeout) as client:
         t0 = asyncio.get_event_loop().time()
         resp = await client.post(
-            f"{SocialScraper.APIFY_BASE}/acts/apify/instagram-search-scraper/run-sync-get-dataset-items",
+            f"{SocialScraper.APIFY_BASE}/acts/{SocialScraper.APIFY_SEARCH_ACTOR}/run-sync-get-dataset-items",
             params={"token": token},
             json={"searchType": "user", "search": [query], "resultsLimit": 5},
         )
@@ -57,12 +57,8 @@ async def main() -> None:
             f"{SocialScraper.APIFY_BASE}/acts/{SocialScraper.APIFY_INSTAGRAM_ACTOR}/run-sync-get-dataset-items",
             params={"token": token},
             json={
-                "username": [handle],
+                "usernames": [handle],
                 "resultsLimit": 5,
-                "shouldDownloadVideos": False,
-                "shouldDownloadCovers": False,
-                "shouldDownloadSubtitles": False,
-                "shouldDownloadCaptions": False,
             },
         )
         dt = asyncio.get_event_loop().time() - t0
