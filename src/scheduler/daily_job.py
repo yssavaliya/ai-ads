@@ -119,13 +119,18 @@ class DailyPipeline:
 
     def run_all(self) -> list[dict[str, Any]]:
         businesses = [b for b in load_businesses() if b.get("is_active", True)]
+        if not businesses:
+            logger.warning("No active businesses configured; daily pipeline has nothing to do")
+            return []
         logger.info("Running daily pipeline for %d businesses", len(businesses))
         results = []
         for business in businesses:
             try:
                 results.append(self.run_for_business(business))
             except Exception as exc:
-                logger.error("Daily pipeline failed for %s: %s", business.get("name"), exc)
+                logger.error(
+                    "::error::Daily pipeline failed for %s: %s", business.get("name"), exc
+                )
                 results.append({"business": business.get("name"), "error": str(exc)})
         return results
 
@@ -173,6 +178,11 @@ def main() -> None:
     results = pipeline.run_all()
     for r in results:
         logger.info("RESULT: %s", r)
+
+    # Fail the workflow step when every business errored — green CI must mean
+    # the pipeline actually produced something.
+    if results and all("error" in r for r in results):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

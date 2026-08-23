@@ -31,11 +31,11 @@ class Settings(BaseSettings):
 
     # Groq API (primary)
     groq_api_key: str | None = Field(default=None, description="Groq API key")
-    groq_model: str = Field(default="llama-3.1-70b-versatile", description="Groq model")
+    groq_model: str = Field(default="llama-3.3-70b-versatile", description="Groq model")
 
     # Gemini API (fallback)
     gemini_api_key: str | None = Field(default=None, description="Gemini API key")
-    gemini_model: str = Field(default="gemini-1.5-flash", description="Gemini model")
+    gemini_model: str = Field(default="gemini-2.0-flash", description="Gemini model")
 
     # Apify (social scraping)
     apify_token: str | None = Field(default=None, description="Apify API token")
@@ -66,12 +66,6 @@ class Settings(BaseSettings):
     logs_dir: Path = Field(default=Path("logs"), description="Logs directory")
     prompts_dir: Path = Field(default=Path("prompts"), description="Prompt templates directory")
     templates_dir: Path = Field(default=Path("templates"), description="Email templates directory")
-
-    # Embeddings (local, no API)
-    embedding_model: str = Field(
-        default="sentence-transformers/all-MiniLM-L6-v2",
-        description="Local embedding model"
-    )
 
     # Logging
     log_level: str = Field(default="INFO", description="Log level")
