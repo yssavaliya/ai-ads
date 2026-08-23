@@ -1,12 +1,23 @@
 {
-  "niches": ["home decor", "bakery", "jewellery store"],
-  "locations": ["Ahmedabad"],
+  "niches": [
+    "home decor",
+    "bakery",
+    "jewellery store"
+  ],
+  "locations": [
+    "Ahmedabad"
+  ],
   "platform_focus": "instagram",
   "min_followers": 500,
   "max_followers": 20000,
   "target_count": 5,
   "min_opportunity_score": 60,
   "digest_email": "tpyashsavaliya13092002@gmail.com",
-  "prompt_types": ["educational", "storytelling", "social_proof", "promotional"],
+  "prompt_types": [
+    "educational",
+    "storytelling",
+    "social_proof",
+    "promotional"
+  ],
   "run_weekly": true
 }
