@@ -295,6 +295,16 @@ def main() -> None:
     result = LeadPipeline().run()
     print(json.dumps(result, indent=2))
 
+    # Leads were found but not a single prompt survived the LLM chain —
+    # fail the workflow step so CI doesn't show green on a dead run.
+    if result.get("top_leads", 0) > 0 and result.get("prompts_generated", 0) == 0:
+        logger.error(
+            "::error::%d leads found but 0 prompts generated — LLM chain is down. "
+            "Set GROQ_API_KEY (free at console.groq.com) as a repo secret.",
+            result["top_leads"],
+        )
+        raise SystemExit(1)
+
 
 if __name__ == "__main__":
     main()

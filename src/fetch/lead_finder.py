@@ -93,6 +93,7 @@ class LeadFinder:
                 for query_template in query_templates:
                     if len(candidates) >= count:
                         break
+                    await asyncio.sleep(2.0)  # throttle: avoid tripping search engines
                     query = query_template.format(niche=niche, location=location)
                     try:
                         results = await self._search_web(query)
@@ -235,6 +236,7 @@ class LeadFinder:
         candidates = []
         for niche in niches:
             for location in locations:
+                await asyncio.sleep(2.0)  # throttle Apify runs
                 query = f"{niche} {location}"
                 items = await scraper.fetch_instagram_search(query)
                 for item in items:
