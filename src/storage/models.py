@@ -106,6 +106,9 @@ class Prompt(Base):
     feedback: Mapped[FeedbackType | None] = mapped_column(SQLEnum(FeedbackType), nullable=True)
     feedback_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     github_issue_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    audience_segment: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    asset_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    asset_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     business: Mapped["Business"] = relationship(back_populates="prompts")
@@ -238,6 +241,27 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    _migrate()
+
+
+def _migrate() -> None:
+    """Lightweight additive migrations for SQLite (create_all won't ALTER)."""
+    import logging
+
+    migrations = [
+        ("prompts", "audience_segment", "VARCHAR(255)"),
+        ("prompts", "asset_path", "VARCHAR(500)"),
+        ("prompts", "asset_type", "VARCHAR(20)"),
+    ]
+    log = logging.getLogger(__name__)
+    with engine.connect() as conn:
+        for table, column, ddl in migrations:
+            try:
+                conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+                log.info("Migration: added %s.%s", table, column)
+            except Exception:
+                pass  # column already exists
+        conn.commit()
 
 
 def get_db():

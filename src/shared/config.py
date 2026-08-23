@@ -25,11 +25,7 @@ class Settings(BaseSettings):
     # Database
     database_path: Path = Field(default=Path("agent.db"), description="SQLite database path")
 
-    # LLM Providers (using OpenCode CLI + API fallbacks)
-    opencode_command: str = Field(default="opencode", description="OpenCode CLI command")
-    opencode_timeout_seconds: int = Field(default=120, description="OpenCode CLI timeout")
-
-    # Groq API (primary)
+    # LLM Providers (free tiers: Groq -> Gemini -> Pollinations)
     groq_api_key: str | None = Field(default=None, description="Groq API key")
     groq_model: str = Field(default="llama-3.3-70b-versatile", description="Groq model")
 
@@ -73,9 +69,14 @@ class Settings(BaseSettings):
     # Timezone
     default_timezone: str = Field(default="Asia/Kolkata", description="Default timezone")
 
+    # Hugging Face (optional free-tier image fallback: FLUX.1-schnell)
+    hf_token: str | None = Field(default=None, description="Hugging Face API token")
+
+    # Dry run: write rendered emails/assets to logs/preview/ instead of sending
+    dry_run: bool = Field(default=False, description="Preview mode — no SMTP, files written to logs/preview/")
+
     @field_validator(
         "smtp_port",
-        "opencode_timeout_seconds",
         "virality_threshold",
         "max_regeneration_attempts",
         mode="before",
@@ -84,7 +85,7 @@ class Settings(BaseSettings):
     def coerce_empty_int(cls, value: Any, info: ValidationInfo) -> Any:
         return _coerce_empty(value, info.field_name, cls.model_fields[info.field_name].default, cls)
 
-    @field_validator("smtp_tls", mode="before")
+    @field_validator("smtp_tls", "dry_run", mode="before")
     @classmethod
     def coerce_empty_bool(cls, value: Any, info: ValidationInfo) -> Any:
         return _coerce_empty(value, info.field_name, cls.model_fields[info.field_name].default, cls)

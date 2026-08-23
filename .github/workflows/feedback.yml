@@ -10,6 +10,10 @@ permissions:
   contents: write
   issues: write
 
+concurrency:
+  group: ai-ads-repo-state
+  cancel-in-progress: false
+
 jobs:
   feedback:
     runs-on: ubuntu-latest
@@ -17,8 +21,6 @@ jobs:
     env:
       LOG_LEVEL: INFO
       DATABASE_PATH: agent.db
-      OPENCODE_COMMAND: opencode
-      OPENCODE_TIMEOUT_SECONDS: "120"
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPO: ${{ github.repository }}
     steps:
@@ -30,6 +32,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Restore agent.db cache
+        uses: actions/cache@v4
+        with:
+          path: agent.db
+          key: agent-db-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            agent-db-${{ runner.os }}-
+
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
@@ -38,15 +48,15 @@ jobs:
       - name: Process feedback issues
         run: python -m src.learning.process_feedback
 
-      - name: Persist artifacts
+      - name: Persist JSON state (agent.db stays in cache, not git)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f agent.db data/weights.json 2>/dev/null || true
+          git add data/weights.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: feedback run artifacts $(date -u +'%Y-%m-%d %H:%M')"
+            git commit -m "chore: feedback run state $(date -u +'%Y-%m-%d %H:%M')"
             git pull --rebase -X ours origin main
             git push
           fi

@@ -17,6 +17,10 @@ permissions:
   contents: write
   issues: write
 
+concurrency:
+  group: ai-ads-repo-state
+  cancel-in-progress: false
+
 jobs:
   leads:
     runs-on: ubuntu-latest
@@ -24,12 +28,11 @@ jobs:
     env:
       LOG_LEVEL: INFO
       DATABASE_PATH: agent.db
-      OPENCODE_COMMAND: opencode
-      OPENCODE_TIMEOUT_SECONDS: "300"
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
       APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -47,25 +50,25 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Cache npm
+      - name: Restore agent.db cache
         uses: actions/cache@v4
         with:
-          path: ~/.npm
-          key: opencode-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          path: agent.db
+          key: agent-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
-            opencode-${{ runner.os }}-
+            agent-db-${{ runner.os }}-
 
-      - name: Install opencode
-        run: npm install -g opencode-ai
-
-      - name: Add npm global bin to PATH
-        run: echo "$(npm config get prefix)/bin" >> "$GITHUB_PATH"
+      - name: Restore piper voice cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/piper-voices
+          key: piper-voices-v1
 
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m playwright install chromium --with-deps
+          python -m pip install piper-tts pillow
 
       - name: Override niches from dispatch input
         if: github.event.inputs.niches != ''
@@ -94,23 +97,26 @@ jobs:
             echo "$line"
           done
 
-      - name: Upload prompt logs
+      - name: Upload prompt logs and rendered assets
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lead-prompts-${{ github.run_id }}
-          path: logs/prompts/
+          name: lead-output-${{ github.run_id }}
+          path: |
+            logs/prompts/
+            logs/assets/
+            logs/preview/
           if-no-files-found: ignore
 
-      - name: Persist artifacts
+      - name: Persist JSON state (agent.db stays in cache, not git)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f agent.db data/leads.json data/weights.json 2>/dev/null || true
+          git add data/leads.json data/lead_seen.json data/weights.json data/lead_config.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: lead discovery artifacts $(date -u +'%Y-%m-%d')"
+            git commit -m "chore: lead discovery state $(date -u +'%Y-%m-%d')"
             git pull --rebase -X ours origin main
             git push
           fi

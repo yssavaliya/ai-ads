@@ -87,36 +87,38 @@ Respond ONLY with JSON:
     "hashtags": ["#tag1", "#tag2", "#tag3"],
     "platform_focus": "instagram" | "linkedin" | "both",
     "format": "reel" | "carousel" | "story" | "single image" | "text post",
-    "angle": "one sentence on the strategic angle"
+    "angle": "one sentence on the strategic angle",
+    "audience_segment": "which persona name from the audience map this targets",
+    "reel_beats": ["3-5 short on-screen text lines for a reel version"]
   }}
 ]
 """
-        try:
-            result = self.llm.run(prompt, label="prompt-forge", temperature=0.8)
-            data = json.loads(extract_json_text(result.stdout))
-            if isinstance(data, dict):
-                data = data.get("prompts", [])
-            if not isinstance(data, list):
-                raise ValueError("forge output must be a JSON array")
-            variants = [
-                {
-                    "prompt_type": str(v.get("prompt_type", "educational")),
-                    "title": str(v.get("title", "")),
-                    "hook": str(v.get("hook", "")),
-                    "prompt_text": str(v.get("prompt_text", "")),
-                    "hashtags": [str(h) for h in v.get("hashtags", []) if str(h).startswith("#")],
-                    "platform_focus": str(v.get("platform_focus", "both")),
-                    "format": str(v.get("format", "reel")),
-                    "angle": str(v.get("angle", "")),
-                }
-                for v in data
-                if isinstance(v, dict) and v.get("prompt_text")
-            ]
-            logger.info("Generated %d prompt variants", len(variants))
-            return variants[:count]
-        except Exception as exc:
-            logger.error("Prompt generation failed: %s", exc)
-            return []
+        result = self.llm.run(prompt, label="prompt-forge", temperature=0.8)
+        data = json.loads(extract_json_text(result.stdout))
+        if isinstance(data, dict):
+            data = data.get("prompts", [])
+        if not isinstance(data, list):
+            raise ValueError("forge output must be a JSON array")
+        variants = [
+            {
+                "prompt_type": str(v.get("prompt_type", "educational")),
+                "title": str(v.get("title", "")),
+                "hook": str(v.get("hook", "")),
+                "prompt_text": str(v.get("prompt_text", "")),
+                "hashtags": [str(h) for h in v.get("hashtags", []) if str(h).startswith("#")],
+                "platform_focus": str(v.get("platform_focus", "both")),
+                "format": str(v.get("format", "reel")),
+                "angle": str(v.get("angle", "")),
+                "audience_segment": str(v.get("audience_segment", "") or ""),
+                "reel_beats": [str(b).strip() for b in v.get("reel_beats", []) if str(b).strip()][:5],
+            }
+            for v in data
+            if isinstance(v, dict) and v.get("prompt_text")
+        ]
+        if not variants:
+            raise ValueError("prompt forge produced no usable variants")
+        logger.info("Generated %d prompt variants", len(variants))
+        return variants[:count]
 
     def refine_with_hints(
         self,
@@ -155,7 +157,9 @@ Respond ONLY with the improved prompt as JSON with the same fields:
   "hashtags": ["..."],
   "platform_focus": "...",
   "format": "...",
-  "angle": "..."
+  "angle": "...",
+  "audience_segment": "...",
+  "reel_beats": ["..."]
 }}
 """
         try:
@@ -172,7 +176,18 @@ Respond ONLY with the improved prompt as JSON with the same fields:
                 "platform_focus": str(data.get("platform_focus", best_variant.get("platform_focus", "both"))),
                 "format": str(data.get("format", best_variant.get("format", "reel"))),
                 "angle": str(data.get("angle", best_variant.get("angle", ""))),
+                "audience_segment": str(data.get("audience_segment", "") or best_variant.get("audience_segment", "")),
+                "reel_beats": [
+                    str(b).strip()
+                    for b in data.get("reel_beats", best_variant.get("reel_beats", []))
+                    if str(b).strip()
+                ][:5],
             }
         except Exception as exc:
-            logger.error("Prompt refinement failed: %s", exc)
+            # Refinement is an optimization: keep the previous honest variant
+            # rather than fabricating, but make the degradation visible.
+            logger.warning(
+                "::warning::Prompt refinement failed (%s) — using unrefined variant %s",
+                exc, best_variant.get("title", ""),
+            )
             return best_variant

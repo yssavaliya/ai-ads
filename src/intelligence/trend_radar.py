@@ -60,22 +60,11 @@ Respond ONLY with JSON:
   "recommended_formats": ["reel", "carousel", "story", "single image", "text post"]
 }}
 """
-        try:
-            result = self.llm.run(prompt, label="trend-radar", temperature=0.5)
-            data = json.loads(extract_json_text(result.stdout))
-            if not isinstance(data, dict):
-                raise ValueError("trend scan must be a JSON object")
-            return data
-        except Exception as exc:
-            logger.error("Trend scan failed: %s", exc)
-            return {
-                "trending_topics": [],
-                "trending_hashtags": [],
-                "content_gaps": [],
-                "viral_patterns": [],
-                "seasonal_events": [],
-                "recommended_formats": ["reel", "carousel"],
-            }
+        result = self.llm.run(prompt, label="trend-radar", temperature=0.5)
+        data = json.loads(extract_json_text(result.stdout))
+        if not isinstance(data, dict):
+            raise ValueError("trend scan must be a JSON object")
+        return data
 
     @staticmethod
     def _summarize_competitors(competitor_posts: list[dict[str, Any]]) -> str:

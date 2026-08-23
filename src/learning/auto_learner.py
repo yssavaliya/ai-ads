@@ -13,7 +13,7 @@ from src.shared.utils import load_businesses
 
 logger = logging.getLogger(__name__)
 
-MIN_SIMILARITY = 0.15          # min caption/prompt token overlap to count as a match
+MIN_SIMILARITY = 0.35          # min caption/prompt token overlap to count as a match
 POST_MATCH_WINDOW_DAYS = 5     # how many days after a prompt the user may have posted
 MATCH_LOOKBACK_DAYS = 14       # how far back to look for sent prompts
 BENCHMARK_LOOKBACK_DAYS = 30   # median engagement window
@@ -50,6 +50,7 @@ class AutoLearner:
 
     def __init__(self) -> None:
         self.updater = BayesianUpdater()
+        self._db: Any = None
 
     def run_for_business(
         self,
@@ -65,11 +66,20 @@ class AutoLearner:
 
         benchmark = self._benchmark_median(posts, followers)
         sent_prompts = self._recent_prompts(db, business_id)
+        for p in sent_prompts:
+            p["audience_segment"] = None
+            if db is not None:
+                from src.storage.models import Prompt
+
+                row = db.get(Prompt, p["id"])
+                if row is not None:
+                    p["audience_segment"] = row.audience_segment
+        self._db = db
         matched = self._match(posts, sent_prompts)
 
         learned = 0
         details = []
-        for prompt_id, prompt_type, prompt_text, post in matched:
+        for prompt_id, prompt_type, prompt_text, post, segment in matched:
             rate = engagement_rate(post, followers)
             outcome = "good" if rate >= benchmark else "bad"
             self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome)
@@ -78,6 +88,7 @@ class AutoLearner:
                 outcome,
                 prompt_type=prompt_type,
                 format=post.get("format"),
+                audience_segment=segment,
             )
             learned += 1
             details.append(
@@ -122,12 +133,42 @@ class AutoLearner:
 
     def _match(
         self, posts: list[dict[str, Any]], prompts: list[dict[str, Any]]
-    ) -> list[tuple[int, str | None, str, dict[str, Any]]]:
-        """Greedy best-match: each prompt matches its most similar post posted
-        within POST_MATCH_WINDOW_DAYS after it was sent; each post used once."""
-        matched: list[tuple[int, str | None, str, dict[str, Any]]] = []
+    ) -> list[tuple[int, str | None, str, dict[str, Any], str | None]]:
+        """Match published posts to sent prompts.
+
+        Priority 1 — explicit links: posts whose post_id matches an Engagement
+        row created via the 📎 'I posted this' button bypass similarity entirely.
+        Priority 2 — similarity: caption/prompt Jaccard >= MIN_SIMILARITY within
+        the post window; each post used once.
+        Returns (prompt_id, prompt_type, prompt_text, post, audience_segment)."""
+        from src.storage.models import Engagement
+
+        matched: list[tuple[int, str | None, str, dict[str, Any], str | None]] = []
         used_post_ids: set[str] = set()
 
+        prompt_ids = [p["id"] for p in prompts]
+        linked_post_ids: set[str] = set()
+        if prompt_ids and self._db is not None:
+            rows = (
+                self._db.query(Engagement)
+                .filter(Engagement.prompt_id.in_(prompt_ids))
+                .filter(Engagement.post_id.isnot(None))
+                .all()
+            )
+            linked_post_ids = {r.post_id for r in rows if r.post_id}
+
+        # Pass 1: exact-ID matches (human-confirmed links).
+        for prompt in prompts:
+            for post in posts:
+                post_id = str(post.get("post_id") or post.get("url") or "")
+                if not post_id or post_id in used_post_ids or post_id not in linked_post_ids:
+                    continue
+                used_post_ids.add(post_id)
+                matched.append(
+                    (prompt["id"], prompt.get("prompt_type"), prompt["prompt_text"], post, prompt.get("audience_segment"))
+                )
+
+        # Pass 2: fuzzy similarity matches.
         for prompt in sorted(prompts, key=lambda p: p["sent_at"] or datetime.min):
             if not prompt.get("sent_at"):
                 continue
@@ -154,7 +195,9 @@ class AutoLearner:
                 post_id = str(post.get("post_id") or post.get("url") or "")
                 if post_id:
                     used_post_ids.add(post_id)
-                matched.append((prompt["id"], prompt["prompt_type"], prompt["prompt_text"], post))
+                matched.append(
+                    (prompt["id"], prompt.get("prompt_type"), prompt["prompt_text"], post, prompt.get("audience_segment"))
+                )
 
         return matched
 

@@ -10,6 +10,7 @@ from src.shared.config import settings
 logger = logging.getLogger(__name__)
 
 FEEDBACK_PREFIX = "[content-intel-feedback]"
+DEGRADED_TITLE = "[pipeline] degraded run"
 
 
 class GithubFeedback:
@@ -28,7 +29,7 @@ class GithubFeedback:
     def create_feedback_links(self, prompt_id: int, business_name: str, prompt_title: str) -> dict[str, str]:
         """Return feedback URLs for a prompt, or placeholder '#' if GitHub is not configured."""
         if not self.enabled:
-            return {"good": "#", "bad": "#", "regenerate": "#"}
+            return {"good": "#", "bad": "#", "regenerate": "#", "posted": "#"}
         title = f"{FEEDBACK_PREFIX} prompt #{prompt_id}"
         body = (
             f"**Business:** {business_name}\n"
@@ -37,10 +38,23 @@ class GithubFeedback:
             f"**Feedback:** __FEEDBACK__"
         )
         base_title = title.replace("__FEEDBACK__", "").strip()
+        posted_body = (
+            f"**Business:** {business_name}\n"
+            f"**Prompt:** {prompt_title}\n"
+            f"**Prompt ID:** {prompt_id}\n\n"
+            "**Instagram post URL** (paste the link to the post you published):\n\n"
+            "https://www.instagram.com/p/...\n\n"
+            "_The learner will attribute this post's engagement to the exact asset._"
+        )
         urls = {}
-        for label, word in (("good", "GOOD 👍"), ("bad", "BAD 👎"), ("regenerate", "REGENERATE 🔄")):
+        for label, word in (
+            ("good", "GOOD 👍"),
+            ("bad", "BAD 👎"),
+            ("regenerate", "REGENERATE 🔄"),
+            ("posted", "POSTED 📎"),
+        ):
             issue_title = f"{base_title} [{word}]"
-            issue_body = body.replace("__FEEDBACK__", word)
+            issue_body = posted_body if label == "posted" else body.replace("__FEEDBACK__", word)
             urls[label] = (
                 f"https://github.com/{self.repo}/issues/new?"
                 f"title={self._quote(issue_title)}&body={self._quote(issue_body)}"
@@ -83,3 +97,68 @@ class GithubFeedback:
         import urllib.parse
 
         return urllib.parse.quote(text, safe="")
+
+    def report_degraded_run(self, failures: list[dict[str, Any]]) -> int | None:
+        """Create (or append to today's) tracking issue listing pipeline stages
+        that failed. Makes 'ran green but produced nothing' visible without
+        reading Actions logs. Never raises."""
+        if not self.enabled or not failures:
+            return None
+        import datetime
+
+        date_str = datetime.date.today().isoformat()
+        title = f"{DEGRADED_TITLE} — {date_str}"
+        entry_lines = []
+        for f in failures[:40]:
+            entry_lines.append(
+                f"- **{f.get('business', f.get('lead', 'unknown'))}** · "
+                f"stage `{f.get('stage', 'unknown')}`: {str(f.get('error', ''))[:300]}"
+            )
+        body = (
+            f"Automated degraded-run report for {date_str}.\n\n"
+            f"The workflow finished, but these stages failed and produced no real output:\n\n"
+            + "\n".join(entry_lines)
+            + "\n\n_Check secrets (GROQ_API_KEY etc.) and provider status. "
+            "This issue updates in place as long as it stays open._"
+        )
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        try:
+            existing = httpx.get(
+                f"{self.base}/repos/{self.repo}/issues",
+                params={"state": "open", "per_page": 50},
+                headers=headers,
+                timeout=30,
+            )
+            existing.raise_for_status()
+            match = next(
+                (i for i in existing.json() if i.get("title", "").startswith(DEGRADED_TITLE)),
+                None,
+            )
+            if match:
+                merged = (match.get("body") or "") + "\n\n---\n\n" + body
+                resp = httpx.patch(
+                    f"{self.base}/repos/{self.repo}/issues/{match['number']}",
+                    headers=headers,
+                    json={"body": merged[-60000:]},
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                logger.info("Updated degraded-run issue #%s", match["number"])
+                return match["number"]
+            resp = httpx.post(
+                f"{self.base}/repos/{self.repo}/issues",
+                headers=headers,
+                json={"title": title, "body": body},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            number = resp.json().get("number")
+            logger.info("Created degraded-run issue #%s (%d failures)", number, len(failures))
+            return number
+        except Exception as exc:
+            logger.error("Failed to report degraded run: %s", exc)
+            return None
