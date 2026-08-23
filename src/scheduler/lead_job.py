@@ -104,13 +104,24 @@ class LeadPipeline:
         top_leads = scored_leads[: config["target_count"]]
 
         digest = []
+        prompt_failures = 0
         for lead in top_leads:
             try:
                 prompts = self._generate_sample_prompts(lead, config)
                 digest.append({**lead, "prompts": prompts})
             except Exception as exc:
-                logger.error("Prompt generation failed for %s: %s", lead.get("name"), exc)
-                digest.append({**lead, "prompts": []})
+                prompt_failures += 1
+                logger.error(
+                    "::error::Prompt generation failed for %s: %s", lead.get("name"), exc
+                )
+                digest.append({**lead, "prompts": [], "prompt_error": str(exc)[:200]})
+
+        if prompt_failures:
+            logger.error(
+                "::error::%d/%d leads got NO prompts — all LLM providers failed. "
+                "Set GROQ_API_KEY (free at console.groq.com) as a repo secret.",
+                prompt_failures, len(top_leads),
+            )
 
         self._save_leads(digest)
         email_ok = self._send_digest(digest, config)
@@ -119,6 +130,8 @@ class LeadPipeline:
             "candidates_found": len(candidates),
             "eligible_scored": len(scored_leads),
             "top_leads": len(digest),
+            "prompts_generated": sum(len(l.get("prompts") or []) for l in digest),
+            "prompt_failures": prompt_failures,
             "email_sent": email_ok,
             "generated_at": datetime.utcnow().isoformat(),
         }

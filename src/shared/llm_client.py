@@ -67,8 +67,12 @@ def extract_json_text(text: str) -> str:
 
 class LLMClient:
     """LLM interface: primary = OpenCode CLI (keyless/free gateway),
-    fallbacks = Groq API (free tier), then Gemini API (free tier).
-    No local models are ever run on CPU."""
+    fallbacks = Groq API (free tier), Gemini API (free tier), then
+    Pollinations (keyless). No local models are ever run on CPU."""
+
+    # Circuit breaker: once opencode has fully failed once in this process
+    # (CI without auth), stop wasting minutes retrying it on every call.
+    _opencode_disabled = False
 
     def __init__(
         self,
@@ -86,7 +90,30 @@ class LLMClient:
         max_retries: int = 3,
     ) -> OpenCodeResult:
         """Run a prompt through the LLM chain. Returns first successful result."""
-        last_error: Exception | None = None
+        result = self._try_opencode(prompt, label, max_retries)
+        if result is not None:
+            return result
+
+        logger.info("opencode unavailable; trying Groq")
+        result = self._try_groq(prompt, label, temperature)
+        if result is not None:
+            return result
+
+        logger.info("Groq unavailable; trying Gemini")
+        result = self._try_gemini(prompt, label, temperature)
+        if result is not None:
+            return result
+
+        logger.info("Gemini unavailable; trying Pollinations (keyless)")
+        result = self._try_pollinations(prompt, label, temperature)
+        if result is not None:
+            return result
+
+        raise RuntimeError(f"All LLM providers failed for {label}")
+
+    def _try_opencode(self, prompt: str, label: str | None, max_retries: int) -> OpenCodeResult | None:
+        if LLMClient._opencode_disabled:
+            return None
         for attempt in range(1, max_retries + 1):
             start = time.monotonic()
             try:
@@ -97,27 +124,27 @@ class LLMClient:
                     result.elapsed_seconds,
                     len(result.stdout),
                 )
+                LLMClient._opencode_disabled = False
                 return result
             except OpenCodeError as exc:
-                last_error = exc
                 logger.warning(
                     "opencode attempt %s/%s failed (exit=%s): %s",
                     attempt, max_retries, exc.exit_code, (exc.stderr or exc.stdout or "")[:300],
                 )
                 if attempt < max_retries:
                     time.sleep(2 * attempt)
+            except Exception as exc:
+                logger.warning(
+                    "opencode attempt %s/%s crashed unexpectedly: %s", attempt, max_retries, exc
+                )
+                if attempt < max_retries:
+                    time.sleep(2 * attempt)
 
-        logger.info("opencode unavailable after %s attempts; trying Groq", max_retries)
-        result = self._try_groq(prompt, label, temperature)
-        if result is not None:
-            return result
-
-        logger.info("Groq unavailable; trying Gemini")
-        result = self._try_gemini(prompt, label, temperature)
-        if result is not None:
-            return result
-
-        raise RuntimeError(f"All LLM providers failed for {label}: {last_error}") from last_error
+        LLMClient._opencode_disabled = True
+        logger.warning(
+            "opencode disabled for the rest of this run after %s failed attempts", max_retries
+        )
+        return None
 
     def _run_opencode(self, prompt: str, label: str | None) -> OpenCodeResult:
         start = time.monotonic()
@@ -244,4 +271,35 @@ class LLMClient:
             return OpenCodeResult(stdout=strip_markdown_fences(content), stderr="", exit_code=0, elapsed_seconds=time.monotonic() - start)
         except Exception as exc:
             logger.error("Gemini failed for %s: %s", label or "llm", exc)
+            return None
+
+    def _try_pollinations(self, prompt: str, label: str | None, temperature: float) -> OpenCodeResult | None:
+        """Keyless free fallback (text.pollinations.ai GET API) — always
+        available, so content generation never hard-fails in CI without
+        secrets. Anonymous tier allows only the 'openai-fast' model and
+        rate-limits aggressively, so this is a last resort."""
+        try:
+            import httpx
+            from urllib.parse import quote
+
+            start = time.monotonic()
+            with httpx.Client(timeout=120) as client:
+                response = client.get(
+                    f"https://text.pollinations.ai/{quote(prompt, safe='')}",
+                    params={"model": "openai-fast"},
+                )
+                response.raise_for_status()
+                content = response.text.strip()
+            if not content or content.startswith('{"error"'):
+                logger.error("Pollinations returned no content for %s", label or "llm")
+                return None
+            logger.info(
+                "::notice::[%s] Pollinations answered in %.1fs (%d chars)",
+                label or "llm", time.monotonic() - start, len(content),
+            )
+            return OpenCodeResult(
+                stdout=strip_markdown_fences(content), stderr="", exit_code=0, elapsed_seconds=time.monotonic() - start
+            )
+        except Exception as exc:
+            logger.error("Pollinations failed for %s: %s", label or "llm", exc)
             return None
