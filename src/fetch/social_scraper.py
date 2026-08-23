@@ -71,7 +71,9 @@ class SocialScraper:
                 run_resp = await client.post(
                     f"{self.APIFY_BASE}/acts/{self.APIFY_SEARCH_ACTOR}/run-sync-get-dataset-items",
                     params={"token": self.apify_token},
-                    json={"searchType": "user", "search": [query], "resultsLimit": limit},
+                    # 'search' must be a plain string for this actor (400
+                    # "Field input.search must be string" when sent as array).
+                    json={"searchType": "user", "search": query, "resultsLimit": limit},
                 )
                 if run_resp.status_code >= 400:
                     logger.error(
