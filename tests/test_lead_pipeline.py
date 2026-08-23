@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from src.scheduler.lead_job import LeadPipeline
+from src.shared.config import settings
 
 
 def _lead_prompt() -> dict:
@@ -16,9 +17,17 @@ def _lead_prompt() -> dict:
     }
 
 
-def test_mark_seen_only_records_delivered_leads(tmp_path):
+def test_mark_seen_only_records_delivered_leads(tmp_path, monkeypatch):
     """Regression: raw candidates rejected by scoring must NOT enter the
-    21-day cooldown cache — otherwise one empty run starves every later run."""
+    21-day cooldown cache — otherwise one empty run starves every later run.
+
+    Isolation: mark_seen()/_recently_seen()/_save_leads() all resolve their
+    file paths from settings.data_dir at call time, so redirecting that
+    shared setting to tmp_path keeps this test from writing fabricated
+    "Vicky Bakery" fixture data into the real, git-tracked data/leads.json
+    and data/lead_seen.json — which is exactly what happened before this
+    fix (verified by reproducing it)."""
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
     pipeline = LeadPipeline()
 
     eligible = {
@@ -91,3 +100,78 @@ def test_mark_seen_only_records_delivered_leads(tmp_path):
     assert len(marked) == 1
     assert marked[0]["name"] == "Vicky Bakery"
     assert all(c["name"] != "Junk Directory" for c in marked)
+
+    # Isolation check: the fixture data landed in tmp_path, not the real
+    # git-tracked data/ directory.
+    assert (tmp_path / "leads.json").exists()
+    assert (tmp_path / "lead_seen.json").exists()
+    assert not (Path("data") / "leads.json").samefile(tmp_path / "leads.json")
+
+
+def test_too_big_candidates_go_to_long_cooldown_reject_cache(tmp_path, monkeypatch):
+    """A structurally-ineligible ('too big') candidate should be cached in
+    the 90-day rejection list, not just skipped — otherwise the same
+    obviously-wrong result (a global brand, a real-estate portal) gets
+    re-discovered and re-scored every single scheduled run forever."""
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    pipeline = LeadPipeline()
+
+    too_small = {
+        "name": "Unverified Candidate",
+        "website_url": "https://tinybakery.example/",
+        "instagram_handle": "",
+        "linkedin_handle": "",
+        "niche": "bakery",
+        "location": "Ahmedabad",
+        "found_via": "search",
+    }
+    too_big = {
+        "name": "Global Luxury Co",
+        "website_url": "https://global-luxury.example/",
+        "instagram_handle": "",
+        "linkedin_handle": "",
+        "niche": "jewellery store",
+        "location": "Ahmedabad",
+        "found_via": "search",
+    }
+
+    async def fake_discover(niches, locations, count, platform_focus):
+        return [too_small, too_big]
+
+    async def fake_enrich(candidates):
+        return candidates
+
+    def fake_score(candidate, social_data, min_followers=500, max_followers=500000):
+        if candidate["name"] == "Global Luxury Co":
+            return {"score": 0, "followers": 5_000_000, "reasons": ["too big: likely already has an agency"], "eligible": False}
+        return {"score": 0, "followers": 0, "reasons": ["too small: under min follower threshold"], "eligible": False}
+
+    db = MagicMock()
+    db.query.return_value.filter.return_value.first.return_value = None
+
+    with (
+        patch.object(LeadPipeline, "_learning_pass", return_value={"leads_checked": 0}),
+        patch.object(pipeline.finder, "discover", fake_discover),
+        patch.object(pipeline.finder, "enrich_with_socials", fake_enrich),
+        patch.object(pipeline.scorer, "score", fake_score),
+        patch("src.scheduler.lead_job.SessionLocal", return_value=db),
+        patch("src.delivery.email_sender.EmailSender.send_lead_digest", return_value=True),
+        patch("src.delivery.github_feedback.GithubFeedback.report_degraded_run"),
+        patch.object(pipeline.finder, "mark_seen") as fake_mark_seen,
+        patch.object(
+            pipeline.finder, "mark_rejected", wraps=pipeline.finder.mark_rejected
+        ) as fake_mark_rejected,
+    ):
+        result = pipeline.run()
+
+    assert result["top_leads"] == 0
+    fake_mark_seen.assert_called_once_with([])  # nothing eligible was delivered
+    assert fake_mark_rejected.call_count == 1
+    rejected = fake_mark_rejected.call_args[0][0]
+    assert len(rejected) == 1
+    assert rejected[0]["name"] == "Global Luxury Co"
+
+    # A second discover() call should now filter it out via the reject cache.
+    seen_recent = pipeline.finder._recently_seen() | pipeline.finder._recently_rejected()
+    assert "global-luxury.example" in seen_recent
+    assert "tinybakery.example" not in seen_recent  # "too small" stays retryable

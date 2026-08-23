@@ -76,7 +76,7 @@ class LeadFinder:
             locations = [locations]
         candidates: list[dict[str, Any]] = []
         seen: set[str] = set()
-        seen_recent = self._recently_seen()
+        seen_recent = self._recently_seen() | self._recently_rejected()
 
         # 1) Instagram search FIRST when available — these candidates already
         #    have handles + follower counts, so they are instantly scoreable.
@@ -161,6 +161,53 @@ class LeadFinder:
         from src.shared.utils import load_json, save_json
 
         path = Path(_s.data_dir) / "lead_seen.json"
+        data = load_json(path, {})
+        now = datetime.utcnow().isoformat()
+        for c in candidates:
+            for key in (
+                self._domain(c.get("website_url") or ""),
+                (c.get("instagram_handle") or "").lower(),
+            ):
+                if key:
+                    data[key] = now
+        save_json(path, data)
+
+    # ------------------------------------------------------------------
+    # Longer-cooldown cache for candidates that are structurally
+    # ineligible (e.g. way over the follower ceiling) rather than merely
+    # not the best lead this run. Without this, an obviously-wrong result
+    # that keeps surfacing from web search (a global brand, a real-estate
+    # portal) gets re-discovered and re-rejected every single scheduled
+    # run forever, burning search budget on candidates that can never
+    # qualify. Deliberately narrower than the 21-day "seen" cache: only
+    # the unambiguous "too big" rejection is cached here, never "too
+    # small", since a 0/low follower count from keyless discovery is
+    # often just an unverified count, not a genuinely tiny account.
+    # ------------------------------------------------------------------
+    REJECTED_COOLDOWN_DAYS = 90
+
+    def _recently_rejected(self) -> set[str]:
+        """Keys (domains/handles, lowercased) structurally rejected within the cooldown window."""
+        from datetime import datetime, timedelta
+
+        from src.shared.utils import load_json
+
+        data = load_json(Path(settings.data_dir) / "lead_rejected.json", {})
+        cutoff = (datetime.utcnow() - timedelta(days=self.REJECTED_COOLDOWN_DAYS)).isoformat()
+        recent = set()
+        for key, ts in data.items():
+            if isinstance(ts, str) and ts >= cutoff:
+                recent.add(key.lower())
+        return recent
+
+    def mark_rejected(self, candidates: list[dict[str, Any]]) -> None:
+        """Record structurally-ineligible candidates in the long cooldown cache."""
+        from datetime import datetime
+
+        from src.shared.config import settings as _s
+        from src.shared.utils import load_json, save_json
+
+        path = Path(_s.data_dir) / "lead_rejected.json"
         data = load_json(path, {})
         now = datetime.utcnow().isoformat()
         for c in candidates:

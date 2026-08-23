@@ -122,7 +122,7 @@ src/scheduler/       daily_job, weekly_job, lead_job
 src/storage/         SQLite models (agent.db lives in Actions cache, NOT git)
 src/shared/          config, LLM client (Groq/Gemini/Pollinations), utils
 templates/           daily_prompt.html, weekly_report.html, welcome.html, leads_digest.html
-data/                businesses.json, lead_config.json, lead_seen.json, weights.json (committed)
+data/                businesses.json, lead_config.json, lead_seen.json, lead_rejected.json, weights.json (committed)
 ```
 
 Rendered assets are uploaded as workflow artifacts and attached to emails — never committed to git.
