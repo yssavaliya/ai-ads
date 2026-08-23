@@ -61,16 +61,24 @@ class SocialScraper:
     async def fetch_instagram_search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
         """Search Instagram accounts by keyword (Apify free tier)."""
         if not self.apify_token:
+            logger.warning("fetch_instagram_search skipped: no APIFY_TOKEN")
             return []
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
+            async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT) as client:
                 run_resp = await client.post(
                     f"{self.APIFY_BASE}/acts/apify/instagram-search-scraper/run-sync-get-dataset-items",
                     params={"token": self.apify_token},
                     json={"searchType": "user", "search": [query], "resultsLimit": limit},
                 )
+                if run_resp.status_code >= 400:
+                    logger.error(
+                        "::error::Apify Instagram search actor failed for %r: %s",
+                        query, self._apify_error_detail(run_resp),
+                    )
                 run_resp.raise_for_status()
                 items = run_resp.json()
+            if not items:
+                logger.warning("Apify Instagram search returned 0 results for %r", query)
             results = []
             for item in items:
                 results.append(
@@ -87,8 +95,20 @@ class SocialScraper:
             logger.warning("Instagram search failed for %r: %s", query, exc)
             return []
 
+    # Apify run-sync waits for the actor to finish server-side (up to 300s);
+    # a client timeout below that silently kills every run with a TimeoutError.
+    APIFY_TIMEOUT = httpx.Timeout(320, connect=30.0)
+
+    def _apify_error_detail(self, resp: "httpx.Response") -> str:
+        body = ""
+        try:
+            body = (resp.text or "")[:300]
+        except Exception:
+            pass
+        return f"status={resp.status_code} body={body!r}"
+
     async def _apify_instagram(self, handle: str, limit: int) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT) as client:
             run_resp = await client.post(
                 f"{self.APIFY_BASE}/acts/{self.APIFY_INSTAGRAM_ACTOR}/run-sync-get-dataset-items",
                 params={"token": self.apify_token},
@@ -101,17 +121,29 @@ class SocialScraper:
                     "shouldDownloadCaptions": False,
                 },
             )
+            if run_resp.status_code >= 400:
+                logger.error(
+                    "::error::Apify Instagram actor failed for @%s: %s",
+                    handle, self._apify_error_detail(run_resp),
+                )
             run_resp.raise_for_status()
             items = run_resp.json()
+        if not items:
+            logger.warning("Apify Instagram actor returned 0 items for @%s", handle)
         return self._normalize_instagram(items)
 
     async def _apify_linkedin(self, handle: str, limit: int) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT) as client:
             run_resp = await client.post(
                 f"{self.APIFY_BASE}/acts/{self.APIFY_LINKEDIN_ACTOR}/run-sync-get-dataset-items",
                 params={"token": self.apify_token},
                 json={"handles": [handle], "resultsLimit": limit},
             )
+            if run_resp.status_code >= 400:
+                logger.error(
+                    "::error::Apify LinkedIn actor failed for %s: %s",
+                    handle, self._apify_error_detail(run_resp),
+                )
             run_resp.raise_for_status()
             items = run_resp.json()
         return self._normalize_linkedin(items)
