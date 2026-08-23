@@ -117,33 +117,58 @@ class SocialScraper:
         return self._normalize_linkedin(items)
 
     async def _playwright_instagram(self, handle: str) -> dict[str, Any]:
+        """Fallback when APIFY_TOKEN is unset: instaloader (open-source,
+        MIT-licensed) fetches public profile metadata + recent post metadata.
+        Loudly degraded output vs Apify; raises on failure so callers log it."""
         try:
-            from playwright.async_api import async_playwright
-        except ImportError:
-            raise RuntimeError("playwright not installed")
+            import asyncio as _asyncio
+            from concurrent.futures import ThreadPoolExecutor
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
-            page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            url = f"https://www.instagram.com/{handle}/"
-            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            def _fetch() -> dict[str, Any]:
+                import instaloader
 
-            meta_description = ""
-            meta = page.locator('meta[name="description"]').first
-            if await meta.count():
-                meta_description = await meta.get_attribute("content") or ""
+                L = instaloader.Instaloader(
+                    download_comments=False,
+                    download_geotags=False,
+                    download_pictures=False,
+                    download_videos=False,
+                    download_video_thumbnails=False,
+                    save_metadata=False,
+                    compress_json=False,
+                    quiet=True,
+                )
+                profile = instaloader.Profile.from_username(L.context, handle)
+                posts = []
+                for i, post in enumerate(profile.get_posts()):
+                    if i >= 12:
+                        break
+                    posts.append(
+                        {
+                            "post_id": post.shortcode,
+                            "caption": post.caption or "",
+                            "likes": post.likes or 0,
+                            "comments": post.comments or 0,
+                            "url": f"https://www.instagram.com/p/{post.shortcode}/",
+                            "posted_at": post.date_utc.isoformat() if post.date_utc else None,
+                            "platform": "instagram",
+                        }
+                    )
+                return {
+                    "handle": handle,
+                    "follower_count": profile.followers,
+                    "following_count": profile.followees,
+                    "posts_count": profile.mediacount,
+                    "full_name": profile.full_name,
+                    "biography": profile.biography,
+                    "posts": posts,
+                    "source": "instaloader",
+                }
 
-            await page.wait_for_timeout(2500)
-            body_text = await page.evaluate("() => document.body ? document.body.innerText.slice(0, 4000) : ''")
-            await browser.close()
-
-            return {
-                "handle": handle,
-                "meta_description": meta_description,
-                "body_text": body_text,
-                "posts": [],
-                "source": "playwright",
-            }
+            loop = _asyncio.get_running_loop()
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                return await loop.run_in_executor(pool, _fetch)
+        except ImportError as exc:
+            raise RuntimeError("instaloader not installed") from exc
 
     @staticmethod
     def _normalize_instagram(items: list[dict[str, Any]]) -> dict[str, Any]:

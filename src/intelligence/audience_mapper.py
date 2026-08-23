@@ -65,25 +65,12 @@ Respond ONLY with JSON:
   "drift_detected": "list of changes vs previous map, or 'none'"
 }}
 """
-        try:
-            result = self.llm.run(prompt, label="audience-mapper", temperature=0.4)
-            data = json.loads(extract_json_text(result.stdout))
-            if not isinstance(data, dict):
-                raise ValueError("audience map must be a JSON object")
-            data["source"] = "llm"
-            return data
-        except Exception as exc:
-            logger.error("Audience mapping failed: %s", exc)
-            return {
-                "personas": [],
-                "top_pain_points": [],
-                "content_themes": [],
-                "engagement_triggers": [],
-                "language_tone": "",
-                "audience_insights": [],
-                "drift_detected": "none",
-                "source": "fallback-empty",
-            }
+        result = self.llm.run(prompt, label="audience-mapper", temperature=0.4)
+        data = json.loads(extract_json_text(result.stdout))
+        if not isinstance(data, dict):
+            raise ValueError("audience map must be a JSON object")
+        data["source"] = "llm"
+        return data
 
     @staticmethod
     def _summarize_social(social_data: dict[str, Any] | None) -> str:

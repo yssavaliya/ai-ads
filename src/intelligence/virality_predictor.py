@@ -29,22 +29,9 @@ class ViralityPredictor:
         prompt_type: str = "educational",
     ) -> dict[str, Any]:
         prompt = self._build_prompt(prompt_text, business_profile, audience_map, trend_data, prompt_type)
-        try:
-            result = self.llm.run(prompt, label="virality-predictor", temperature=0.2)
-            payload = json.loads(extract_json_text(result.stdout))
-            return self._validate(payload)
-        except Exception as exc:
-            logger.error("Virality prediction failed: %s", exc)
-            return {
-                "virality_score": 50,
-                "virality_label": "MEDIUM",
-                "virality_probability": 0.5,
-                "key_factors": ["prediction failed; defaulted to medium"],
-                "risks": ["unable to evaluate"],
-                "reasoning": str(exc),
-                "improvement_hints": ["retry prediction"],
-                "timestamp": None,
-            }
+        result = self.llm.run(prompt, label="virality-predictor", temperature=0.2)
+        payload = json.loads(extract_json_text(result.stdout))
+        return self._validate(payload)
 
     def _build_prompt(
         self,

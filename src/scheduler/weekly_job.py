@@ -63,7 +63,7 @@ class WeeklyPipeline:
             db.close()
 
     def run_all(self) -> list[dict[str, Any]]:
-        businesses = [b for b in load_businesses() if b.get("is_active", True)]
+        businesses = [b for b in load_businesses() if b.get("is_active", True) and not b.get("demo")]
         logger.info("Running weekly pipeline for %d businesses", len(businesses))
         results = []
         for business in businesses:

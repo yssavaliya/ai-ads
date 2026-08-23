@@ -84,6 +84,27 @@ class DailyPipeline:
                 weights,
             )
 
+            # Render real creative assets (image inline / Reel MP4 attachment).
+            from src.generation.creative_forge import CreativeForge
+
+            creative = CreativeForge()
+            render_warnings: list[str] = []
+            for i, p in enumerate(prompts):
+                try:
+                    asset = creative.render_prompt(p, profile, index=i)
+                    p["asset_path"] = asset["asset_path"]
+                    p["asset_type"] = asset["asset_type"]
+                    p["thumbnail"] = asset.get("thumbnail")
+                    if asset.get("warnings"):
+                        p["warnings"] = asset["warnings"]
+                        render_warnings.extend(asset["warnings"])
+                except Exception as exc:
+                    logger.warning(
+                        "::warning::Asset render failed for %s/%s: %s",
+                        name, p.get("title"), exc,
+                    )
+                    render_warnings.append(f"{p.get('title')}: {exc}")
+
             saved = []
             for p in prompts:
                 prompt = Prompt(
@@ -97,6 +118,9 @@ class DailyPipeline:
                     risks=p.get("risks"),
                     reasoning=p.get("reasoning"),
                     generation_attempt=p.get("generation_attempt", 1),
+                    audience_segment=(p.get("audience_segment") or None),
+                    asset_path=p.get("asset_path"),
+                    asset_type=p.get("asset_type"),
                     sent_at=datetime.utcnow(),
                 )
                 db.add(prompt)
@@ -118,12 +142,16 @@ class DailyPipeline:
             db.close()
 
     def run_all(self) -> list[dict[str, Any]]:
-        businesses = [b for b in load_businesses() if b.get("is_active", True)]
+        businesses = [b for b in load_businesses() if b.get("is_active", True) and not b.get("demo")]
         if not businesses:
-            logger.warning("No active businesses configured; daily pipeline has nothing to do")
+            logger.warning(
+                "No active (non-demo) businesses configured; daily pipeline has nothing to do. "
+                "Onboard a real business via the 'Onboard Business' workflow."
+            )
             return []
         logger.info("Running daily pipeline for %d businesses", len(businesses))
         results = []
+        failures = []
         for business in businesses:
             try:
                 results.append(self.run_for_business(business))
@@ -131,7 +159,11 @@ class DailyPipeline:
                 logger.error(
                     "::error::Daily pipeline failed for %s: %s", business.get("name"), exc
                 )
+                failures.append({"business": business.get("name"), "stage": "daily-pipeline", "error": str(exc)})
                 results.append({"business": business.get("name"), "error": str(exc)})
+
+        if failures:
+            self.feedback.report_degraded_run(failures)
         return results
 
     def _get_or_create_business(self, db: Any, config: dict[str, Any]) -> Business:

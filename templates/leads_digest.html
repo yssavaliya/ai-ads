@@ -43,6 +43,13 @@
                       {% if lead.website_url %} · <a href="{{ lead.website_url }}" style="color:#b45309;">{{ lead.website_url }}</a>{% endif %}
                       · niche: {{ lead.niche }}
                     </div>
+                    {% if lead.contact_email %}
+                    <div style="font-size:13px;margin-bottom:10px;">✉️ Contact: <a href="mailto:{{ lead.contact_email }}" style="color:#b45309;font-weight:600;">{{ lead.contact_email }}</a></div>
+                    {% else %}
+                    <div style="font-size:13px;color:#92400e;background-color:#fef3c7;border-radius:6px;padding:6px 10px;margin-bottom:10px;">
+                      ⚠️ No contact email found on their website — reach out via Instagram DM manually.
+                    </div>
+                    {% endif %}
                     <ul style="margin:0 0 12px;padding-left:20px;">
                       {% for r in lead.opportunity_reasons %}
                       <li style="font-size:13px;color:#374151;margin-bottom:4px;">{{ r }}</li>
@@ -54,6 +61,14 @@
                     </div>
                     {% for p in lead.prompts %}
                     <div style="padding:10px 14px;background-color:#ffffff;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;">
+                      {% if p.asset_cid %}
+                      <div style="text-align:center;margin-bottom:10px;">
+                        <img src="cid:{{ p.asset_cid }}" alt="{{ p.title }}" style="max-width:100%;border-radius:6px;border:1px solid #e5e7eb;" width="360">
+                        {% if p.asset_type == 'reel' %}
+                        <div style="font-size:11px;color:#6b7280;margin-top:4px;">🎬 Reel MP4 attached</div>
+                        {% endif %}
+                      </div>
+                      {% endif %}
                       <div style="font-size:13px;font-weight:600;color:#111827;">{{ p.title }}
                         <span style="color:#6b7280;font-weight:400;">· {{ p.prompt_type|replace('_', ' ')|title }} · score {{ p.virality_score }}</span>
                       </div>

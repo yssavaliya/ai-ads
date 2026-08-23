@@ -27,6 +27,10 @@ permissions:
   contents: write
   issues: write
 
+concurrency:
+  group: ai-ads-repo-state
+  cancel-in-progress: false
+
 jobs:
   onboard:
     runs-on: ubuntu-latest
@@ -34,8 +38,6 @@ jobs:
     env:
       LOG_LEVEL: INFO
       DATABASE_PATH: agent.db
-      OPENCODE_COMMAND: opencode
-      OPENCODE_TIMEOUT_SECONDS: "300"
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -57,25 +59,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Cache npm
+      - name: Restore agent.db cache
         uses: actions/cache@v4
         with:
-          path: ~/.npm
-          key: opencode-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          path: agent.db
+          key: agent-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
-            opencode-${{ runner.os }}-
-
-      - name: Install opencode
-        run: npm install -g opencode-ai
-
-      - name: Add npm global bin to PATH
-        run: echo "$(npm config get prefix)/bin" >> "$GITHUB_PATH"
+            agent-db-${{ runner.os }}-
 
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m playwright install chromium --with-deps
 
       - name: Onboard business
         run: |
@@ -87,11 +82,11 @@ jobs:
             --email "${{ github.event.inputs.email }}" \
             --threshold "${{ github.event.inputs.virality_threshold }}"
 
-      - name: Persist artifacts
+      - name: Persist JSON state (agent.db stays in cache, not git)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f agent.db data/businesses.json data/weights.json 2>/dev/null || true
+          git add data/businesses.json data/weights.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else

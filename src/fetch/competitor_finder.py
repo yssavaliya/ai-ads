@@ -42,17 +42,13 @@ For each competitor provide:
 Respond ONLY with a JSON array:
 [{{"name": "...", "platform": "instagram", "handle": "...", "reason": "..."}}]
 """
-        try:
-            result = self.llm.run(prompt, label="competitor-discovery")
-            data = json.loads(extract_json_text(result.stdout))
-            if isinstance(data, dict):
-                data = data.get("competitors", [])
-            competitors = [c for c in data if isinstance(c, dict) and c.get("handle")]
-            logger.info("Discovered %d competitors", len(competitors))
-            return competitors[: self.COMPETITOR_COUNT]
-        except Exception as exc:
-            logger.error("Competitor discovery failed: %s", exc)
-            return []
+        result = self.llm.run(prompt, label="competitor-discovery")
+        data = json.loads(extract_json_text(result.stdout))
+        if isinstance(data, dict):
+            data = data.get("competitors", [])
+        competitors = [c for c in data if isinstance(c, dict) and c.get("handle")]
+        logger.info("Discovered %d competitors", len(competitors))
+        return competitors[: self.COMPETITOR_COUNT]
 
     async def fetch_competitor_posts(self, competitors: list[dict[str, Any]]) -> list[dict[str, Any]]:
         enriched = []

@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import random
 import re
+from pathlib import Path
 import urllib.parse
 from typing import Any
 from urllib.parse import urlparse
@@ -68,6 +70,7 @@ class LeadFinder:
             locations = [locations]
         candidates: list[dict[str, Any]] = []
         seen: set[str] = set()
+        seen_recent = self._recently_seen()
 
         # 1) Instagram search FIRST when available — these candidates already
         #    have handles + follower counts, so they are instantly scoreable.
@@ -76,7 +79,7 @@ class LeadFinder:
                 ig_candidates = await self._search_instagram(niches, locations)
                 for c in ig_candidates:
                     key = c.get("instagram_handle") or c.get("website_url") or ""
-                    if key in seen:
+                    if key in seen or key.lower() in seen_recent:
                         continue
                     seen.add(key)
                     candidates.append(c)
@@ -93,7 +96,7 @@ class LeadFinder:
                 for query_template in query_templates:
                     if len(candidates) >= count:
                         break
-                    await asyncio.sleep(2.0)  # throttle: avoid tripping search engines
+                    await asyncio.sleep(random.uniform(2.0, 5.0))  # jittered throttle
                     query = query_template.format(niche=niche, location=location)
                     try:
                         results = await self._search_web(query)
@@ -107,7 +110,7 @@ class LeadFinder:
                         domain = self._domain(url)
                         if not domain or domain in IGNORED_DOMAINS:
                             continue
-                        if domain in seen:
+                        if domain in seen or domain in seen_recent:
                             continue
                         seen.add(domain)
                         candidates.append(
@@ -125,6 +128,44 @@ class LeadFinder:
         logger.info("Lead discovery found %d candidate businesses", len(candidates))
         return candidates[:count]
 
+    # ------------------------------------------------------------------
+    # Cooldown cache: don't re-discover the same businesses every run
+    # ------------------------------------------------------------------
+    SEEN_COOLDOWN_DAYS = 21
+
+    def _recently_seen(self) -> set[str]:
+        """Keys (domains/handles, lowercased) discovered within the cooldown window."""
+        from datetime import datetime, timedelta
+
+        from src.shared.utils import load_json
+
+        data = load_json(Path(settings.data_dir) / "lead_seen.json", {})
+        cutoff = (datetime.utcnow() - timedelta(days=self.SEEN_COOLDOWN_DAYS)).isoformat()
+        recent = set()
+        for key, ts in data.items():
+            if isinstance(ts, str) and ts >= cutoff:
+                recent.add(key.lower())
+        return recent
+
+    def mark_seen(self, candidates: list[dict[str, Any]]) -> None:
+        """Record discovered candidates in the cooldown cache."""
+        from datetime import datetime
+
+        from src.shared.config import settings as _s
+        from src.shared.utils import load_json, save_json
+
+        path = Path(_s.data_dir) / "lead_seen.json"
+        data = load_json(path, {})
+        now = datetime.utcnow().isoformat()
+        for c in candidates:
+            for key in (
+                self._domain(c.get("website_url") or ""),
+                (c.get("instagram_handle") or "").lower(),
+            ):
+                if key:
+                    data[key] = now
+        save_json(path, data)
+
     async def enrich_with_socials(self, candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Fetch each candidate's website and extract IG/LinkedIn handles.
         For web-found candidates without handles, also try a name-based
@@ -139,6 +180,9 @@ class LeadFinder:
                 candidate["instagram_handle"] = handles.get("instagram", candidate.get("instagram_handle", ""))
                 candidate["linkedin_handle"] = handles.get("linkedin", candidate.get("linkedin_handle", ""))
                 candidate["website_title"] = profile.get("title", "")
+                emails = profile.get("contact_emails") or []
+                if emails:
+                    candidate["contact_email"] = emails[0]
             except Exception as exc:
                 logger.warning("Enrichment failed for %s: %s", candidate.get("name"), exc)
 

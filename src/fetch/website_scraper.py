@@ -50,6 +50,7 @@ class WebsiteScraper:
         text_blocks = [t for t in text_blocks if len(t) > 20]
 
         links = self._extract_links(pages)
+        contact_emails = self._extract_contact_emails(pages)
 
         all_text = " ".join(
             self._clean(p["html_text"]) for p in pages if p.get("html_text")
@@ -62,6 +63,7 @@ class WebsiteScraper:
             "headings": headings,
             "text_blocks": text_blocks[:40],
             "links": links[:50],
+            "contact_emails": contact_emails,
             "page_count": len(pages),
             "pages": [{"url": p["url"], "title": p["title"]} for p in pages[:10]],
             "full_text_sample": all_text[:15000],
@@ -130,6 +132,24 @@ class WebsiteScraper:
                 if full not in links and self._same_domain(pages[0]["url"], full):
                     links.append(full)
         return links
+
+    @staticmethod
+    def _extract_contact_emails(pages: list[dict[str, Any]]) -> list[str]:
+        """Pull mailto: addresses (contact pages first)."""
+        import re
+
+        found: list[str] = []
+        ordered = sorted(
+            pages,
+            key=lambda p: ("contact" not in (p.get("url") or "").lower(),),
+        )
+        mailto_re = re.compile(r"mailto:([^\"'?>\s]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})", re.I)
+        for page in ordered:
+            for match in mailto_re.findall(page.get("html", "")):
+                email = match.strip().rstrip(".")
+                if email.lower() not in [e.lower() for e in found]:
+                    found.append(email)
+        return found[:5]
 
     @staticmethod
     def _clean(text: str) -> str:

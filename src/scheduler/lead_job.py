@@ -84,6 +84,10 @@ class LeadPipeline:
         )
         candidates = asyncio.run(self.finder.enrich_with_socials(raw_candidates))
         logger.info("Discovered %d candidates with social handles", len(candidates))
+        try:
+            self.finder.mark_seen(candidates)
+        except Exception as exc:
+            logger.warning("Could not update lead cooldown cache: %s", exc)
 
         social = SocialScraper()
         scored_leads = []
@@ -119,26 +123,56 @@ class LeadPipeline:
         db = SessionLocal()
         digest = []
         prompt_failures = 0
+        failures = []
+        creative = None
         try:
             for lead in top_leads:
                 try:
                     biz = self._get_or_create_business(db, lead)
                     prompts = self._generate_sample_prompts(lead, config, biz.id)
                     self._save_prompts(db, biz.id, prompts)
+
+                    if creative is None:
+                        from src.generation.creative_forge import CreativeForge
+
+                        creative = CreativeForge()
+                    profile = {
+                        "name": lead.get("name", ""),
+                        "meta_description": "",
+                        "headings": [],
+                    }
+                    rendered = 0
+                    for i, p in enumerate(prompts[:2]):  # top 2 assets per lead keep runtime sane
+                        try:
+                            asset = creative.render_prompt(p, profile, index=i)
+                            p["asset_path"] = asset["asset_path"]
+                            p["asset_type"] = asset["asset_type"]
+                            p["thumbnail"] = asset.get("thumbnail")
+                            if asset.get("warnings"):
+                                p["warnings"] = asset["warnings"]
+                            self._attach_asset(db, biz.id, p)
+                            rendered += 1
+                        except Exception as exc:
+                            logger.warning(
+                                "::warning::Asset render failed for %s/%s: %s",
+                                lead.get("name"), p.get("title"), exc,
+                            )
+                    logger.info("Rendered %d assets for lead %s", rendered, lead.get("name"))
                     digest.append({**lead, "prompts": prompts})
                 except Exception as exc:
                     prompt_failures += 1
+                    failures.append(
+                        {"lead": lead.get("name"), "stage": "prompt-generation", "error": str(exc)}
+                    )
                     logger.error(
                         "::error::Prompt generation failed for %s: %s", lead.get("name"), exc
                     )
                     digest.append({**lead, "prompts": [], "prompt_error": str(exc)[:200]})
 
-            if prompt_failures:
-                logger.error(
-                    "::error::%d/%d leads got NO prompts — all LLM providers failed. "
-                    "Set GROQ_API_KEY (free at console.groq.com) as a repo secret.",
-                    prompt_failures, len(top_leads),
-                )
+            if failures:
+                from src.delivery.github_feedback import GithubFeedback
+
+                GithubFeedback().report_degraded_run(failures)
         finally:
             db.close()
 
@@ -194,8 +228,11 @@ class LeadPipeline:
         return totals
 
     def _get_or_create_business(self, db: Any, lead: dict[str, Any]) -> Business:
-        """Persist the discovered lead so future runs can learn from it."""
+        """Persist the discovered lead so future runs can learn from it.
+        Contact email only when actually found on their website — never the
+        operator's own address or a fabricated placeholder."""
         handle = (lead.get("instagram_handle") or "").lstrip("@")
+        contact_email = (lead.get("contact_email") or "").strip() or None
         biz = None
         if handle:
             biz = (
@@ -215,7 +252,7 @@ class LeadPipeline:
                 website_url=lead.get("website_url") or None,
                 instagram_handle=handle or None,
                 linkedin_handle=lead.get("linkedin_handle") or None,
-                email=lead.get("digest_email") or settings.smtp_user or "lead@discovered.local",
+                email=contact_email or f"unverified+{handle or 'lead'}@leads.invalid",
                 timezone="Asia/Kolkata",
                 virality_threshold=settings.virality_threshold,
                 prompt_types=["educational", "storytelling", "social_proof", "promotional"],
@@ -225,8 +262,14 @@ class LeadPipeline:
             db.refresh(biz)
             logger.info("Persisted new lead business #%d %s", biz.id, biz.name)
         else:
+            changed = False
             if handle and not biz.instagram_handle:
                 biz.instagram_handle = handle
+                changed = True
+            if contact_email and "leads.invalid" in (biz.email or ""):
+                biz.email = contact_email
+                changed = True
+            if changed:
                 db.add(biz)
                 db.commit()
         return biz
@@ -243,10 +286,28 @@ class LeadPipeline:
                     prompt_type=self._prompt_type(p.get("prompt_type") or "educational"),
                     virality_score=p.get("virality_score"),
                     virality_label=p.get("virality_label"),
+                    audience_segment=(p.get("audience_segment") or None),
                     sent_at=now,
                 )
             )
         db.commit()
+
+    def _attach_asset(self, db: Any, business_id: int, prompt: dict[str, Any]) -> None:
+        """Record the rendered asset path on the newest matching Prompt row."""
+        row = (
+            db.query(Prompt)
+            .filter(
+                Prompt.business_id == business_id,
+                Prompt.prompt_text == (prompt.get("prompt_text") or ""),
+            )
+            .order_by(Prompt.id.desc())
+            .first()
+        )
+        if row is not None:
+            row.asset_path = prompt.get("asset_path")
+            row.asset_type = prompt.get("asset_type")
+            db.add(row)
+            db.commit()
 
     @staticmethod
     def _prompt_type(value: str) -> PromptType:

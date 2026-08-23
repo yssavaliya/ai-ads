@@ -18,7 +18,8 @@ from src.storage.models import Business, FeedbackType, Prompt, SessionLocal
 logger = logging.getLogger(__name__)
 
 FEEDBACK_PREFIX = "[content-intel-feedback]"
-FEEDBACK_RE = re.compile(r"prompt #(\d+) \[(GOOD|BAD|REGENERATE)")
+FEEDBACK_RE = re.compile(r"prompt #(\d+) \[(GOOD|BAD|REGENERATE|POSTED)")
+IG_POST_RE = re.compile(r"https?://(?:www\.)?instagram\.com/(?:p|reel|reels|tv)/[A-Za-z0-9_-]+/?", re.I)
 
 
 def parse_feedback_issues() -> list[dict[str, Any]]:
@@ -82,7 +83,9 @@ def close_issue(issue_number: int) -> None:
 
 
 def process_feedback() -> int:
-    """Process open feedback issues: update DB, Bayesian weights, close issues."""
+    """Process open feedback issues: update DB, Bayesian weights, close issues.
+    POSTED issues write a direct Engagement row tied to the exact Prompt —
+    no fuzzy matching needed for explicitly linked posts."""
     db = SessionLocal()
     updater = BayesianUpdater()
     issues = parse_feedback_issues()
@@ -97,6 +100,49 @@ def process_feedback() -> int:
             close_issue(issue["issue_number"])
             continue
 
+        if feedback == "posted":
+            url_match = IG_POST_RE.search(issue["body"])
+            if not url_match:
+                logger.warning(
+                    "::warning::POSTED issue #%s has no Instagram URL; leaving open for edit",
+                    issue["issue_number"],
+                )
+                continue
+            post_url = url_match.group(0)
+            post_id = post_url.rstrip("/").split("/")[-1]
+            from src.storage.models import Engagement, Platform
+            from datetime import datetime
+
+            existing = (
+                db.query(Engagement)
+                .filter(Engagement.prompt_id == prompt_id, Engagement.post_id == post_id)
+                .first()
+            )
+            if existing is None:
+                db.add(
+                    Engagement(
+                        prompt_id=prompt_id,
+                        platform=Platform.INSTAGRAM,
+                        post_id=post_id[:100],
+                        post_url=post_url[:500],
+                        fetched_at=datetime.utcnow(),
+                    )
+                )
+            prompt.feedback = FeedbackType.GOOD  # human-confirmed posted
+            prompt.feedback_at = datetime.utcnow()
+            db.add(prompt)
+            updater.record(
+                prompt.business_id,
+                "good",
+                prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
+                audience_segment=prompt.audience_segment or None,
+            )
+            db.commit()
+            logger.info("Linked post %s to prompt %s", post_url, prompt_id)
+            close_issue(issue["issue_number"])
+            processed += 1
+            continue
+
         fb = {"good": FeedbackType.GOOD, "bad": FeedbackType.BAD, "regenerate": FeedbackType.REGENERATE}.get(feedback)
         if fb is None:
             close_issue(issue["issue_number"])
@@ -108,12 +154,12 @@ def process_feedback() -> int:
         prompt.feedback_at = datetime.utcnow()
         db.add(prompt)
 
+        # A regenerate request is a real negative signal for learning too.
         updater.record(
             prompt.business_id,
             "good" if feedback == "good" else "bad",
             prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
-            format=None,
-            audience_segment=None,
+            audience_segment=prompt.audience_segment or None,
         )
         db.commit()
         close_issue(issue["issue_number"])
