@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -65,6 +66,13 @@ class SocialScraper:
         """Search Instagram accounts by keyword (Apify free tier)."""
         if not self.apify_token:
             logger.warning("fetch_instagram_search skipped: no APIFY_TOKEN")
+            return []
+        # The actor validates 'search' against a pattern that forbids most
+        # punctuation; raw web-search titles ("Homes.com: Homes for Sale...")
+        # must be reduced to plain words or the call 400s.
+        query = re.sub(r"[^\w\s]", " ", query)
+        query = re.sub(r"\s+", " ", query).strip()
+        if not query:
             return []
         try:
             async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT) as client:

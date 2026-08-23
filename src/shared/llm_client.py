@@ -117,7 +117,7 @@ class LLMClient:
                 max_retries=2,
             )
             start = time.monotonic()
-            response = self._chat(client, settings.groq_model, prompt, temperature, max_retries)
+            response = self._chat(client, settings.groq_model, prompt, temperature, 2)
             content = (response.choices[0].message.content or "").strip()
             logger.info(
                 "::notice::[%s] Groq answered via %s in %.1fs (%d chars)",
@@ -143,7 +143,7 @@ class LLMClient:
                 max_retries=2,
             )
             start = time.monotonic()
-            response = self._chat(client, settings.gemini_model, prompt, temperature, max_retries)
+            response = self._chat(client, settings.gemini_model, prompt, temperature, 2)
             content = (response.choices[0].message.content or "").strip()
             logger.info(
                 "::notice::[%s] Gemini answered via %s in %.1fs (%d chars)",
