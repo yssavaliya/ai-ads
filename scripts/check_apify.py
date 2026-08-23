@@ -40,7 +40,7 @@ async def main() -> None:
         resp = await client.post(
             f"{SocialScraper.APIFY_BASE}/acts/{SocialScraper.APIFY_SEARCH_ACTOR}/run-sync-get-dataset-items",
             params={"token": token},
-            json={"searchType": "user", "search": [query], "resultsLimit": 5},
+            json={"searchType": "user", "search": query, "resultsLimit": 5},
         )
         dt = asyncio.get_event_loop().time() - t0
         print(f"\n[search actor] {resp.status_code} in {dt:.0f}s")
