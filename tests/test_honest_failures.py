@@ -85,3 +85,61 @@ def test_forge_variants_include_reel_beats_and_segment():
     v = variants[0]
     assert v["audience_segment"] == "young couples"
     assert v["reel_beats"] == ["beat one", "beat two", "beat three"]
+
+def test_groq_path_executes_without_nameerror(monkeypatch):
+    """Regression: the Groq call referenced an undefined `max_retries` name
+    and crashed before ever reaching the API — even with a valid key set."""
+    from src.shared.config import settings
+
+    monkeypatch.setattr(settings, "groq_api_key", "test-key")
+    monkeypatch.setattr(settings, "gemini_api_key", "")
+
+    fake_resp = MagicMock()
+    fake_resp.choices = [MagicMock()]
+    fake_resp.choices[0].message.content = '```json\n{"ok": true}\n```'
+
+    fake_client = MagicMock()
+    fake_client.chat.completions.create.return_value = fake_resp
+
+    with patch("openai.OpenAI", return_value=fake_client):
+        result = LLMClient().run("say hi", label="regression")
+
+    assert '"ok"' in result.stdout  # fences stripped, Groq answer used
+    assert fake_client.chat.completions.create.call_count >= 1
+
+
+def test_instagram_search_query_is_sanitized():
+    import asyncio
+    from src.fetch.social_scraper import SocialScraper
+
+    captured = {}
+
+    async def fake_post(self, **kwargs):
+        captured["payload"] = None
+        raise AssertionError("not used")
+
+    scraper = SocialScraper(apify_token="t")
+
+    class FakeResp:
+        status_code = 200
+        text = "[]"
+        def json(self):
+            return []
+        def raise_for_status(self):
+            pass
+
+    class FakeClient:
+        def __init__(self, *a, **k):
+            pass
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *a):
+            return False
+        async def post(self, url, params=None, json=None):
+            captured["payload"] = json
+            return FakeResp()
+
+    with patch("src.fetch.social_scraper.httpx.AsyncClient", FakeClient):
+        asyncio.run(scraper.fetch_instagram_search('Homes.com: Homes for Sale, Real Estate & Rent!'))
+
+    assert captured["payload"]["search"] == "Homes com Homes for Sale Real Estate Rent"
