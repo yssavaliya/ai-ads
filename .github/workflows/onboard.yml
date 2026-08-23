@@ -62,7 +62,10 @@ jobs:
       - name: Restore agent.db cache
         uses: actions/cache@v4
         with:
-          path: agent.db
+          path: |
+            agent.db
+            agent.db-wal
+            agent.db-shm
           key: agent-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             agent-db-${{ runner.os }}-

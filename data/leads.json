@@ -1,33 +1,4 @@
 {
-  "generated_at": "2026-08-23T10:55:57.423419",
-  "leads": [
-    {
-      "name": "Vicky Bakery",
-      "website_url": "https://vickybakery.com/",
-      "instagram_handle": "vickybakery",
-      "linkedin_handle": "",
-      "niche": "bakery",
-      "location": "Ahmedabad",
-      "found_via": "search",
-      "follower_count": 900,
-      "opportunity_score": 80,
-      "opportunity_reasons": [
-        "ok"
-      ],
-      "followers": 900,
-      "prompts": [
-        {
-          "title": "Hook",
-          "prompt_text": "Show the oven",
-          "prompt_type": "educational",
-          "virality_score": 88,
-          "virality_label": "high",
-          "audience_segment": "home bakers",
-          "asset_path": "a.jpg",
-          "asset_type": "image",
-          "thumbnail": ""
-        }
-      ]
-    }
-  ]
+  "generated_at": null,
+  "leads": []
 }

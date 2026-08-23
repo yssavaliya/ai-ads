@@ -45,7 +45,10 @@ jobs:
       - name: Restore agent.db cache
         uses: actions/cache@v4
         with:
-          path: agent.db
+          path: |
+            agent.db
+            agent.db-wal
+            agent.db-shm
           key: agent-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             agent-db-${{ runner.os }}-
@@ -62,11 +65,28 @@ jobs:
           python -m pip install -e .
           python -m pip install piper-tts pillow
 
+      - name: Verify creative-rendering dependencies
+        run: |
+          set -e
+          echo "ffmpeg: $(ffmpeg -version | head -1)"
+          echo "ffprobe: $(ffprobe -version | head -1)"
+          command -v piper >/dev/null || {
+            echo "::error::piper binary not found on PATH after 'pip install piper-tts' — Reel voiceover would fail silently later"
+            exit 1
+          }
+          echo "piper: found at $(command -v piper)"
+
       - name: Run daily pipeline
         run: |
           python -m src.scheduler.daily_job 2>&1 | while IFS= read -r line; do
-            echo "::notice::$line"
             echo "$line"
+            if [[ "$line" == *"::error::"* ]]; then
+              echo "::error::${line#*::error::}"
+            elif [[ "$line" == *"::warning::"* ]]; then
+              echo "::warning::${line#*::warning::}"
+            else
+              echo "::notice::$line"
+            fi
           done
 
       - name: Upload prompt logs and rendered assets

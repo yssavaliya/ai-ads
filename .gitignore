@@ -13,6 +13,7 @@ logs/prompts/*
 .mypy_cache/
 node_modules/
 playwright-report/
-test-results/logs/assets/*
+test-results/
+logs/assets/*
 logs/preview/*
 !logs/prompts/.gitkeep

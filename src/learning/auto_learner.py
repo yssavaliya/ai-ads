@@ -17,6 +17,8 @@ MIN_SIMILARITY = 0.35          # min caption/prompt token overlap to count as a 
 POST_MATCH_WINDOW_DAYS = 5     # how many days after a prompt the user may have posted
 MATCH_LOOKBACK_DAYS = 14       # how far back to look for sent prompts
 BENCHMARK_LOOKBACK_DAYS = 30   # median engagement window
+NO_HISTORY_BENCHMARK = 0.01    # fallback "good post" bar when a business has no
+                                # positive-engagement posts yet to compute a real median from
 
 
 def tokenize(text: str) -> set[str]:
@@ -126,7 +128,7 @@ class AutoLearner:
         """Median engagement rate of the business's own recent posts."""
         rates = sorted(engagement_rate(p, followers) for p in posts if engagement_rate(p, followers) > 0)
         if not rates:
-            return 0.01
+            return NO_HISTORY_BENCHMARK
         n = len(rates)
         mid = n // 2
         return rates[mid] if n % 2 else (rates[mid - 1] + rates[mid]) / 2

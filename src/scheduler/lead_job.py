@@ -87,6 +87,7 @@ class LeadPipeline:
 
         social = SocialScraper()
         scored_leads = []
+        structurally_ineligible = []
         for candidate in candidates:
             handle = candidate.get("instagram_handle") or ""
             social_data = {}
@@ -103,6 +104,14 @@ class LeadPipeline:
                 max_followers=config["max_followers"],
             )
             if not assessment.get("eligible"):
+                # "Too big" is a durable verdict (a global brand won't shrink
+                # into range next week) — cache it long-term so it stops
+                # burning search budget every run. "Too small" is often just
+                # an unverified/zero follower count from keyless discovery,
+                # not a real tiny account, so it stays retryable.
+                reasons = assessment.get("reasons") or []
+                if any("too big" in r for r in reasons):
+                    structurally_ineligible.append(candidate)
                 continue
 
             lead = {
@@ -124,6 +133,16 @@ class LeadPipeline:
             self.finder.mark_seen(top_leads)
         except Exception as exc:
             logger.warning("Could not update lead cooldown cache: %s", exc)
+
+        if structurally_ineligible:
+            try:
+                self.finder.mark_rejected(structurally_ineligible)
+                logger.info(
+                    "Long-cooldown rejected %d structurally-ineligible candidates",
+                    len(structurally_ineligible),
+                )
+            except Exception as exc:
+                logger.warning("Could not update lead rejection cache: %s", exc)
 
         db = SessionLocal()
         digest = []
