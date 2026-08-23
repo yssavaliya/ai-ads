@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class SocialScraper:
     """Fetches public Instagram/LinkedIn profile + recent post data.
-    Primary: Apify free tier (REST API). Fallback: Playwright for public pages.
+    Primary: Apify free tier (REST API). Fallback: instaloader for public profiles.
     Never requires local CPU models; runs entirely in GitHub Actions."""
 
     APIFY_INSTAGRAM_ACTOR = "apify/instagram-scraper"
@@ -33,14 +33,14 @@ class SocialScraper:
             try:
                 return await self._apify_instagram(handle, limit)
             except Exception as exc:
-                logger.warning("Apify Instagram failed for %s: %s; falling back to Playwright", handle, exc)
+                logger.warning("Apify Instagram failed for %s: %s; falling back to instaloader", handle, exc)
         else:
-            logger.info("APIFY_TOKEN not set; falling back to Playwright for @%s", handle)
+            logger.info("APIFY_TOKEN not set; falling back to instaloader for @%s", handle)
 
         try:
-            return await self._playwright_instagram(handle)
+            return await self._instaloader_instagram(handle)
         except Exception as exc:
-            logger.warning("Playwright Instagram failed for %s: %s", handle, exc)
+            logger.warning("instaloader Instagram failed for %s: %s", handle, exc)
             return {"handle": handle, "error": str(exc), "posts": []}
 
     async def fetch_linkedin(self, handle: str, limit: int = POST_LIMIT) -> dict[str, Any]:
@@ -116,7 +116,7 @@ class SocialScraper:
             items = run_resp.json()
         return self._normalize_linkedin(items)
 
-    async def _playwright_instagram(self, handle: str) -> dict[str, Any]:
+    async def _instaloader_instagram(self, handle: str) -> dict[str, Any]:
         """Fallback when APIFY_TOKEN is unset: instaloader (open-source,
         MIT-licensed) fetches public profile metadata + recent post metadata.
         Loudly degraded output vs Apify; raises on failure so callers log it."""
