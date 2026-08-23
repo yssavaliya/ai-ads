@@ -42,6 +42,12 @@ SOCIAL_LINK_PATTERNS = {
     "linkedin": re.compile(r"linkedin\.com/(?:company|in)/([a-zA-Z0-9\-_]+)"),
 }
 
+# Path segments that appear on instagram.com URLs but are not usernames.
+INSTAGRAM_RESERVED_PATHS = {
+    "p", "reel", "reels", "tv", "explore", "stories", "accounts",
+    "directory", "about", "legal", "developer", "share", "web",
+}
+
 
 class LeadFinder:
     """Discovers candidate businesses automatically: free web search
@@ -169,7 +175,8 @@ class LeadFinder:
     async def enrich_with_socials(self, candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Fetch each candidate's website and extract IG/LinkedIn handles.
         For web-found candidates without handles, also try a name-based
-        Instagram lookup (Apify) so they become scoreable."""
+        Instagram lookup (Apify when configured, else keyless web search)
+        so they become scoreable."""
         for candidate in candidates:
             try:
                 from src.fetch.website_scraper import WebsiteScraper
@@ -186,7 +193,7 @@ class LeadFinder:
             except Exception as exc:
                 logger.warning("Enrichment failed for %s: %s", candidate.get("name"), exc)
 
-            if not candidate.get("instagram_handle") and settings.apify_token:
+            if not candidate.get("instagram_handle"):
                 try:
                     match = await self._find_instagram_by_name(
                         candidate.get("name", ""), candidate.get("niche", ""), candidate.get("location", "")
@@ -302,10 +309,23 @@ class LeadFinder:
         return candidates
 
     async def _find_instagram_by_name(self, name: str, niche: str, location: str) -> dict[str, Any] | None:
-        """Search Instagram for a business by its name (used for web-found candidates)."""
+        """Search Instagram for a business by its name (used for web-found
+        candidates). Apify search when a token exists; otherwise a keyless
+        web search for the business's Instagram profile URL."""
         query = name.strip() or niche
         if not query:
             return None
+        if settings.apify_token:
+            try:
+                match = await self._find_instagram_apify(query, name)
+            except Exception as exc:
+                logger.warning("Apify name lookup failed for %r: %s", query, exc)
+                match = None
+            if match:
+                return match
+        return await self._find_instagram_via_web(query)
+
+    async def _find_instagram_apify(self, query: str, name: str) -> dict[str, Any] | None:
         items = await SocialScraper().fetch_instagram_search(query)
         for item in items:
             handle = item.get("username") or ""
@@ -325,6 +345,25 @@ class LeadFinder:
                     "followers": item.get("followersCount") or 0,
                     "full_name": item.get("fullName") or "",
                 }
+        return None
+
+    async def _find_instagram_via_web(self, query: str) -> dict[str, Any] | None:
+        """Keyless fallback: find the business's Instagram profile through the
+        free web-search engines. Follower count is unknown here (0); it gets
+        filled in later by the social scraper during scoring."""
+        try:
+            results = await self._search_web(f'"{query}" instagram site:instagram.com')
+        except Exception as exc:
+            logger.warning("Web IG lookup failed for %r: %s", query, exc)
+            return None
+        for url, title in results:
+            match = SOCIAL_LINK_PATTERNS["instagram"].search(url or "")
+            if not match:
+                continue
+            handle = match.group(1).rstrip(".")
+            if not handle or handle.lower() in INSTAGRAM_RESERVED_PATHS:
+                continue
+            return {"handle": handle, "followers": 0, "full_name": title[:80]}
         return None
 
     @staticmethod

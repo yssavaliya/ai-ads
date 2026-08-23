@@ -84,10 +84,6 @@ class LeadPipeline:
         )
         candidates = asyncio.run(self.finder.enrich_with_socials(raw_candidates))
         logger.info("Discovered %d candidates with social handles", len(candidates))
-        try:
-            self.finder.mark_seen(candidates)
-        except Exception as exc:
-            logger.warning("Could not update lead cooldown cache: %s", exc)
 
         social = SocialScraper()
         scored_leads = []
@@ -119,6 +115,15 @@ class LeadPipeline:
 
         scored_leads.sort(key=lambda l: l["opportunity_score"], reverse=True)
         top_leads = scored_leads[: config["target_count"]]
+
+        # Only leads actually delivered enter the 21-day cooldown cache.
+        # Raw candidates rejected by scoring stay retryable on future runs —
+        # marking everything discovered would starve the pipeline after one
+        # unlucky run.
+        try:
+            self.finder.mark_seen(top_leads)
+        except Exception as exc:
+            logger.warning("Could not update lead cooldown cache: %s", exc)
 
         db = SessionLocal()
         digest = []

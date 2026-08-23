@@ -28,7 +28,7 @@ def test_decode_bing_url_garbage():
 def test_discover_runs_instagram_search_even_when_web_fills_count():
     finder = LeadFinder()
 
-    async def fake_web_search(self, query):
+    async def fake_web_search(query):
         return [("https://shop-a.com/", "Shop A"), ("https://shop-b.com/", "Shop B")]
 
     async def fake_ig_search(self, query, limit=10):
@@ -88,3 +88,50 @@ def test_enrich_looks_up_instagram_by_name_for_web_candidates():
 
     assert enriched[0]["instagram_handle"] == "sweetbakery"
     assert enriched[0]["follower_count"] == 800
+
+
+def test_find_instagram_by_name_falls_back_to_web_search_without_token():
+    finder = LeadFinder()
+
+    async def fake_web(query):
+        assert "site:instagram.com" in query
+        return [
+            ("https://www.instagram.com/p/Cabc123/", "A post"),
+            ("https://www.instagram.com/explore/tags/bakery/", "Explore"),
+            ("https://www.instagram.com/vickybakery/", "Vicky Bakery — Ahmedabad"),
+        ]
+
+    with (
+        patch("src.shared.config.settings.apify_token", ""),
+        patch.object(finder, "_search_web", fake_web),
+    ):
+        match = asyncio.run(finder._find_instagram_by_name("Vicky Bakery", "bakery", "Ahmedabad"))
+
+    assert match is not None
+    assert match["handle"] == "vickybakery"
+
+
+def test_enrich_name_lookup_works_without_apify_token():
+    finder = LeadFinder()
+    candidates = [
+        {
+            "name": "Sweet Bakery",
+            "website_url": "https://sweetbakery.com/",
+            "instagram_handle": "",
+            "niche": "bakery",
+            "location": "Ahmedabad",
+        }
+    ]
+
+    async def fake_web(query):
+        return [("https://www.instagram.com/sweetbakeryahd/", "Sweet Bakery")]
+
+    with (
+        patch.object(finder, "_extract_social_handles", return_value={"instagram": "", "linkedin": ""}),
+        patch("src.fetch.website_scraper.WebsiteScraper.scrape", return_value={"title": "x", "pages": []}),
+        patch("src.shared.config.settings.apify_token", ""),
+        patch.object(finder, "_search_web", fake_web),
+    ):
+        enriched = asyncio.run(finder.enrich_with_socials(candidates))
+
+    assert enriched[0]["instagram_handle"] == "sweetbakeryahd"
