@@ -16,8 +16,11 @@ class SocialScraper:
     Primary: Apify free tier (REST API). Fallback: instaloader for public profiles.
     Never requires local CPU models; runs entirely in GitHub Actions."""
 
-    APIFY_INSTAGRAM_ACTOR = "apify/instagram-scraper"
-    APIFY_LINKEDIN_ACTOR = "curious_coder/linkedin-profile-scraper"
+    # Actor IDs in Apify API URL paths MUST use '~' between owner and name
+    # ('/' in the path 404s with "page-not-found" — verified empirically).
+    APIFY_INSTAGRAM_ACTOR = "apify~instagram-scraper"
+    APIFY_SEARCH_ACTOR = "apify~instagram-search-scraper"
+    APIFY_LINKEDIN_ACTOR = "curious_coder~linkedin-profile-scraper"
     APIFY_BASE = "https://api.apify.com/v2"
     POST_LIMIT = 20
 
@@ -66,7 +69,7 @@ class SocialScraper:
         try:
             async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT) as client:
                 run_resp = await client.post(
-                    f"{self.APIFY_BASE}/acts/apify/instagram-search-scraper/run-sync-get-dataset-items",
+                    f"{self.APIFY_BASE}/acts/{self.APIFY_SEARCH_ACTOR}/run-sync-get-dataset-items",
                     params={"token": self.apify_token},
                     json={"searchType": "user", "search": [query], "resultsLimit": limit},
                 )
@@ -113,12 +116,8 @@ class SocialScraper:
                 f"{self.APIFY_BASE}/acts/{self.APIFY_INSTAGRAM_ACTOR}/run-sync-get-dataset-items",
                 params={"token": self.apify_token},
                 json={
-                    "username": [handle],
+                    "usernames": [handle],
                     "resultsLimit": limit,
-                    "shouldDownloadVideos": False,
-                    "shouldDownloadCovers": False,
-                    "shouldDownloadSubtitles": False,
-                    "shouldDownloadCaptions": False,
                 },
             )
             if run_resp.status_code >= 400:
@@ -168,6 +167,11 @@ class SocialScraper:
                     save_metadata=False,
                     compress_json=False,
                     quiet=True,
+                    # Fail fast: default unlimited retries sleep ~11 minutes per
+                    # profile on 429s, which hangs CI jobs. GitHub runner IPs
+                    # are heavily rate-limited by IG anyway — if it doesn't
+                    # work first try, let Apify handle it instead.
+                    max_connection_attempts=1,
                 )
                 profile = instaloader.Profile.from_username(L.context, handle)
                 posts = []
