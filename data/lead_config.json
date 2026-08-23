@@ -1,6 +1,6 @@
 {
   "niches": ["home decor", "bakery", "jewellery store"],
-  "locations": ["Ahmedabad", "Surat", "Vadodara"],
+  "locations": ["Ahmedabad"],
   "platform_focus": "instagram",
   "min_followers": 500,
   "max_followers": 20000,

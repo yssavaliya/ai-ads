@@ -17,15 +17,23 @@ from src.generation.virality_gate import ViralityGate
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.lead_scorer import LeadScorer
 from src.intelligence.trend_radar import TrendRadar
+from src.learning.auto_learner import AutoLearner
+from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
 from src.shared.utils import load_json, save_json
+from src.storage.models import Base, Business, Prompt, PromptType, SessionLocal, engine as db_engine
 
 logger = logging.getLogger(__name__)
 
 
 class LeadPipeline:
     """Discovers potential businesses automatically, scores their content
-    opportunity, and generates viral prompt samples for the best leads."""
+    opportunity, and generates viral prompt samples for the best leads.
+
+    Self-learning: every run first re-scrapes previously discovered leads'
+    Instagram posts and matches them against prompts we generated earlier —
+    real engagement updates the Bayesian weights, which steer the next round
+    of prompt generation."""
 
     def __init__(self) -> None:
         self.finder = LeadFinder()
@@ -34,6 +42,7 @@ class LeadPipeline:
         self.audience = AudienceMapper()
         self.trends = TrendRadar()
         self.email = EmailSender()
+        self.weights = BayesianUpdater()
 
     def load_config(self) -> dict[str, Any]:
         default = load_json(Path(settings.data_dir) / "lead_config.json", {})
@@ -60,6 +69,10 @@ class LeadPipeline:
             "Lead pipeline: niches=%s locations=%s target=%d",
             config["niches"], config["locations"], config["target_count"],
         )
+
+        # 1) Self-learning pass: re-scrape previously discovered leads, match
+        #    their new posts to prompts we generated before, update weights.
+        learning = self._learning_pass()
 
         raw_candidates = asyncio.run(
             self.finder.discover(
@@ -103,25 +116,31 @@ class LeadPipeline:
         scored_leads.sort(key=lambda l: l["opportunity_score"], reverse=True)
         top_leads = scored_leads[: config["target_count"]]
 
+        db = SessionLocal()
         digest = []
         prompt_failures = 0
-        for lead in top_leads:
-            try:
-                prompts = self._generate_sample_prompts(lead, config)
-                digest.append({**lead, "prompts": prompts})
-            except Exception as exc:
-                prompt_failures += 1
-                logger.error(
-                    "::error::Prompt generation failed for %s: %s", lead.get("name"), exc
-                )
-                digest.append({**lead, "prompts": [], "prompt_error": str(exc)[:200]})
+        try:
+            for lead in top_leads:
+                try:
+                    biz = self._get_or_create_business(db, lead)
+                    prompts = self._generate_sample_prompts(lead, config, biz.id)
+                    self._save_prompts(db, biz.id, prompts)
+                    digest.append({**lead, "prompts": prompts})
+                except Exception as exc:
+                    prompt_failures += 1
+                    logger.error(
+                        "::error::Prompt generation failed for %s: %s", lead.get("name"), exc
+                    )
+                    digest.append({**lead, "prompts": [], "prompt_error": str(exc)[:200]})
 
-        if prompt_failures:
-            logger.error(
-                "::error::%d/%d leads got NO prompts — all LLM providers failed. "
-                "Set GROQ_API_KEY (free at console.groq.com) as a repo secret.",
-                prompt_failures, len(top_leads),
-            )
+            if prompt_failures:
+                logger.error(
+                    "::error::%d/%d leads got NO prompts — all LLM providers failed. "
+                    "Set GROQ_API_KEY (free at console.groq.com) as a repo secret.",
+                    prompt_failures, len(top_leads),
+                )
+        finally:
+            db.close()
 
         self._save_leads(digest)
         email_ok = self._send_digest(digest, config)
@@ -132,13 +151,113 @@ class LeadPipeline:
             "top_leads": len(digest),
             "prompts_generated": sum(len(l.get("prompts") or []) for l in digest),
             "prompt_failures": prompt_failures,
+            "learning": learning,
             "email_sent": email_ok,
             "generated_at": datetime.utcnow().isoformat(),
         }
         logger.info("Lead pipeline result: %s", result)
         return result
 
-    def _generate_sample_prompts(self, lead: dict[str, Any], config: dict[str, Any]) -> list[dict[str, Any]]:
+    def _learning_pass(self) -> dict[str, Any]:
+        """Re-scrape every known lead's Instagram, match new posts to prompts
+        we generated earlier, and feed engagement outcomes into the weights."""
+        import asyncio as _asyncio
+
+        Base.metadata.create_all(bind=db_engine)
+        db = SessionLocal()
+        scraper = SocialScraper()
+        learner = AutoLearner()
+        totals = {"leads_checked": 0, "matched": 0, "learned": 0}
+        try:
+            businesses = (
+                db.query(Business)
+                .filter(Business.is_active.is_(True))
+                .filter(Business.instagram_handle.isnot(None))
+                .filter(Business.instagram_handle != "")
+                .all()
+            )
+            for biz in businesses:
+                try:
+                    social = _asyncio.run(scraper.fetch_instagram(biz.instagram_handle))
+                    res = learner.run_for_business(biz.id, social, db)
+                    totals["leads_checked"] += 1
+                    totals["matched"] += int(res.get("matched") or 0)
+                    totals["learned"] += int(res.get("learned") or 0)
+                except Exception as exc:
+                    logger.warning("Learning pass failed for %s: %s", biz.name, exc)
+        finally:
+            db.close()
+        if totals["leads_checked"]:
+            logger.info("Self-learning pass: %s", totals)
+        else:
+            logger.info("Self-learning pass: no known leads with IG handles yet")
+        return totals
+
+    def _get_or_create_business(self, db: Any, lead: dict[str, Any]) -> Business:
+        """Persist the discovered lead so future runs can learn from it."""
+        handle = (lead.get("instagram_handle") or "").lstrip("@")
+        biz = None
+        if handle:
+            biz = (
+                db.query(Business)
+                .filter(Business.instagram_handle.ilike(handle))
+                .first()
+            )
+        if biz is None and lead.get("website_url"):
+            biz = (
+                db.query(Business)
+                .filter(Business.website_url == lead["website_url"])
+                .first()
+            )
+        if biz is None:
+            biz = Business(
+                name=lead.get("name") or handle or "Unknown lead",
+                website_url=lead.get("website_url") or None,
+                instagram_handle=handle or None,
+                linkedin_handle=lead.get("linkedin_handle") or None,
+                email=lead.get("digest_email") or settings.smtp_user or "lead@discovered.local",
+                timezone="Asia/Kolkata",
+                virality_threshold=settings.virality_threshold,
+                prompt_types=["educational", "storytelling", "social_proof", "promotional"],
+            )
+            db.add(biz)
+            db.commit()
+            db.refresh(biz)
+            logger.info("Persisted new lead business #%d %s", biz.id, biz.name)
+        else:
+            if handle and not biz.instagram_handle:
+                biz.instagram_handle = handle
+                db.add(biz)
+                db.commit()
+        return biz
+
+    def _save_prompts(self, db: Any, business_id: int, prompts: list[dict[str, Any]]) -> None:
+        """Store generated sample prompts so auto-learning can match the
+        lead's future posts against them."""
+        now = datetime.utcnow()
+        for p in prompts:
+            db.add(
+                Prompt(
+                    business_id=business_id,
+                    prompt_text=p.get("prompt_text") or "",
+                    prompt_type=self._prompt_type(p.get("prompt_type") or "educational"),
+                    virality_score=p.get("virality_score"),
+                    virality_label=p.get("virality_label"),
+                    sent_at=now,
+                )
+            )
+        db.commit()
+
+    @staticmethod
+    def _prompt_type(value: str) -> PromptType:
+        try:
+            return PromptType(value)
+        except ValueError:
+            return PromptType.EDUCATIONAL
+
+    def _generate_sample_prompts(
+        self, lead: dict[str, Any], config: dict[str, Any], business_id: int | None = None
+    ) -> list[dict[str, Any]]:
         profile = {
             "name": lead.get("name", ""),
             "website_url": lead.get("website_url", ""),
@@ -148,11 +267,13 @@ class LeadPipeline:
         }
         audience_map = self.audience.map_audience(profile, None, None, None)
         trend_data = self.trends.scan(profile, audience_map, None)
+        weights = self.weights.to_forge_weights(business_id) if business_id else {}
         prompts = self.gate.run(
             profile,
             audience_map,
             trend_data,
             config.get("prompt_types", ["educational", "storytelling", "social_proof", "promotional"]),
+            weights,
         )
         return prompts
 
