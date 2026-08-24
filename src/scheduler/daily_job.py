@@ -194,7 +194,13 @@ class DailyPipeline:
         only what already works."""
         allowed = business.get("prompt_types", ["educational", "storytelling", "social_proof"])
         candidates = [t for t in allowed if t not in existing_types] or allowed
-        chosen = random.choice(candidates)
+        # Information-gain: explore the LEAST-tried format first so the loop
+        # fills its blind spots instead of randomly sampling proven ones.
+        def _explore_score(t: str) -> float:
+            w = weights.get(f"topics::{t}") if weights else None
+            return 0.0 if w is None else float(w)  # unexplored (absent) ranked best
+
+        chosen = min(candidates, key=_explore_score)
         extras = self.gate.run(profile, audience_map, trend_data, [chosen], weights)
         for ex in extras:
             if ex.get("prompt_type") == chosen:
