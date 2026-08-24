@@ -13,8 +13,8 @@ from src.shared.utils import load_businesses
 
 logger = logging.getLogger(__name__)
 
-MIN_SIMILARITY = 0.35          # min caption/prompt token overlap to count as a match
-POST_MATCH_WINDOW_DAYS = 5     # how many days after a prompt the user may have posted
+MIN_SIMILARITY = 0.30          # min caption/prompt token overlap to count as a match
+POST_MATCH_WINDOW_DAYS = 10    # how many days after a prompt the user may have posted
 MATCH_LOOKBACK_DAYS = 14       # how far back to look for sent prompts
 BENCHMARK_LOOKBACK_DAYS = 30   # median engagement window
 NO_HISTORY_BENCHMARK = 0.01    # fallback "good post" bar when a business has no
@@ -32,6 +32,20 @@ def jaccard_similarity(a: str, b: str) -> float:
     if not ta or not tb:
         return 0.0
     return len(ta & tb) / len(ta | tb)
+
+
+def containment(a: str, b: str) -> float:
+    """Overlap relative to the SMALLER caption — catches cases where one post
+    is a shortened/paraphrased version of the other (common when a user trims
+    the suggested caption before posting)."""
+    ta, tb = tokenize(a), tokenize(b)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / min(len(ta), len(tb))
+
+
+def caption_similarity(post_caption: str, prompt_text: str) -> float:
+    return max(jaccard_similarity(post_caption, prompt_text), containment(post_caption, prompt_text))
 
 
 def engagement_rate(post: dict[str, Any], followers: int | None) -> float:
@@ -186,7 +200,7 @@ class AutoLearner:
                     continue
                 if posted_at < prompt["sent_at"] or posted_at > window_end:
                     continue
-                sim = jaccard_similarity(
+                sim = caption_similarity(
                     post.get("caption") or "", prompt["prompt_text"]
                 )
                 if sim >= MIN_SIMILARITY and (best is None or sim > best[0]):
