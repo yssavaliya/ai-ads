@@ -185,7 +185,14 @@ class DailyPipeline:
                 )
             db.commit()
 
-            email_ok = self.email.send_daily_prompts(business, saved)
+            try:
+                email_ok = self.email.send_daily_prompts(business, saved)
+            except Exception as exc:
+                # A transient SMTP error must not discard a successfully
+                # generated batch — log it; prompts are already persisted and
+                # the user can be re-notified by re-running the workflow.
+                logger.error("::error::Daily email for %s failed to send: %s", name, exc)
+                email_ok = False
             logger.info("Daily email for %s sent=%s (%d prompts)", name, email_ok, len(saved))
             return {"business": name, "prompts": len(saved), "email_sent": email_ok}
         finally:
@@ -321,7 +328,25 @@ class DailyPipeline:
                     return blob["data"]
             except Exception:
                 pass
-        data = compute()
+        try:
+            data = compute()
+        except Exception as exc:
+            # A transient LLM/API outage must NOT kill the whole daily run.
+            # Degrade to stale cached intel if we have it, else empty — the
+            # generator and predictor still produce prompts (with less grounding),
+            # and the Drift Check workflow alerts separately.
+            logger.error(
+                "::warning::Intel '%s' for %s failed: %s; falling back to stale/empty",
+                key, business.get("name"), exc,
+            )
+            if path.exists():
+                try:
+                    blob = _json.loads(path.read_text(encoding="utf-8"))
+                    logger.info("Using stale intel cache for %s/%s", business.get("name"), key)
+                    return blob["data"]
+                except Exception:
+                    pass
+            return {}
         try:
             path.write_text(
                 _json.dumps({"ts": datetime.utcnow().timestamp(), "data": data}, default=str),

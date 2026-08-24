@@ -45,29 +45,46 @@ class ViralityGate:
         hints: list[str] = []
 
         for attempt in range(1, self.max_attempts + 1):
-            variants = self.forge.generate_variants(
-                business_profile=business_profile,
-                audience_map=audience_map,
-                trend_data=trend_data,
-                prompt_types=prompt_types,
-                weights=weights,
-                improvement_hints=hints,
-                count=5,
-            )
+            try:
+                variants = self.forge.generate_variants(
+                    business_profile=business_profile,
+                    audience_map=audience_map,
+                    trend_data=trend_data,
+                    prompt_types=prompt_types,
+                    weights=weights,
+                    improvement_hints=hints,
+                    count=5,
+                )
+            except Exception as exc:
+                # Forge is honest (raises on bad LLM output); we don't fake
+                # variants, but one failed attempt must not abort the whole run.
+                logger.error("::warning::Variant generation failed on attempt %d: %s", attempt, exc)
+                break
             if not variants:
                 logger.warning("No variants generated on attempt %d", attempt)
                 break
 
             scored = []
             for v in variants:
-                prediction = self.predictor.score(
-                    v["prompt_text"],
-                    business_profile,
-                    audience_map,
-                    trend_data,
-                    v.get("prompt_type", "educational"),
-                    history=history,
-                )
+                try:
+                    prediction = self.predictor.score(
+                        v["prompt_text"],
+                        business_profile,
+                        audience_map,
+                        trend_data,
+                        v.get("prompt_type", "educational"),
+                        history=history,
+                    )
+                except Exception as exc:
+                    # Prediction failed for this variant: keep the (real) variant
+                    # text but score it neutral so generation still proceeds.
+                    logger.error("::warning::Scoring failed for a variant: %s", exc)
+                    prediction = {
+                        "virality_score": 50, "virality_label": "MEDIUM",
+                        "virality_probability": 0.5, "key_factors": [],
+                        "risks": [], "reasoning": "prediction unavailable",
+                        "improvement_hints": [],
+                    }
                 v["virality_score"] = prediction["virality_score"]
                 v["virality_label"] = prediction["virality_label"]
                 v["virality_probability"] = prediction["virality_probability"]
