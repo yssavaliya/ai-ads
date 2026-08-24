@@ -153,22 +153,31 @@ class ViralityGate:
                     best_overall = refined
 
         results = list(selected.values())
-        if len(results) < 3 and best_overall:
-            if best_overall.get("prompt_type") not in {r.get("prompt_type") for r in results}:
-                results.append(best_overall)
-            else:
-                results = sorted(results + [best_overall], key=lambda v: v["virality_score"], reverse=True)[:3]
-        if best_overall and len(results) < 3:
-            fillers = sorted(
-                [best_overall] + results, key=lambda v: v["virality_score"], reverse=True
+        # Include the single best-overall variant only if it isn't already
+        # represented, then de-duplicate and return the top 3 by virality
+        # score. Without de-duplication a below-threshold run could otherwise
+        # emit the same prompt twice (best_overall added on top of itself).
+        if best_overall is not None:
+            dup = any(
+                r is best_overall
+                or r.get("prompt_text") == best_overall.get("prompt_text")
+                for r in results
             )
-            results = fillers[:3]
+            if not dup:
+                results.append(best_overall)
+
+        seen: dict[str, dict[str, Any]] = {}
+        for r in results:
+            key = r.get("prompt_text") or str(id(r))
+            if key not in seen or r["virality_score"] > seen[key]["virality_score"]:
+                seen[key] = r
+        final = sorted(seen.values(), key=lambda v: v["virality_score"], reverse=True)[:3]
 
         logger.info(
             "Virality gate final: %d prompts, best score=%d (threshold=%d)",
-            len(results), max((v["virality_score"] for v in results), default=0), self.threshold,
+            len(final), max((v["virality_score"] for v in final), default=0), self.threshold,
         )
-        return results[:3]
+        return final
 
     @staticmethod
     def _weight_boost(
