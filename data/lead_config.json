@@ -12,6 +12,7 @@
   "max_followers": 20000,
   "target_count": 5,
   "min_opportunity_score": 60,
+  "enforce_location": true,
   "digest_email": "tpyashsavaliya13092002@gmail.com",
   "prompt_types": [
     "educational",

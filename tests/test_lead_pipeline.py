@@ -29,6 +29,7 @@ def test_mark_seen_only_records_delivered_leads(tmp_path, monkeypatch):
     fix (verified by reproducing it)."""
     monkeypatch.setattr(settings, "data_dir", tmp_path)
     pipeline = LeadPipeline()
+    monkeypatch.setattr(pipeline, "_merge_known_leads", lambda db, tl, cfg: tl)
 
     eligible = {
         "name": "Vicky Bakery",
@@ -115,6 +116,7 @@ def test_too_big_candidates_go_to_long_cooldown_reject_cache(tmp_path, monkeypat
     re-discovered and re-scored every single scheduled run forever."""
     monkeypatch.setattr(settings, "data_dir", tmp_path)
     pipeline = LeadPipeline()
+    monkeypatch.setattr(pipeline, "_merge_known_leads", lambda db, tl, cfg: tl)
 
     too_small = {
         "name": "Unverified Candidate",

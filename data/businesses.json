@@ -12,5 +12,19 @@
     "prompt_types": ["educational", "storytelling", "social_proof"],
     "is_active": false,
     "demo": true
+  },
+  {
+    "id": 2,
+    "name": "Aimagix Studio",
+    "website_url": "https://instagram.com/aimagix.studio",
+    "instagram_handle": "aimagix.studio",
+    "linkedin_handle": "",
+    "twitter_handle": "",
+    "email": "tpyashsavaliya13092002@gmail.com",
+    "timezone": "Asia/Kolkata",
+    "virality_threshold": 70,
+    "prompt_types": ["educational", "storytelling", "social_proof", "promotional"],
+    "is_active": true,
+    "demo": false
   }
 ]
