@@ -80,9 +80,12 @@ class DailyPipeline:
                     profile, social_data, competitors, biz.audience_personas_json
                 ),
             )
-            biz.audience_personas_json = audience_map
-            db.add(biz)
-            db.commit()
+            # Never overwrite good, previously-learned personas with an empty
+            # map from a transient audience-mapping outage (would erase learning).
+            if audience_map:
+                biz.audience_personas_json = audience_map
+                db.add(biz)
+                db.commit()
 
             trend_data = self._cached_intel(
                 business, "trends",
@@ -145,7 +148,7 @@ class DailyPipeline:
                     p["asset_type"] = asset["asset_type"]
                     p["thumbnail"] = asset.get("thumbnail")
                     if asset.get("warnings"):
-                        p["warnings"] = asset["warnings"]
+                        p.setdefault("warnings", []).extend(asset["warnings"])
                         render_warnings.extend(asset["warnings"])
                 except Exception as exc:
                     logger.warning(

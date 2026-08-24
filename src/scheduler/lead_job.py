@@ -456,8 +456,8 @@ class LeadPipeline:
             "niche": lead.get("niche", ""),
             "followers": lead.get("followers", 0),
         }
-        audience_map = self.audience.map_audience(profile, None, None, None)
-        trend_data = self.trends.scan(profile, audience_map, None)
+        audience_map = self.audience.map_audience(profile, {}, None, None)
+        trend_data = self.trends.scan(profile, audience_map, {})
         weights = self.weights.to_forge_weights(business_id) if business_id else {}
         prompts = self.gate.run(
             profile,

@@ -85,6 +85,9 @@ class ViralityGate:
                         "risks": [], "reasoning": "prediction unavailable",
                         "improvement_hints": [],
                     }
+                    v.setdefault("warnings", []).append(
+                        "Virality score is provisional — the predictor was unavailable."
+                    )
                 v["virality_score"] = prediction["virality_score"]
                 v["virality_label"] = prediction["virality_label"]
                 v["virality_probability"] = prediction["virality_probability"]
