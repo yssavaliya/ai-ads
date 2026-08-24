@@ -29,6 +29,19 @@
               </p>
             </td>
           </tr>
+          <!-- Empty state -->
+          {% if not prompts %}
+          <tr>
+            <td style="padding:24px 32px 8px;">
+              <div style="background-color:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:16px;font-size:14px;color:#9a3412;line-height:1.6;">
+                ⚠️ <strong>No content prompts were generated for {{ date_str }}.</strong><br>
+                This is usually a temporary free-tier LLM/API hiccup. Your past learning
+                and posted content are safe. Re-run the <strong>Daily</strong> workflow
+                (Actions → Daily Content Generation → Run workflow) and a fresh batch will arrive.
+              </div>
+            </td>
+          </tr>
+          {% endif %}
           <!-- Prompts -->
           {% for p in prompts %}
           <tr>

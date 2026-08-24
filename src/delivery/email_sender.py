@@ -119,7 +119,10 @@ class EmailSender:
 
     def send_daily_prompts(self, business: dict[str, Any], prompts: list[dict[str, Any]]) -> bool:
         template = self._env.get_template("daily_prompt.html")
-        subject = f"🎯 Tomorrow's {len(prompts)} Viral Content Prompts for {business['name']}"
+        if prompts:
+            subject = f"🎯 Tomorrow's {len(prompts)} Viral Content Prompts for {business['name']}"
+        else:
+            subject = f"⚠️ Content generation unavailable today — re-run the Daily workflow ({business['name']})"
 
         inline: dict[str, str] = {}
         attachments: list[str] = []
@@ -143,9 +146,10 @@ class EmailSender:
         # only the lightweight preview frames and tell the reader the full
         # assets are in the workflow run artifact (gap #10: email size safety).
         attachments, dropped = self._size_safe_attachments(attachments)
-        if dropped:
+        dropped_set = set(dropped)
+        if dropped_set:
             for p in prompts:
-                if p.get("asset_type") == "reel":
+                if p.get("asset_type") == "reel" and p.get("asset_path") in dropped_set:
                     p["asset_note"] = (
                         "Full Reel in the workflow run artifact (email size limit). "
                         "Preview frame shown inline."
@@ -195,7 +199,16 @@ class EmailSender:
                     p["asset_cid"] = cid
                 pi += 1
 
-        attachments, _ = self._size_safe_attachments(attachments)
+        attachments, dropped = self._size_safe_attachments(attachments)
+        dropped_set = set(dropped)
+        if dropped_set:
+            for lead in leads:
+                for p in lead.get("prompts") or []:
+                    if p.get("asset_type") == "reel" and p.get("asset_path") in dropped_set:
+                        p["asset_note"] = (
+                            "Full Reel in the workflow run artifact (email size limit). "
+                            "Preview frame shown inline."
+                        )
         html = template.render(leads=leads, date_str=self._today_str())
         return self.send(to, subject, html, inline_images=inline, attachments=attachments)
 
@@ -241,17 +254,23 @@ class EmailSender:
         return True
 
     @staticmethod
-    def _size_safe_attachments(paths: list[str], limit_bytes: int = 22_000_000) -> tuple[list[str], int]:
+    def _size_safe_attachments(
+        paths: list[str], limit_bytes: int = 22_000_000
+    ) -> tuple[list[str], set[str]]:
         """Keep attachments under `limit_bytes` (Gmail ~25MB cap, with margin).
-        Drops the largest files first (Reels) and returns (kept, dropped_count)."""
+        Drops the largest files first (Reels). Returns (kept, dropped_paths) so
+        callers can annotate only the Reels that were actually dropped."""
         kept: list[str] = []
         total = 0
-        dropped = 0
-        # Sort descending by size so we drop the heaviest (Reels) first.
-        for path in sorted(paths, key=lambda p: -Path(p).stat().st_size if Path(p).exists() else 0):
-            size = Path(path).stat().st_size if Path(path).exists() else 0
-            if total + size > limit_bytes and kept:
-                dropped += 1
+        dropped: set[str] = set()
+        for path in sorted(
+            paths, key=lambda p: -Path(p).stat().st_size if Path(p).exists() else 0
+        ):
+            size = Path(path).stat().st_size if Path(p).exists() else 0
+            if total + size > limit_bytes:
+                # Drop even the first/largest file if it alone would breach the
+                # cap (a single oversized Reel must not be attached verbatim).
+                dropped.add(path)
                 continue
             kept.append(path)
             total += size
