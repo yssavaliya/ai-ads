@@ -85,6 +85,11 @@ class LeadPipeline:
         candidates = asyncio.run(self.finder.enrich_with_socials(raw_candidates))
         logger.info("Discovered %d candidates with social handles", len(candidates))
 
+        if config.get("enforce_location"):
+            before = len(candidates)
+            candidates = [c for c in candidates if self._is_local(c, config)]
+            logger.info("Location filter dropped %d non-local candidates", before - len(candidates))
+
         social = SocialScraper()
         scored_leads = []
         structurally_ineligible = []
@@ -125,6 +130,15 @@ class LeadPipeline:
         scored_leads.sort(key=lambda l: l["opportunity_score"], reverse=True)
         top_leads = scored_leads[: config["target_count"]]
 
+        db = SessionLocal()
+        # Re-include previously-discovered eligible businesses so the digest
+        # keeps delivering content instead of going empty once the good leads
+        # have been delivered once and parked in the 21-day seen-cache.
+        try:
+            top_leads = self._merge_known_leads(db, top_leads, config)
+        except Exception as exc:
+            logger.warning("Could not merge known leads: %s", exc)
+
         # Only leads actually delivered enter the 21-day cooldown cache.
         # Raw candidates rejected by scoring stay retryable on future runs —
         # marking everything discovered would starve the pipeline after one
@@ -143,8 +157,6 @@ class LeadPipeline:
                 )
             except Exception as exc:
                 logger.warning("Could not update lead rejection cache: %s", exc)
-
-        db = SessionLocal()
         digest = []
         prompt_failures = 0
         failures = []
@@ -215,6 +227,91 @@ class LeadPipeline:
         }
         logger.info("Lead pipeline result: %s", result)
         return result
+
+    @staticmethod
+    def _is_local(candidate: dict[str, Any], config: dict[str, Any]) -> bool:
+        """Heuristic: drop candidates clearly outside the target location.
+        Web search returns global results, so without this the pool fills
+        with franchises/portals (bakerycity.com = Orange County, etc.)."""
+        locations = [l.lower() for l in config.get("locations", [])]
+        name = (candidate.get("name") or "").lower()
+        domain = (candidate.get("website_url") or "").lower()
+        handle = (candidate.get("instagram_handle") or "").lower()
+        haystack = f"{name} {domain} {handle}"
+        foreign = [
+            "california", "new york", "orange county", "hong kong", ".hk",
+            "london", "united kingdom", "canada", "australia", "singapore",
+            "france", "tokyo", "dubai", "germany",
+        ]
+        if any(f in haystack for f in foreign):
+            return False
+        if not locations:
+            return True
+        if any(loc in haystack for loc in locations):
+            return True
+        if domain.endswith(".in") or ".in/" in domain:
+            return True
+        return True
+
+    def _merge_known_leads(
+        self, db: Any, top_leads: list[dict[str, Any]], config: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Include previously-discovered eligible businesses (from the DB) in
+        the digest so it keeps delivering content instead of going empty once
+        the good leads have been delivered once and parked in the seen-cache."""
+        exclude = {l.get("instagram_handle", "").lower() for l in top_leads}
+        try:
+            businesses = (
+                db.query(Business)
+                .filter(Business.is_active.is_(True))
+                .filter(Business.instagram_handle.isnot(None))
+                .filter(Business.instagram_handle != "")
+                .all()
+            )
+        except Exception as exc:
+            logger.warning("Could not load known businesses: %s", exc)
+            return top_leads
+
+        social = SocialScraper()
+        known: list[dict[str, Any]] = []
+        for biz in businesses:
+            handle = (biz.instagram_handle or "").lstrip("@")
+            if not handle or handle.lower() in exclude:
+                continue
+            social_data: dict[str, Any] = {}
+            try:
+                sd = asyncio.run(social.fetch_instagram(handle))
+                if sd.get("follower_count"):
+                    social_data = sd
+            except Exception as exc:
+                logger.warning("Known-lead social fetch failed for %s: %s", biz.name, exc)
+            assessment = self.scorer.score(
+                {
+                    "name": biz.name,
+                    "instagram_handle": handle,
+                    "website_url": biz.website_url or "",
+                    "niche": (biz.prompt_types or [""])[0],
+                },
+                social_data,
+                min_followers=config["min_followers"],
+                max_followers=config["max_followers"],
+            )
+            if not assessment.get("eligible"):
+                continue
+            known.append(
+                {
+                    "name": biz.name,
+                    "instagram_handle": handle,
+                    "website_url": biz.website_url or "",
+                    "niche": (biz.prompt_types or [""])[0],
+                    "opportunity_score": assessment["score"],
+                    "opportunity_reasons": assessment["reasons"],
+                    "followers": assessment["followers"],
+                }
+            )
+        merged = top_leads + known
+        merged.sort(key=lambda l: l.get("opportunity_score", 0), reverse=True)
+        return merged[: config["target_count"]]
 
     def _learning_pass(self) -> dict[str, Any]:
         """Re-scrape every known lead's Instagram, match new posts to prompts

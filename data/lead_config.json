@@ -12,6 +12,7 @@
   "max_followers": 20000,
   "target_count": 5,
   "min_opportunity_score": 60,
+  "enforce_location": true,
   "digest_email": "owner@example.invalid",
   "prompt_types": [
     "educational",
