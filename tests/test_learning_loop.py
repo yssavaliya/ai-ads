@@ -16,6 +16,25 @@ def test_containment_matches_trimmed_caption():
     assert caption_similarity(posted, suggested) >= MIN_SIMILARITY
 
 
+def test_decide_outcome_absolute_bar_for_new_account():
+    from src.learning.auto_learner import AutoLearner
+
+    # Too little history: a post with any real reaction is good.
+    assert AutoLearner._decide_outcome({"likes": 3, "comments": 0}, 100, 0.5, 1) == "good"
+    assert AutoLearner._decide_outcome({"likes": 0, "comments": 2}, 100, 0.5, 1) == "good"
+    # Total flop is bad even for a new account.
+    assert AutoLearner._decide_outcome({"likes": 0, "comments": 0}, 100, 0.5, 1) == "bad"
+
+
+def test_decide_outcome_uses_median_benchmark_with_enough_history():
+    from src.learning.auto_learner import AutoLearner
+
+    # Enough history: compare against the business's own median rate.
+    post = {"likes": 10, "comments": 0}
+    assert AutoLearner._decide_outcome(post, 1000, 0.02, 5) == "bad"   # rate 0.01 < 0.02
+    assert AutoLearner._decide_outcome(post, 1000, 0.005, 5) == "good"  # rate 0.01 >= 0.005
+
+
 def test_ig_post_regex_extracts_reel_and_post_urls():
     body = "here it is https://www.instagram.com/reel/Cxyz123/ thanks"
     assert IG_POST_RE.search(body).group(0) == "https://www.instagram.com/reel/Cxyz123/"

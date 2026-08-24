@@ -29,7 +29,9 @@ def test_benchmark_median():
         {"likes": 30, "comments": 0, "shares": 0, "saves": 0, "reach": 100},
         {"likes": 20, "comments": 0, "shares": 0, "saves": 0, "reach": 100},
     ]
-    assert abs(AutoLearner()._benchmark_median(posts, None) - 0.2) < 1e-6
+    median, n = AutoLearner()._benchmark_median(posts, None)
+    assert abs(median - 0.2) < 1e-6
+    assert n == 3
 
 
 def test_match_by_date_and_similarity():
