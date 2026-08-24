@@ -122,7 +122,7 @@ class AutoLearner:
 
         learned = 0
         details = []
-        for prompt_id, prompt_type, prompt_text, post, segment in matched:
+        for prompt_id, prompt_type, prompt_text, post, segment, fmt in matched:
             rate = engagement_rate(post, followers)
             outcome = self._decide_outcome(post, followers, benchmark, bench_n, post.get("comments_text"))
             recorded = self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome)
@@ -134,7 +134,7 @@ class AutoLearner:
                     business_id,
                     outcome,
                     prompt_type=prompt_type,
-                    format=post.get("format"),
+                    format=fmt or post.get("format"),
                     audience_segment=segment,
                 )
                 learned += 1
@@ -165,6 +165,7 @@ class AutoLearner:
                 "prompt_type": p.prompt_type.value if p.prompt_type else None,
                 "prompt_text": p.prompt_text,
                 "caption": p.caption or "",
+                "format": p.format or "",
                 "sent_at": p.sent_at,
             }
             for p in rows
@@ -220,14 +221,14 @@ class AutoLearner:
 
     def _match(
         self, posts: list[dict[str, Any]], prompts: list[dict[str, Any]]
-    ) -> list[tuple[int, str | None, str, dict[str, Any], str | None]]:
+    ) -> list[tuple[int, str | None, str, dict[str, Any], str | None, str | None]]:
         """Match published posts to sent prompts.
 
         Priority 1 — explicit links: posts whose post_id matches an Engagement
         row created via the 📎 'I posted this' button bypass similarity entirely.
         Priority 2 — similarity: caption/prompt Jaccard >= MIN_SIMILARITY within
         the post window; each post used once.
-        Returns (prompt_id, prompt_type, prompt_text, post, audience_segment)."""
+        Returns (prompt_id, prompt_type, prompt_text, post, audience_segment, format)."""
         from src.storage.models import Engagement
 
         matched: list[tuple[int, str | None, str, dict[str, Any], str | None]] = []
@@ -291,7 +292,7 @@ class AutoLearner:
                 if post_id:
                     used_post_ids.add(post_id)
                 matched.append(
-                    (prompt["id"], prompt.get("prompt_type"), prompt["prompt_text"], post, prompt.get("audience_segment"))
+                    (prompt["id"], prompt.get("prompt_type"), prompt["prompt_text"], post, prompt.get("audience_segment"), prompt.get("format"))
                 )
 
         return matched

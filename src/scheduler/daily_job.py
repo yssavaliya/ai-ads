@@ -174,6 +174,7 @@ class DailyPipeline:
                     audience_segment=(p.get("audience_segment") or None),
                     asset_path=p.get("asset_path"),
                     asset_type=p.get("asset_type"),
+                    format=p.get("format"),
                     sent_at=datetime.utcnow(),
                 )
                 db.add(prompt)
