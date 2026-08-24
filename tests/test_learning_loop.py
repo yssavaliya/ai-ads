@@ -58,8 +58,15 @@ def test_explicit_link_bypasses_similarity(tmp_path):
         engine as db_engine,
     )
 
-    Base.metadata.create_all(bind=db_engine)
-    db = SessionLocal()
+    from sqlalchemy import create_engine as _ce
+    from sqlalchemy.orm import sessionmaker as _sm
+
+    # Own, isolated engine: the module-level `engine` singleton is bound to the
+    # default DB (created before the `caption` column existed), so create_all
+    # there won't add it. A fresh sqlite file always has the full schema.
+    eng = _ce(f"sqlite:///{tmp_path / 't.db'}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(bind=eng)
+    db = _sm(bind=eng, autoflush=False, autocommit=False)()
     prompt = Prompt(
         business_id=1,
         prompt_text="totally different words here",
@@ -130,8 +137,15 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
         engine as db_engine,
     )
 
-    Base.metadata.create_all(bind=db_engine)
-    db = SessionLocal()
+    from sqlalchemy import create_engine as _ce
+    from sqlalchemy.orm import sessionmaker as _sm
+
+    # Own, isolated engine: the module-level `engine` singleton is bound to the
+    # default DB (created before the `caption` column existed), so create_all
+    # there won't add it. A fresh sqlite file always has the full schema.
+    eng = _ce(f"sqlite:///{tmp_path / 't.db'}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(bind=eng)
+    db = _sm(bind=eng, autoflush=False, autocommit=False)()
     try:
         biz = Business(name="InflateBiz", email="x@y.z", virality_threshold=75)
         db.add(biz)
@@ -210,8 +224,15 @@ def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
         engine as db_engine,
     )
 
-    Base.metadata.create_all(bind=db_engine)
-    db = SessionLocal()
+    from sqlalchemy import create_engine as _ce
+    from sqlalchemy.orm import sessionmaker as _sm
+
+    # Own, isolated engine: the module-level `engine` singleton is bound to the
+    # default DB (created before the `caption` column existed), so create_all
+    # there won't add it. A fresh sqlite file always has the full schema.
+    eng = _ce(f"sqlite:///{tmp_path / 't.db'}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(bind=eng)
+    db = _sm(bind=eng, autoflush=False, autocommit=False)()
     try:
         biz = Business(name="PostedBiz", email="p@q.r", virality_threshold=75)
         db.add(biz)
@@ -270,5 +291,79 @@ def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
         assert len(rows) == 1, [r.post_id for r in rows]  # no duplicate row
         # The single row was refreshed with real scraped engagement.
         assert rows[0].likes == 40
+    finally:
+        db.close()
+
+
+def test_learner_matches_by_posted_caption_not_brief(tmp_path, monkeypatch):
+    """Regression: the human posts the email's `caption` (hook+hashtags), NOT
+    the creative `prompt_text`. The learner must attribute a scraped post by
+    matching its caption against the persisted `caption`, otherwise real
+    engagement is never linked to the prompt it came from."""
+    import os
+    from datetime import datetime, timedelta
+
+    os.environ["DATABASE_PATH"] = str(tmp_path / "t.db")
+    from src.shared.config import settings
+
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    from src.learning.auto_learner import AutoLearner
+    from src.learning.bayesian_updater import BayesianUpdater
+    from src.storage.models import (
+        Base,
+        Business,
+        Prompt,
+        PromptType,
+        SessionLocal,
+        engine as db_engine,
+    )
+
+    from sqlalchemy import create_engine as _ce
+    from sqlalchemy.orm import sessionmaker as _sm
+
+    # Own, isolated engine: the module-level `engine` singleton is bound to the
+    # default DB (created before the `caption` column existed), so create_all
+    # there won't add it. A fresh sqlite file always has the full schema.
+    eng = _ce(f"sqlite:///{tmp_path / 't.db'}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(bind=eng)
+    db = _sm(bind=eng, autoflush=False, autocommit=False)()
+    try:
+        biz = Business(name="CapBiz", email="c@d.e", virality_threshold=75)
+        db.add(biz)
+        db.commit()
+        db.refresh(biz)
+        prompt = Prompt(
+            business_id=biz.id,
+            # The brief and the posted caption are deliberately very different.
+            prompt_text="a long internal creative rationale about brand storytelling",
+            caption="Ready to grow? Follow Aimagix Studio for AI tips #Ahmedabad #AI",
+            prompt_type=PromptType.EDUCATIONAL,
+            sent_at=datetime.utcnow() - timedelta(days=1),
+        )
+        db.add(prompt)
+        db.commit()
+        db.refresh(prompt)
+
+        social = {
+            "handle": "capbiz",
+            "follower_count": 1000,
+            "posts": [
+                {
+                    "post_id": "CAP1",
+                    "caption": "Ready to grow? Follow Aimagix Studio for AI tips #Ahmedabad #AI",
+                    "likes": 30,
+                    "comments": 4,
+                    "shares": 1,
+                    "saves": 3,
+                    "reach": 400,
+                    "posted_at": (datetime.utcnow() - timedelta(hours=20)).isoformat(),
+                }
+            ],
+        }
+        AutoLearner().run_for_business(biz.id, social, db)
+
+        edu = BayesianUpdater().get_weights(biz.id)["topics"]["educational"]
+        assert edu["trials"] == 1, edu  # matched via the posted caption
+        assert edu["hits"] == 1, edu
     finally:
         db.close()
