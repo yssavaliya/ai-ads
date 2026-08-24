@@ -273,6 +273,7 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
         audience_segment=(v.get("audience_segment") or None),
         asset_path=v.get("asset_path"),
         asset_type=v.get("asset_type"),
+        format=v.get("format"),
         sent_at=datetime.utcnow(),
     )
     db.add(new_prompt)

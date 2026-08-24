@@ -112,6 +112,7 @@ class Prompt(Base):
     caption: Mapped[str | None] = mapped_column(Text, nullable=True)
     asset_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     asset_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    format: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     business: Mapped[Business] = relationship(back_populates="prompts")
@@ -263,6 +264,7 @@ def _migrate() -> None:
         ("prompts", "caption", "TEXT"),
         ("prompts", "asset_path", "VARCHAR(500)"),
         ("prompts", "asset_type", "VARCHAR(20)"),
+        ("prompts", "format", "VARCHAR(40)"),
     ]
     log = logging.getLogger(__name__)
     with engine.connect() as conn:

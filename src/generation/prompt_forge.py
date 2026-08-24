@@ -107,7 +107,7 @@ Respond ONLY with JSON:
                 "prompt_text": str(v.get("prompt_text", "")),
                 "hashtags": [str(h) for h in v.get("hashtags", []) if str(h).startswith("#")],
                 "platform_focus": str(v.get("platform_focus", "both")),
-                "format": str(v.get("format", "reel")),
+                "format": str(v.get("format", "reel")).lower(),
                 "angle": str(v.get("angle", "")),
                 "audience_segment": str(v.get("audience_segment", "") or ""),
                 "reel_beats": [str(b).strip() for b in v.get("reel_beats", []) if str(b).strip()][:5],
@@ -174,7 +174,7 @@ Respond ONLY with the improved prompt as JSON with the same fields:
                 "prompt_text": str(data.get("prompt_text", "")),
                 "hashtags": [str(h) for h in data.get("hashtags", best_variant.get("hashtags", []))],
                 "platform_focus": str(data.get("platform_focus", best_variant.get("platform_focus", "both"))),
-                "format": str(data.get("format", best_variant.get("format", "reel"))),
+                "format": str(data.get("format", best_variant.get("format", "reel"))).lower(),
                 "angle": str(data.get("angle", best_variant.get("angle", ""))),
                 "audience_segment": str(data.get("audience_segment", "") or best_variant.get("audience_segment", "")),
                 "reel_beats": [
