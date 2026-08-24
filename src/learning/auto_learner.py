@@ -426,14 +426,20 @@ def run_auto_learning() -> dict[str, Any]:
         for config in load_businesses():
             if not config.get("is_active", True):
                 continue
-            biz = db.query(Business).filter(Business.name == config["name"]).first()
-            if biz is None:
-                continue
-            handle = config.get("instagram_handle") or ""
-            if not handle:
-                continue
-            social = asyncio.run(scraper.fetch_instagram(handle))
-            results[config["name"]] = AutoLearner().run_for_business(biz.id, social, db)
+            try:
+                biz = db.query(Business).filter(Business.name == config["name"]).first()
+                if biz is None:
+                    continue
+                handle = config.get("instagram_handle") or ""
+                if not handle:
+                    continue
+                social = asyncio.run(scraper.fetch_instagram(handle))
+                results[config["name"]] = AutoLearner().run_for_business(biz.id, social, db)
+            except Exception as exc:  # noqa: BLE001
+                # One business's scrape/learning failure must not abort learning
+                # for the rest (and fail the workflow step before weights commit).
+                logger.error("::warning::Auto-learning failed for %s: %s", config.get("name"), exc)
+                results[config.get("name", "?")] = {"matched": 0, "learned": 0, "error": str(exc)}
     finally:
         db.close()
     return results
