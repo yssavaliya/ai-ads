@@ -54,7 +54,10 @@ class DailyPipeline:
                 db.add(biz)
                 db.commit()
 
-            competitors = self.competitors.discover_and_fetch(profile)
+            competitors = self._cached_intel(
+                business, "competitors",
+                lambda: self.competitors.discover_and_fetch(profile),
+            )
             social_data = {}
             if business.get("instagram_handle"):
                 from src.fetch.social_scraper import fetch_instagram_sync
@@ -119,6 +122,13 @@ class DailyPipeline:
                         logger.info("Exploration: added variant type=%s", extra.get("prompt_type"))
                 except Exception as exc:
                     logger.warning("Exploration variant skipped: %s", exc)
+
+            if not prompts:
+                logger.error(
+                    "::warning::No prompts generated for %s — the daily email will be empty. "
+                    "Likely an LLM provider outage; the Drift Check workflow should alert separately.",
+                    name,
+                )
 
             # Attach a ready-to-post brief (caption + best time) to every prompt.
             self._attach_posting_brief(business, prompts, social_data, audience_map)

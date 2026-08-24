@@ -313,11 +313,22 @@ class AutoLearner:
 
         platform = Platform.LINKEDIN if post.get("platform") == "linkedin" else Platform.INSTAGRAM
         post_id = str(post.get("post_id") or "")[:100]
-        existing = (
-            db.query(Engagement)
-            .filter(Engagement.prompt_id == prompt_id, Engagement.post_id == post_id)
-            .first()
-        )
+        post_url = str(post.get("url") or "")[:500]
+        short = post_url.rstrip("/").split("/")[-1] if post_url else ""
+
+        # A post may have been explicitly linked via the "I posted this" button
+        # (process_feedback stores post_id == URL shortcode), but the same post
+        # re-scraped from Instagram carries Apify's internal id, so a naive
+        # post_id match misses it -> would double-count the weight and create a
+        # duplicate Engagement row. Match on post_id OR the URL shortcode.
+        existing = None
+        for cand in db.query(Engagement).filter(Engagement.prompt_id == prompt_id).all():
+            if cand.post_id == post_id:
+                existing = cand
+                break
+            if short and cand.post_url and cand.post_url.rstrip("/").split("/")[-1] == short:
+                existing = cand
+                break
         is_new = existing is None
         if existing:
             # Refresh stored engagement (likes/comments grow over time) but do

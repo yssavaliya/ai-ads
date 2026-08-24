@@ -181,3 +181,94 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
         assert len(inflate_lines) == 1, inflate_lines
     finally:
         db.close()
+
+
+def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
+    """Regression: when a human confirms 'I posted this' (process_feedback
+    stores post_id == URL shortcode and records a GOOD weight), the same post
+    re-scraped from Instagram later carries Apify's internal id (different from
+    the shortcode). The learner must still recognise it as the SAME post via the
+    URL shortcode, so it (a) does NOT record the weight a second time and
+    (b) does NOT create a duplicate Engagement row."""
+    import os
+    from datetime import datetime, timedelta
+
+    os.environ["DATABASE_PATH"] = str(tmp_path / "t.db")
+    from src.shared.config import settings
+
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    from src.learning.auto_learner import AutoLearner
+    from src.learning.bayesian_updater import BayesianUpdater
+    from src.storage.models import (
+        Base,
+        Business,
+        Engagement,
+        Platform,
+        Prompt,
+        PromptType,
+        SessionLocal,
+        engine as db_engine,
+    )
+
+    Base.metadata.create_all(bind=db_engine)
+    db = SessionLocal()
+    try:
+        biz = Business(name="PostedBiz", email="p@q.r", virality_threshold=75)
+        db.add(biz)
+        db.commit()
+        db.refresh(biz)
+        prompt = Prompt(
+            business_id=biz.id,
+            prompt_text="human confirmed posted phrase zeta eta theta",
+            prompt_type=PromptType.EDUCATIONAL,
+            sent_at=datetime.utcnow() - timedelta(days=1),
+        )
+        db.add(prompt)
+        db.commit()
+        db.refresh(prompt)
+
+        # Simulate process_feedback handling a "I posted this" issue.
+        short = "SHORTXYZ"
+        db.add(
+            Engagement(
+                prompt_id=prompt.id,
+                platform=Platform.INSTAGRAM,
+                post_id=short,
+                post_url=f"https://instagram.com/p/{short}",
+                fetched_at=datetime.utcnow(),
+            )
+        )
+        db.commit()
+        BayesianUpdater().record(biz.id, "good", prompt_type="educational")
+
+        # Later scrape: same post, but post_id is Apify's internal id while the
+        # URL still points at the same shortcode.
+        social = {
+            "handle": "postedbiz",
+            "follower_count": 1000,
+            "posts": [
+                {
+                    "post_id": "apify_internal_999",
+                    "url": f"https://instagram.com/p/{short}",
+                    "caption": "human confirmed posted phrase zeta eta theta",
+                    "likes": 40,
+                    "comments": 3,
+                    "shares": 1,
+                    "saves": 2,
+                    "reach": 500,
+                    "posted_at": (datetime.utcnow() - timedelta(hours=20)).isoformat(),
+                }
+            ],
+        }
+        AutoLearner().run_for_business(biz.id, social, db)
+
+        edu = BayesianUpdater().get_weights(biz.id)["topics"]["educational"]
+        assert edu["trials"] == 1, edu  # only the human GOOD, not a second count
+        assert edu["hits"] == 1, edu
+
+        rows = db.query(Engagement).filter(Engagement.prompt_id == prompt.id).all()
+        assert len(rows) == 1, [r.post_id for r in rows]  # no duplicate row
+        # The single row was refreshed with real scraped engagement.
+        assert rows[0].likes == 40
+    finally:
+        db.close()

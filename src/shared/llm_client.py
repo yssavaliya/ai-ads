@@ -71,7 +71,7 @@ class LLMClient:
     """LLM interface — free tiers only: Groq API → Gemini API.
     No local models are ever run on CPU."""
 
-    def __init__(self, timeout_seconds: int | None = None, command: str | None = None) -> None:
+    def __init__(self, timeout_seconds: int | None = None) -> None:
         self.timeout_seconds = timeout_seconds or 60
 
     def run(
@@ -83,12 +83,12 @@ class LLMClient:
     ) -> LLMResult:
         """Run a prompt through the provider chain. Returns first success;
         raises AllProvidersFailedError when every provider fails."""
-        result = self._try_groq(prompt, label, temperature)
+        result = self._try_groq(prompt, label, temperature, max_retries)
         if result is not None:
             return result
 
         logger.info("[%s] Groq unavailable; trying Gemini", label or "llm")
-        result = self._try_gemini(prompt, label, temperature)
+        result = self._try_gemini(prompt, label, temperature, max_retries)
         if result is not None:
             return result
 
@@ -97,7 +97,7 @@ class LLMClient:
             "Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
         )
 
-    def _try_groq(self, prompt: str, label: str | None, temperature: float) -> LLMResult | None:
+    def _try_groq(self, prompt: str, label: str | None, temperature: float, max_retries: int) -> LLMResult | None:
         if not settings.groq_api_key:
             logger.warning("GROQ_API_KEY unset; skipping Groq")
             return None
@@ -109,10 +109,9 @@ class LLMClient:
                 api_key=settings.groq_api_key,
                 base_url="https://api.groq.com/openai/v1",
                 timeout=self.timeout_seconds,
-                max_retries=2,
             )
             start = time.monotonic()
-            response = self._chat(client, settings.groq_model, prompt, temperature, 2)
+            response = self._chat(client, settings.groq_model, prompt, temperature, max_retries)
             content = (response.choices[0].message.content or "").strip()
             logger.info(
                 "::notice::[%s] Groq answered via %s in %.1fs (%d chars)",
@@ -123,7 +122,7 @@ class LLMClient:
             logger.error("Groq failed for %s: %s", label or "llm", exc)
             return None
 
-    def _try_gemini(self, prompt: str, label: str | None, temperature: float) -> LLMResult | None:
+    def _try_gemini(self, prompt: str, label: str | None, temperature: float, max_retries: int) -> LLMResult | None:
         if not settings.gemini_api_key:
             logger.warning("GEMINI_API_KEY unset; skipping Gemini")
             return None
@@ -135,10 +134,9 @@ class LLMClient:
                 api_key=settings.gemini_api_key,
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
                 timeout=self.timeout_seconds,
-                max_retries=2,
             )
             start = time.monotonic()
-            response = self._chat(client, settings.gemini_model, prompt, temperature, 2)
+            response = self._chat(client, settings.gemini_model, prompt, temperature, max_retries)
             content = (response.choices[0].message.content or "").strip()
             logger.info(
                 "::notice::[%s] Gemini answered via %s in %.1fs (%d chars)",
