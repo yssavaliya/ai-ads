@@ -205,6 +205,10 @@ class AutoLearner:
         sentiment = comment_sentiment(comments_text or [])
         if sentiment <= -2:
             return "bad"
+        # Strongly positive comments can rescue a post that only barely missed
+        # the like/rate bar — the audience clearly liked it.
+        if sentiment >= 2 and base == "bad":
+            return "good"
         return base
 
     def _match(

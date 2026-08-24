@@ -70,22 +70,39 @@ class DailyPipeline:
                 name, auto_result.get("matched"), auto_result.get("learned"),
             )
 
-            audience_map = self.audience.map_audience(
-                profile, social_data, competitors, biz.audience_personas_json
+            audience_map = self._cached_intel(
+                business, "audience",
+                lambda: self.audience.map_audience(
+                    profile, social_data, competitors, biz.audience_personas_json
+                ),
             )
             biz.audience_personas_json = audience_map
             db.add(biz)
             db.commit()
 
-            trend_data = self.trends.scan(profile, audience_map, competitors)
+            trend_data = self._cached_intel(
+                business, "trends",
+                lambda: self.trends.scan(profile, audience_map, competitors),
+            )
             weights = self.weights.to_forge_weights(biz.id)
+            history = self._load_history(db, biz)
             prompts = self.gate.run(
                 profile,
                 audience_map,
                 trend_data,
                 business.get("prompt_types", ["educational", "storytelling", "social_proof"]),
                 weights,
+                history=history,
             )
+
+            # NOVELTY (#2): don't re-send a prompt we already sent in the last
+            # 14 days — replace near-duplicates so the feed stays fresh.
+            recent_texts = self._recent_prompt_texts(db, biz)
+            if recent_texts:
+                kept = self._dedupe_prompts(prompts, recent_texts)
+                if kept:
+                    prompts = kept
+                    logger.info("Dedup: %d/%d prompts kept (dropped near-duplicates)", len(kept), len(prompts))
 
             # EXPLORATION (gap #5): with modest probability, generate one extra
             # variant in an under-tested format/angle so the learner keeps
@@ -103,7 +120,7 @@ class DailyPipeline:
                     logger.warning("Exploration variant skipped: %s", exc)
 
             # Attach a ready-to-post brief (caption + best time) to every prompt.
-            self._attach_posting_brief(business, prompts, social_data)
+            self._attach_posting_brief(business, prompts, social_data, audience_map)
 
             # Render real creative assets (image inline / Reel MP4 attachment).
             from src.generation.creative_forge import CreativeForge
@@ -188,11 +205,12 @@ class DailyPipeline:
         business: dict[str, Any],
         prompts: list[dict[str, Any]],
         social_data: dict[str, Any],
+        audience_map: dict[str, Any] | None = None,
     ) -> None:
         """Gap #2/#9 + user request: every prompt carries a copy-paste caption
         and a recommended post time, so the human can post manually without
         re-deriving anything."""
-        post_time = self._recommend_post_time(business, social_data)
+        post_time = self._recommend_post_time(business, social_data, audience_map)
         handle = business.get("instagram_handle") or business.get("name") or ""
         for p in prompts:
             hook = (p.get("hook") or "").strip()
@@ -209,10 +227,15 @@ class DailyPipeline:
                 f"Follow @{handle} for more."
             )
 
-    def _recommend_post_time(self, business: dict[str, Any], social_data: dict[str, Any]) -> str:
+    def _recommend_post_time(
+        self,
+        business: dict[str, Any],
+        social_data: dict[str, Any],
+        audience_map: dict[str, Any] | None = None,
+    ) -> str:
         """Recommend the next good slot to post, in the business timezone.
-        Data-driven when we have >=3 timestamped posts (use the hour their own
-        audience engaged most), otherwise default to 7 PM local."""
+        Prefers the audience map's stated best_posting_times (#3); falls back to
+        the hour the business's own posts performed best; else 7 PM local."""
         tz_name = business.get("timezone", "Asia/Kolkata")
         try:
             tz = ZoneInfo(tz_name)
@@ -220,17 +243,16 @@ class DailyPipeline:
             tz = ZoneInfo("Asia/Kolkata")
         now = datetime.now(tz)
 
-        from src.learning.auto_learner import AutoLearner
+        best = self._audience_best_hour(audience_map)
+        if best is None:
+            from src.learning.auto_learner import AutoLearner
 
-        hours: list[int] = []
-        for post in social_data.get("posts", []):
-            dt = AutoLearner._parse_date(post.get("posted_at"))
-            if dt is not None:
-                hours.append(dt.hour)
-        if len(hours) >= 3:
-            best = Counter(hours).most_common(1)[0][0]
-        else:
-            best = 19
+            hours: list[int] = []
+            for post in social_data.get("posts", []):
+                dt = AutoLearner._parse_date(post.get("posted_at"))
+                if dt is not None:
+                    hours.append(dt.hour)
+            best = Counter(hours).most_common(1)[0][0] if len(hours) >= 3 else 19
 
         if now.hour >= best:
             target = (now + timedelta(days=1)).replace(hour=best, minute=0, second=0, microsecond=0)
@@ -238,6 +260,119 @@ class DailyPipeline:
             target = now.replace(hour=best, minute=0, second=0, microsecond=0)
         day = "Today" if target.date() == now.date() else "Tomorrow"
         return f"{day} at {target.strftime('%I:%M %p')} {tz_name.replace('_', ' ')}"
+
+    @staticmethod
+    def _audience_best_hour(audience_map: dict[str, Any] | None) -> int | None:
+        """Parse a 'best_posting_times' like 'Tue-Thu 6-9 PM IST' into an hour."""
+        if not audience_map:
+            return None
+        import re
+
+        blob = " ".join(
+            str(p.get("best_posting_times", ""))
+            for p in audience_map.get("personas", []) or []
+        )
+        if not blob:
+            return None
+        matches = re.findall(r"(\d{1,2})\s*(AM|PM)", blob, re.I)
+        if not matches:
+            return None
+        hours = []
+        for h, ap in matches:
+            h = int(h)
+            if ap.upper() == "PM" and h != 12:
+                h += 12
+            elif ap.upper() == "AM" and h == 12:
+                h = 0
+            hours.append(h)
+        return max(hours)  # catch the late-evening window, typically peak
+
+    def _cached_intel(self, business: dict[str, Any], key: str, compute) -> dict[str, Any]:
+        """Cache slow LLM-built intelligence (audience map, trends) per business
+        for 24h so the daily job doesn't re-pay for it every run (#5)."""
+        import json as _json
+
+        cache_dir = Path(settings.data_dir) / "cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        path = cache_dir / f"{self._slug(business.get('name', 'biz'))}-{key}.json"
+        if path.exists():
+            try:
+                blob = _json.loads(path.read_text(encoding="utf-8"))
+                if (datetime.utcnow().timestamp() - blob.get("ts", 0)) < 24 * 3600:
+                    logger.info("Intel cache hit: %s/%s", business.get("name"), key)
+                    return blob["data"]
+            except Exception:
+                pass
+        data = compute()
+        try:
+            path.write_text(
+                _json.dumps({"ts": datetime.utcnow().timestamp(), "data": data}, default=str),
+                encoding="utf-8",
+            )
+        except Exception as exc:
+            logger.warning("Intel cache write failed: %s", exc)
+        return data
+
+    def _load_history(self, db: Any, biz: Any) -> list[dict[str, Any]]:
+        """Real past performance to ground the predictor (#1): recent prompts
+        that got explicit human feedback, with their outcome."""
+        from datetime import timedelta
+
+        from src.storage.models import FeedbackType, Prompt
+
+        cutoff = datetime.utcnow() - timedelta(days=30)
+        rows = (
+            db.query(Prompt)
+            .filter(Prompt.business_id == biz.id, Prompt.sent_at >= cutoff, Prompt.feedback.isnot(None))
+            .order_by(Prompt.sent_at.desc())
+            .limit(12)
+            .all()
+        )
+        history = []
+        for p in rows:
+            outcome = "good" if p.feedback == FeedbackType.GOOD else (
+                "bad" if p.feedback in (FeedbackType.BAD, FeedbackType.REGENERATE) else "unknown"
+            )
+            history.append({"prompt_text": p.prompt_text or "", "outcome": outcome})
+        return history
+
+    def _recent_prompt_texts(self, db: Any, biz: Any) -> list[str]:
+        from datetime import timedelta
+
+        from src.storage.models import Prompt
+
+        cutoff = datetime.utcnow() - timedelta(days=14)
+        rows = (
+            db.query(Prompt.prompt_text)
+            .filter(Prompt.business_id == biz.id, Prompt.sent_at >= cutoff)
+            .all()
+        )
+        return [r[0] for r in rows if r[0]]
+
+    def _dedupe_prompts(
+        self, prompts: list[dict[str, Any]], recent_texts: list[str], threshold: float = 0.6
+    ) -> list[dict[str, Any]]:
+        """Drop prompts too similar to something we already sent recently."""
+        from src.learning.auto_learner import caption_similarity
+
+        kept = []
+        for p in prompts:
+            text = p.get("prompt_text") or ""
+            sim = max((caption_similarity(text, r) for r in recent_texts), default=0.0)
+            if sim < threshold:
+                kept.append(p)
+            else:
+                logger.info("Dedup: dropping near-duplicate (sim=%.2f): %s", sim, text[:60])
+        # Never return empty — fall back to the single best if everything matched.
+        if not kept and prompts:
+            return [max(prompts, key=lambda x: x.get("virality_score", 0))]
+        return kept
+
+    @staticmethod
+    def _slug(text: str) -> str:
+        import re
+
+        return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-") or "biz"
 
     def run_all(self) -> list[dict[str, Any]]:
         businesses = [b for b in load_businesses() if b.get("is_active", True) and not b.get("demo")]

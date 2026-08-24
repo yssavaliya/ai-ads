@@ -48,3 +48,24 @@ def test_validate_payload_normalizes_missing_lists():
     )
     assert payload["key_factors"] == []
     assert payload["risks"] == []
+
+
+def test_build_prompt_includes_history():
+    p = ViralityPredictor()
+    prompt = p._build_prompt(
+        "some hook",
+        {},
+        {},
+        {},
+        "educational",
+        history=[{"prompt_text": "previously worked topic", "outcome": "good"}],
+    )
+    assert "REAL PAST PERFORMANCE" in prompt
+    assert "previously worked topic" in prompt
+    assert "good" in prompt
+
+
+def test_build_prompt_handles_empty_history():
+    p = ViralityPredictor()
+    prompt = p._build_prompt("some hook", {}, {}, {}, "educational", history=None)
+    assert "No historical performance" in prompt
