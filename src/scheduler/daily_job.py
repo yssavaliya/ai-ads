@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import logging
+import random
 import sys
-from datetime import datetime
+from collections import Counter
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -84,6 +87,24 @@ class DailyPipeline:
                 weights,
             )
 
+            # EXPLORATION (gap #5): with modest probability, generate one extra
+            # variant in an under-tested format/angle so the learner keeps
+            # gathering data on formats it would otherwise never try. Never
+            # blocks the main flow — failures are swallowed.
+            if random.random() < 0.25:
+                try:
+                    extra = self._explore_variant(
+                        business, profile, audience_map, trend_data, weights, [p.get("prompt_type") for p in prompts]
+                    )
+                    if extra:
+                        prompts.append(extra)
+                        logger.info("Exploration: added variant type=%s", extra.get("prompt_type"))
+                except Exception as exc:
+                    logger.warning("Exploration variant skipped: %s", exc)
+
+            # Attach a ready-to-post brief (caption + best time) to every prompt.
+            self._attach_posting_brief(business, prompts, social_data)
+
             # Render real creative assets (image inline / Reel MP4 attachment).
             from src.generation.creative_forge import CreativeForge
 
@@ -140,6 +161,76 @@ class DailyPipeline:
             return {"business": name, "prompts": len(saved), "email_sent": email_ok}
         finally:
             db.close()
+
+    def _explore_variant(
+        self,
+        business: dict[str, Any],
+        profile: dict[str, Any],
+        audience_map: dict[str, Any],
+        trend_data: dict[str, Any],
+        weights: dict[str, Any],
+        existing_types: list[str],
+    ) -> dict[str, Any] | None:
+        """Gap #5: generate one variant of an under-tested type to keep the
+        Bayesian loop exploring the format/angle space instead of exploiting
+        only what already works."""
+        allowed = business.get("prompt_types", ["educational", "storytelling", "social_proof"])
+        candidates = [t for t in allowed if t not in existing_types] or allowed
+        chosen = random.choice(candidates)
+        extras = self.gate.run(profile, audience_map, trend_data, [chosen], weights)
+        for ex in extras:
+            if ex.get("prompt_type") == chosen:
+                return ex
+        return extras[0] if extras else None
+
+    def _attach_posting_brief(
+        self,
+        business: dict[str, Any],
+        prompts: list[dict[str, Any]],
+        social_data: dict[str, Any],
+    ) -> None:
+        """Gap #2/#9 + user request: every prompt carries a copy-paste caption
+        and a recommended post time, so the human can post manually without
+        re-deriving anything."""
+        post_time = self._recommend_post_time(business, social_data)
+        for p in prompts:
+            hook = (p.get("hook") or "").strip()
+            hashtags = " ".join(p.get("hashtags") or [])
+            caption = hook
+            if hashtags:
+                caption = f"{caption}\n\n{hashtags}".strip() if caption else hashtags
+            p["caption"] = caption
+            p["recommended_post_time"] = post_time
+
+    def _recommend_post_time(self, business: dict[str, Any], social_data: dict[str, Any]) -> str:
+        """Recommend the next good slot to post, in the business timezone.
+        Data-driven when we have >=3 timestamped posts (use the hour their own
+        audience engaged most), otherwise default to 7 PM local."""
+        tz_name = business.get("timezone", "Asia/Kolkata")
+        try:
+            tz = ZoneInfo(tz_name)
+        except Exception:
+            tz = ZoneInfo("Asia/Kolkata")
+        now = datetime.now(tz)
+
+        from src.learning.auto_learner import AutoLearner
+
+        hours: list[int] = []
+        for post in social_data.get("posts", []):
+            dt = AutoLearner._parse_date(post.get("posted_at"))
+            if dt is not None:
+                hours.append(dt.hour)
+        if len(hours) >= 3:
+            best = Counter(hours).most_common(1)[0][0]
+        else:
+            best = 19
+
+        if now.hour >= best:
+            target = (now + timedelta(days=1)).replace(hour=best, minute=0, second=0, microsecond=0)
+        else:
+            target = now.replace(hour=best, minute=0, second=0, microsecond=0)
+        day = "Today" if target.date() == now.date() else "Tomorrow"
+        return f"{day} at {target.strftime('%I:%M %p')} {tz_name.replace('_', ' ')}"
 
     def run_all(self) -> list[dict[str, Any]]:
         businesses = [b for b in load_businesses() if b.get("is_active", True) and not b.get("demo")]

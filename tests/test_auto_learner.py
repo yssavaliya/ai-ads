@@ -1,6 +1,12 @@
 from datetime import datetime, timedelta
 
-from src.learning.auto_learner import AutoLearner, engagement_rate, jaccard_similarity, tokenize
+from src.learning.auto_learner import (
+    AutoLearner,
+    comment_sentiment,
+    engagement_rate,
+    jaccard_similarity,
+    tokenize,
+)
 
 
 def test_tokenize():
@@ -71,3 +77,26 @@ def test_no_match_when_never_posted():
     now = datetime.utcnow()
     prompt = {"id": 1, "prompt_type": "educational", "prompt_text": "some prompt", "sent_at": now - timedelta(days=2)}
     assert AutoLearner()._match([], [prompt]) == []
+
+
+def test_comment_sentiment():
+    pos = comment_sentiment(["love this! 🔥", "amazing work ❤"])
+    neg = comment_sentiment(["this is boring and fake", "worst ever"])
+    assert pos > 0
+    assert neg < 0
+
+
+def test_decide_outcome_negative_comments_flip():
+    # A post that clears the absolute like bar but draws hostile comments
+    # should be treated as bad, not rewarded.
+    post = {"likes": 10, "comments": 2, "shares": 0, "saves": 0, "reach": 100,
+            "comments_text": ["this is fake and boring", "worst advice ever"]}
+    outcome = AutoLearner._decide_outcome(post, 100, 0.5, 0, post["comments_text"])
+    assert outcome == "bad"
+
+
+def test_decide_outcome_love_comments_stay_good():
+    post = {"likes": 3, "comments": 1, "shares": 0, "saves": 0, "reach": 100,
+            "comments_text": ["love this 🔥 amazing"]}
+    outcome = AutoLearner._decide_outcome(post, 100, 0.5, 0, post["comments_text"])
+    assert outcome == "good"

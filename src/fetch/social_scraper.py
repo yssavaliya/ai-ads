@@ -128,6 +128,7 @@ class SocialScraper:
                 json={
                     "usernames": [handle],
                     "resultsLimit": limit,
+                    "commentsLimit": 3,
                 },
             )
             if run_resp.status_code >= 400:
@@ -225,12 +226,26 @@ class SocialScraper:
                 or (item.get("alt") or "")
                 or (item.get("description") or "")
             )
+            comments_text: list[str] = []
+            raw_comments = item.get("comments")
+            if isinstance(raw_comments, list):
+                for c in raw_comments[:5]:
+                    if isinstance(c, dict):
+                        txt = c.get("text") or c.get("caption") or ""
+                    elif isinstance(c, str):
+                        txt = c
+                    else:
+                        txt = ""
+                    if txt:
+                        comments_text.append(txt)
+
             posts.append(
                 {
                     "post_id": item.get("id") or item.get("shortCode") or "",
                     "caption": caption,
                     "likes": item.get("likesCount") or 0,
                     "comments": item.get("commentsCount") or 0,
+                    "comments_text": comments_text,
                     "video_views": item.get("videoViewCount") or 0,
                     "url": item.get("url") or "",
                     "posted_at": item.get("timestamp") or item.get("postedAt") or None,
