@@ -412,6 +412,7 @@ class LeadPipeline:
                 Prompt(
                     business_id=business_id,
                     prompt_text=p.get("prompt_text") or "",
+                    caption=p.get("caption"),
                     prompt_type=self._prompt_type(p.get("prompt_type") or "educational"),
                     virality_score=p.get("virality_score"),
                     virality_label=p.get("virality_label"),

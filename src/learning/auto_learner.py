@@ -164,6 +164,7 @@ class AutoLearner:
                 "id": p.id,
                 "prompt_type": p.prompt_type.value if p.prompt_type else None,
                 "prompt_text": p.prompt_text,
+                "caption": p.caption or "",
                 "sent_at": p.sent_at,
             }
             for p in rows
@@ -260,6 +261,12 @@ class AutoLearner:
                 continue
             window_end = prompt["sent_at"] + timedelta(days=POST_MATCH_WINDOW_DAYS)
 
+            # The human posts the email's `caption` (hook + hashtags), which is
+            # NOT the creative `prompt_text`. Match the scraped post against the
+            # actually-posted caption first, falling back to the brief.
+            ref_caption = prompt.get("caption") or ""
+            ref_brief = prompt.get("prompt_text") or ""
+
             best: tuple[float, dict[str, Any]] | None = None
             for post in posts:
                 post_id = str(post.get("post_id") or post.get("url") or "")
@@ -270,8 +277,10 @@ class AutoLearner:
                     continue
                 if posted_at < prompt["sent_at"] or posted_at > window_end:
                     continue
-                sim = caption_similarity(
-                    post.get("caption") or "", prompt["prompt_text"]
+                scraped = post.get("caption") or ""
+                sim = max(
+                    caption_similarity(scraped, ref_caption) if ref_caption else 0.0,
+                    caption_similarity(scraped, ref_brief) if ref_brief else 0.0,
                 )
                 if sim >= MIN_SIMILARITY and (best is None or sim > best[0]):
                     best = (sim, post)
@@ -352,14 +361,18 @@ class AutoLearner:
         db.add(engagement)
         db.commit()
         if is_new:
-            self._log_engagement(prompt_id, post, rate, outcome)
+            self._log_engagement(prompt_id, post, rate, outcome, prompt.caption or prompt.prompt_text)
         return is_new
 
     @staticmethod
-    def _log_engagement(prompt_id: int, post: dict[str, Any], rate: float, outcome: str) -> None:
+    def _log_engagement(
+        prompt_id: int, post: dict[str, Any], rate: float, outcome: str, caption: str | None = None
+    ) -> None:
         """Append a durable, git-tracked engagement record so learning history
         survives agent.db cache eviction (raw Engagement rows live only in the
-        cache; the Bayesian weights persist separately in data/weights.json)."""
+        cache; the Bayesian weights persist separately in data/weights.json).
+        Stores the posted caption so the record is self-contained even if the
+        Prompt row is later deleted."""
         try:
             from pathlib import Path
 
@@ -371,6 +384,7 @@ class AutoLearner:
                             "ts": datetime.utcnow().isoformat(),
                             "prompt_id": prompt_id,
                             "post_id": str(post.get("post_id") or "")[:100],
+                            "caption": (caption or "")[:500],
                             "rate": round(rate, 4),
                             "likes": int(post.get("likes") or 0),
                             "comments": int(post.get("comments") or 0),

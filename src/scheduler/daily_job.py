@@ -159,6 +159,7 @@ class DailyPipeline:
                 prompt = Prompt(
                     business_id=biz.id,
                     prompt_text=p["prompt_text"],
+                    caption=p.get("caption"),
                     prompt_type=self._prompt_type(p.get("prompt_type", "educational")),
                     virality_score=p.get("virality_score"),
                     virality_label=p.get("virality_label"),
@@ -345,7 +346,9 @@ class DailyPipeline:
             .filter(Prompt.business_id == biz.id, Prompt.sent_at >= cutoff)
             .all()
         )
-        text_by_id = {p.id: (p.prompt_text or "") for p in prompts}
+        # Ground the predictor on what was actually POSTED (the caption), not
+        # the internal creative brief — that's the text real audiences saw.
+        text_by_id = {p.id: (p.caption or p.prompt_text or "") for p in prompts}
 
         history: list[dict[str, Any]] = []
         seen: set[str] = set()
@@ -355,21 +358,25 @@ class DailyPipeline:
             outcome = "good" if p.feedback == FeedbackType.GOOD else (
                 "bad" if p.feedback in (FeedbackType.BAD, FeedbackType.REGENERATE) else "unknown"
             )
-            t = p.prompt_text or ""
+            t = p.caption or p.prompt_text or ""
             history.append({"prompt_text": t, "outcome": outcome})
             seen.add(t[:120])
 
         # Enrich with AUTO-learned outcomes (real engagement scraped from the
-        # business's own posts) — the richer, always-present signal.
+        # business's own posts) — the richer, always-present signal. The log is
+        # self-contained (it stores the posted caption), so it still contributes
+        # even if the original Prompt row has since been deleted.
         for rec in self._read_engagement_log():
-            pid = rec.get("prompt_id")
             outcome = rec.get("outcome")
-            if pid in text_by_id and outcome:
-                t = text_by_id[pid]
-                if t[:120] in seen:
-                    continue
-                history.append({"prompt_text": t, "outcome": outcome})
-                seen.add(t[:120])
+            if not outcome:
+                continue
+            t = rec.get("caption") or text_by_id.get(rec.get("prompt_id")) or ""
+            if not t:
+                continue
+            if t[:120] in seen:
+                continue
+            history.append({"prompt_text": t, "outcome": outcome})
+            seen.add(t[:120])
 
         return history[:15]
 

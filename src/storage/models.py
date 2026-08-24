@@ -107,6 +107,7 @@ class Prompt(Base):
     feedback_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     github_issue_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     audience_segment: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    caption: Mapped[str | None] = mapped_column(Text, nullable=True)
     asset_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     asset_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -250,6 +251,7 @@ def _migrate() -> None:
 
     migrations = [
         ("prompts", "audience_segment", "VARCHAR(255)"),
+        ("prompts", "caption", "TEXT"),
         ("prompts", "asset_path", "VARCHAR(500)"),
         ("prompts", "asset_type", "VARCHAR(20)"),
     ]

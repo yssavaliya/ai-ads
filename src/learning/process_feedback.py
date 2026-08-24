@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -151,18 +152,36 @@ def process_feedback() -> int:
             processed += 1
             continue
 
-        fb = {"good": FeedbackType.GOOD, "bad": FeedbackType.BAD, "regenerate": FeedbackType.REGENERATE}.get(feedback)
+        # A regenerate request is a real negative signal AND must actually
+        # produce a fresh replacement prompt (otherwise the button is a no-op).
+        if feedback == "regenerate":
+            prompt.feedback = FeedbackType.REGENERATE
+            prompt.feedback_at = datetime.utcnow()
+            db.add(prompt)
+            updater.record(
+                prompt.business_id,
+                "bad",
+                prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
+                audience_segment=prompt.audience_segment or None,
+            )
+            db.commit()
+            try:
+                regenerate_prompt(prompt, db)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Regenerate failed for prompt %s: %s", prompt.id, exc)
+            close_issue(issue["issue_number"])
+            processed += 1
+            continue
+
+        fb = {"good": FeedbackType.GOOD, "bad": FeedbackType.BAD}.get(feedback)
         if fb is None:
             close_issue(issue["issue_number"])
             continue
 
         prompt.feedback = fb
-        from datetime import datetime
-
         prompt.feedback_at = datetime.utcnow()
         db.add(prompt)
 
-        # A regenerate request is a real negative signal for learning too.
         updater.record(
             prompt.business_id,
             "good" if feedback == "good" else "bad",
@@ -176,6 +195,91 @@ def process_feedback() -> int:
     db.close()
     logger.info("Processed %d feedback issues", processed)
     return processed
+
+
+def regenerate_prompt(prompt: Any, db: Any) -> bool:
+    """Generate a fresh variant for a prompt the user wanted redone, render its
+    asset, persist it, and email it. Returns True if a replacement was sent."""
+    from datetime import datetime
+
+    from src.delivery.email_sender import EmailSender
+    from src.generation.creative_forge import CreativeForge
+    from src.generation.prompt_forge import PromptForge
+    from src.generation.virality_gate import ViralityGate
+    from src.learning.bayesian_updater import BayesianUpdater
+    from src.scheduler.daily_job import DailyJob
+    from src.shared.utils import load_businesses
+    from src.storage.models import Business, Prompt, PromptType
+
+    biz = db.get(Business, prompt.business_id)
+    if biz is None:
+        return False
+    business = next((b for b in load_businesses() if b.get("name") == biz.name), {})
+    if not business:
+        return False
+
+    profile = biz.profile_json or {}
+    audience_map = biz.audience_personas_json or {}
+    weights = BayesianUpdater().to_forge_weights(biz.id)
+    ptype = prompt.prompt_type.value if prompt.prompt_type else "educational"
+
+    forge = PromptForge()
+    variants = forge.generate_variants(profile, audience_map, {}, [ptype], weights=weights, count=1)
+    if not variants:
+        logger.warning("Regenerate produced no variants for prompt %s", prompt.id)
+        return False
+    v = variants[0]
+    v["prompt_type"] = ptype
+
+    gate = ViralityGate()
+    res = gate.predictor.score(v["prompt_text"], history=[])
+    v["virality_score"] = res.get("score")
+    v["virality_label"] = res.get("label")
+    v["virality_probability"] = res.get("probability")
+    v["key_factors"] = res.get("key_factors")
+    v["risks"] = res.get("risks")
+    v["reasoning"] = res.get("reasoning")
+
+    dj = DailyJob()
+    dj._attach_posting_brief(business, [v], {}, audience_map)
+    try:
+        creative = CreativeForge()
+        asset = creative.render_prompt(v, profile, index=0)
+        v["asset_path"] = asset.get("asset_path")
+        v["asset_type"] = asset.get("asset_type")
+        v["thumbnail"] = asset.get("thumbnail")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Regenerate asset render failed: %s", exc)
+
+    new_prompt = Prompt(
+        business_id=biz.id,
+        prompt_text=v["prompt_text"],
+        caption=v.get("caption"),
+        prompt_type=PromptType(ptype),
+        virality_score=v.get("virality_score"),
+        virality_label=v.get("virality_label"),
+        virality_probability=v.get("virality_probability"),
+        key_factors=v.get("key_factors"),
+        risks=v.get("risks"),
+        reasoning=v.get("reasoning"),
+        audience_segment=(v.get("audience_segment") or None),
+        asset_path=v.get("asset_path"),
+        asset_type=v.get("asset_type"),
+        sent_at=datetime.utcnow(),
+    )
+    db.add(new_prompt)
+    db.flush()
+    links = dj.feedback.create_feedback_links(new_prompt.id, biz.name, v.get("title", ""))
+    db.commit()
+
+    try:
+        EmailSender().send_daily_prompts(
+            business,
+            [{**v, "prompt_id": new_prompt.id, "feedback_links": links}],
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Regenerate email failed: %s", exc)
+    return True
 
 
 def main() -> None:
