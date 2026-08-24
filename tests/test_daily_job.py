@@ -28,7 +28,9 @@ def test_attach_posting_brief_sets_caption_and_time():
     prompts = [
         {"hook": "Stop guessing.", "hashtags": ["#growth", "#ai"], "prompt_type": "educational"},
     ]
-    pipe._attach_posting_brief({"timezone": "Asia/Kolkata"}, prompts, {})
+    pipe._attach_posting_brief({"timezone": "Asia/Kolkata", "instagram_handle": "aimagix"}, prompts, {})
     assert prompts[0]["caption"].startswith("Stop guessing.")
     assert "#growth" in prompts[0]["caption"]
     assert "recommended_post_time" in prompts[0]
+    assert "first_comment" in prompts[0]
+    assert "@aimagix" in prompts[0]["first_comment"]

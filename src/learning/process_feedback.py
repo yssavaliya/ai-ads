@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 FEEDBACK_PREFIX = "[content-intel-feedback]"
 FEEDBACK_RE = re.compile(r"prompt #(\d+) \[(GOOD|BAD|REGENERATE|POSTED)")
 IG_POST_RE = re.compile(r"https?://(?:www\.)?instagram\.com/(?:p|reel|reels|tv)/[A-Za-z0-9_-]+/?", re.I)
+# Fallback for users who paste just the shortcode (e.g. "shortcode: ABC123").
+SHORTCODE_RE = re.compile(r"shortcode[:\s]+([A-Za-z0-9_-]{5,30})", re.I)
 
 
 def parse_feedback_issues() -> list[dict[str, Any]]:
@@ -102,14 +104,20 @@ def process_feedback() -> int:
 
         if feedback == "posted":
             url_match = IG_POST_RE.search(issue["body"])
-            if not url_match:
-                logger.warning(
-                    "::warning::POSTED issue #%s has no Instagram URL; leaving open for edit",
-                    issue["issue_number"],
-                )
-                continue
-            post_url = url_match.group(0)
-            post_id = post_url.rstrip("/").split("/")[-1]
+            if url_match:
+                post_url = url_match.group(0)
+                post_id = post_url.rstrip("/").split("/")[-1]
+            else:
+                code_match = SHORTCODE_RE.search(issue["body"])
+                if not code_match:
+                    logger.warning(
+                        "::warning::POSTED issue #%s has no Instagram URL/shortcode; leaving open for edit",
+                        issue["issue_number"],
+                    )
+                    continue
+                post_id = code_match.group(1)
+                post_url = f"https://instagram.com/p/{post_id}"
+            post_id = post_id.rstrip("/").split("/")[-1]
             from src.storage.models import Engagement, Platform
             from datetime import datetime
 

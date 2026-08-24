@@ -17,6 +17,9 @@ class BayesianUpdater:
     Implements a simple beta-Bernoulli update: weight = (hits + prior) / (trials + 2*prior)."""
 
     PRIOR = 1.0
+    COLD_START_TRIALS = 6          # below this many local trials, seed from global winners
+    COLD_START_BLEND = 0.85        # how strongly to trust the cross-business prior
+    GLOBAL_TOP_N = 15              # how many global winning combos to seed
 
     def __init__(self, weights_path: str | None = None) -> None:
         self.path = weights_path
@@ -76,11 +79,41 @@ class BayesianUpdater:
         return self._business(business_id)
 
     def to_forge_weights(self, business_id: int) -> dict[str, Any]:
-        """Flatten into {topic::format::segment: weight} for the forge prompt."""
+        """Flatten into {topic::format::segment: weight} for the forge prompt.
+
+        Cold-start: a brand-new business has no trials, so its weights are all
+        flat PRIOR (=1.0) and the forge gets no useful signal. To bootstrap
+        learning we blend in the top cross-business winning combos (scaled
+        slightly below their proven strength) until the business has enough
+        of its own data."""
         biz = self._business(business_id)
         flat: dict[str, float] = {}
         dims = ("topics", "formats", "audience_segments")
         for dim in dims:
             for key, entry in biz.get(dim, {}).items():
                 flat[f"{dim}::{key}"] = round(entry["weight"], 3)
+
+        total_trials = sum(
+            entry.get("trials", 0)
+            for dim in dims
+            for entry in biz.get(dim, {}).values()
+        )
+        if total_trials < self.COLD_START_TRIALS:
+            for key, weight in self._global_top_weights():
+                if key not in flat:
+                    flat[key] = round(weight * self.COLD_START_BLEND, 3)
         return flat
+
+    def _global_top_weights(self) -> list[tuple[str, float]]:
+        """Aggregate proven combos across ALL businesses (averaged per key),
+        returning the strongest N to seed cold-start accounts."""
+        data = self._data()
+        agg: dict[str, list[float]] = {}
+        for biz in data.values():
+            for dim in ("topics", "formats", "audience_segments"):
+                for key, entry in (biz.get(dim) or {}).items():
+                    k = f"{dim}::{key}"
+                    agg.setdefault(k, []).append(float(entry.get("weight", 0.0)))
+        scored = [(k, sum(v) / len(v)) for k, v in agg.items() if v]
+        scored.sort(key=lambda x: -x[1])
+        return scored[: self.GLOBAL_TOP_N]

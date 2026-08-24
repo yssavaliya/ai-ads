@@ -177,3 +177,23 @@ def test_too_big_candidates_go_to_long_cooldown_reject_cache(tmp_path, monkeypat
     seen_recent = pipeline.finder._recently_seen() | pipeline.finder._recently_rejected()
     assert "global-luxury.example" in seen_recent
     assert "tinybakery.example" not in seen_recent  # "too small" stays retryable
+
+
+def test_is_local_drops_overseas():
+    cfg = {"locations": ["Ahmedabad"]}
+    overseas = {"name": "Bakery City", "website_url": "bakerycity.com", "instagram_handle": "bakerycity"}
+    assert LeadPipeline._is_local(overseas, cfg) is False
+
+
+def test_is_local_keeps_indian_signals():
+    cfg = {"locations": ["Ahmedabad"]}
+    assert LeadPipeline._is_local({"name": "Ahmedabad Bakers", "website_url": "ahmedabadbakers.in"}, cfg) is True
+    assert LeadPipeline._is_local({"name": "Gujarat Sweets", "website_url": "gujaratsweets.com"}, cfg) is True
+    assert LeadPipeline._is_local({"name": "India Decor Co", "website_url": "indiadecor.co.in"}, cfg) is True
+
+
+def test_is_local_drops_unconfirmed():
+    cfg = {"locations": ["Ahmedabad"], "enforce_location": True}
+    # No overseas marker, but also no positive local signal -> skip (quality over quantity)
+    assert LeadPipeline._is_local({"name": "Generic Bakery", "website_url": "genericbakery.com"}, cfg) is False
+
