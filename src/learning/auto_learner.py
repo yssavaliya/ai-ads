@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from datetime import datetime, timedelta, timezone
@@ -18,7 +19,9 @@ POST_MATCH_WINDOW_DAYS = 10    # how many days after a prompt the user may have 
 MATCH_LOOKBACK_DAYS = 14       # how far back to look for sent prompts
 BENCHMARK_LOOKBACK_DAYS = 30   # median engagement window
 NO_HISTORY_BENCHMARK = 0.01    # fallback "good post" bar when a business has no
-                                # positive-engagement posts yet to compute a real median from
+                                 # positive-engagement posts yet to compute a real median from
+MIN_POSTS_FOR_BENCHMARK = 3    # need this many non-zero posts before trusting the
+                                 # own-median benchmark; below it we use an absolute bar
 
 
 def tokenize(text: str) -> set[str]:
@@ -80,7 +83,7 @@ class AutoLearner:
             logger.info("Business %s: no posts available for auto-learning", business_id)
             return {"matched": 0, "learned": 0}
 
-        benchmark = self._benchmark_median(posts, followers)
+        benchmark, bench_n = self._benchmark_median(posts, followers)
         sent_prompts = self._recent_prompts(db, business_id)
         for p in sent_prompts:
             p["audience_segment"] = None
@@ -97,7 +100,7 @@ class AutoLearner:
         details = []
         for prompt_id, prompt_type, prompt_text, post, segment in matched:
             rate = engagement_rate(post, followers)
-            outcome = "good" if rate >= benchmark else "bad"
+            outcome = self._decide_outcome(post, followers, benchmark, bench_n)
             self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome)
             self.updater.record(
                 business_id,
@@ -138,14 +141,38 @@ class AutoLearner:
             for p in rows
         ]
 
-    def _benchmark_median(self, posts: list[dict[str, Any]], followers: int | None) -> float:
-        """Median engagement rate of the business's own recent posts."""
+    def _benchmark_median(self, posts: list[dict[str, Any]], followers: int | None) -> tuple[float, int]:
+        """Median engagement rate of the business's own recent posts.
+        Returns (median, count_of_nonzero_posts) so callers can fall back to an
+        absolute bar when there isn't enough history to trust the median."""
         rates = sorted(engagement_rate(p, followers) for p in posts if engagement_rate(p, followers) > 0)
         if not rates:
-            return NO_HISTORY_BENCHMARK
+            return NO_HISTORY_BENCHMARK, 0
         n = len(rates)
         mid = n // 2
-        return rates[mid] if n % 2 else (rates[mid - 1] + rates[mid]) / 2
+        return (rates[mid] if n % 2 else (rates[mid - 1] + rates[mid]) / 2), n
+
+    @staticmethod
+    def _decide_outcome(
+        post: dict[str, Any], followers: int | None, benchmark: float, bench_n: int
+    ) -> str:
+        """good/bad for a matched post.
+
+        With enough history we compare against the business's own median
+        engagement rate. With too few posts (typical for a brand-new account)
+        we use an absolute bar so the loop still gets a real negative signal
+        instead of everything reading 'good' (the old 0.01 floor did)."""
+        rate = engagement_rate(post, followers)
+        likes = int(post.get("likes") or 0)
+        comments = int(post.get("comments") or 0)
+        if bench_n >= MIN_POSTS_FOR_BENCHMARK:
+            return "good" if rate >= benchmark else "bad"
+        # Not enough history: a post that drew any real reaction is good; a
+        # total flop is bad. Avoids penalizing a tiny account's first tries
+        # while still learning from genuine duds.
+        if likes >= 2 or comments >= 1:
+            return "good"
+        return "bad"
 
     def _match(
         self, posts: list[dict[str, Any]], prompts: list[dict[str, Any]]
@@ -262,6 +289,34 @@ class AutoLearner:
         )
         db.add(engagement)
         db.commit()
+        self._log_engagement(prompt_id, post, rate, outcome)
+
+    @staticmethod
+    def _log_engagement(prompt_id: int, post: dict[str, Any], rate: float, outcome: str) -> None:
+        """Append a durable, git-tracked engagement record so learning history
+        survives agent.db cache eviction (raw Engagement rows live only in the
+        cache; the Bayesian weights persist separately in data/weights.json)."""
+        try:
+            from pathlib import Path
+
+            path = Path(settings.data_dir) / "engagement_log.jsonl"
+            with open(path, "a", encoding="utf-8") as fh:
+                fh.write(
+                    json.dumps(
+                        {
+                            "ts": datetime.utcnow().isoformat(),
+                            "prompt_id": prompt_id,
+                            "post_id": str(post.get("post_id") or "")[:100],
+                            "rate": round(rate, 4),
+                            "likes": int(post.get("likes") or 0),
+                            "comments": int(post.get("comments") or 0),
+                            "outcome": outcome,
+                        }
+                    )
+                    + "\n"
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to append engagement log: %s", exc)
 
     @staticmethod
     def _parse_date(value: Any) -> datetime | None:
