@@ -228,30 +228,38 @@ class LeadPipeline:
         logger.info("Lead pipeline result: %s", result)
         return result
 
-    @staticmethod
-    def _is_local(candidate: dict[str, Any], config: dict[str, Any]) -> bool:
-        """Heuristic: drop candidates clearly outside the target location.
+    # Overseas markers that mean "not our market" — hard drop.
+    _FOREIGN = [
+        "california", "new york", "orange county", "hong kong", ".hk",
+        "london", "united kingdom", "canada", "australia", "singapore",
+        "france", "tokyo", "dubai", "germany", "usa", "u.s.", "united states",
+    ]
+    # Positive India/Gujarat/Ahmedabad signals — a business with one of these
+    # (or a .in TLD) is treated as local even if the city isn't spelled out.
+    _INDIA = ["ahmedabad", "gujarat", "india", "अहमदाबाद", "bharat", ".in", "co.in"]
+
+    @classmethod
+    def _is_local(cls, candidate: dict[str, Any], config: dict[str, Any]) -> bool:
+        """Keep only leads that plausibly serve the target market.
+
         Web search returns global results, so without this the pool fills
-        with franchises/portals (bakerycity.com = Orange County, etc.)."""
+        with franchises/portals (bakerycity.com = Orange County, etc.).
+        We hard-drop overseas signals, then require at least one positive
+        local signal (configured city, India/Gujarat marker, or .in TLD).
+        Leads with neither are skipped — quality over quantity."""
         locations = [l.lower() for l in config.get("locations", [])]
         name = (candidate.get("name") or "").lower()
         domain = (candidate.get("website_url") or "").lower()
         handle = (candidate.get("instagram_handle") or "").lower()
-        haystack = f"{name} {domain} {handle}"
-        foreign = [
-            "california", "new york", "orange county", "hong kong", ".hk",
-            "london", "united kingdom", "canada", "australia", "singapore",
-            "france", "tokyo", "dubai", "germany",
-        ]
-        if any(f in haystack for f in foreign):
+        bio = (candidate.get("bio") or candidate.get("description") or "").lower()
+        haystack = f"{name} {domain} {handle} {bio}"
+        if any(f in haystack for f in cls._FOREIGN):
             return False
-        if not locations:
+        local_signals = locations + cls._INDIA
+        if any(sig in haystack for sig in local_signals):
             return True
-        if any(loc in haystack for loc in locations):
-            return True
-        if domain.endswith(".in") or ".in/" in domain:
-            return True
-        return True
+        logger.debug("Location unconfirmed for '%s'; dropping (no local signal)", name)
+        return False
 
     def _merge_known_leads(
         self, db: Any, top_leads: list[dict[str, Any]], config: dict[str, Any]

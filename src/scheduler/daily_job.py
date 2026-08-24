@@ -193,6 +193,7 @@ class DailyPipeline:
         and a recommended post time, so the human can post manually without
         re-deriving anything."""
         post_time = self._recommend_post_time(business, social_data)
+        handle = business.get("instagram_handle") or business.get("name") or ""
         for p in prompts:
             hook = (p.get("hook") or "").strip()
             hashtags = " ".join(p.get("hashtags") or [])
@@ -201,6 +202,12 @@ class DailyPipeline:
                 caption = f"{caption}\n\n{hashtags}".strip() if caption else hashtags
             p["caption"] = caption
             p["recommended_post_time"] = post_time
+            # First-comment CTA: posting a pinned first comment reliably lifts
+            # reach and comment rate, so we hand the user a ready one.
+            p["first_comment"] = (
+                f"💬 What's your take? Comment below.\n\n"
+                f"Follow @{handle} for more."
+            )
 
     def _recommend_post_time(self, business: dict[str, Any], social_data: dict[str, Any]) -> str:
         """Recommend the next good slot to post, in the business timezone.
