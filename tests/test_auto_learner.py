@@ -100,3 +100,11 @@ def test_decide_outcome_love_comments_stay_good():
             "comments_text": ["love this 🔥 amazing"]}
     outcome = AutoLearner._decide_outcome(post, 100, 0.5, 0, post["comments_text"])
     assert outcome == "good"
+
+
+def test_decide_outcome_positive_comments_rescue():
+    # Barely missed the like bar (base would be 'bad') but comments loved it.
+    post = {"likes": 1, "comments": 0, "shares": 0, "saves": 0, "reach": 100,
+            "comments_text": ["love this 🔥 amazing", "want this"]}
+    outcome = AutoLearner._decide_outcome(post, 100, 0.5, 0, post["comments_text"])
+    assert outcome == "good"

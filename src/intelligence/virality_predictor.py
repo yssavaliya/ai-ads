@@ -27,11 +27,27 @@ class ViralityPredictor:
         audience_map: dict[str, Any],
         trend_data: dict[str, Any],
         prompt_type: str = "educational",
+        history: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        prompt = self._build_prompt(prompt_text, business_profile, audience_map, trend_data, prompt_type)
+        prompt = self._build_prompt(
+            prompt_text, business_profile, audience_map, trend_data, prompt_type, history
+        )
         result = self.llm.run(prompt, label="virality-predictor", temperature=0.2)
         payload = json.loads(extract_json_text(result.stdout))
         return self._validate(payload)
+
+    @staticmethod
+    def _format_history(history: list[dict[str, Any]] | None) -> str:
+        if not history:
+            return "No historical performance data yet for this business."
+        lines = []
+        for h in history[:10]:
+            text = (h.get("prompt_text") or "")[:200].replace("\n", " ")
+            outcome = h.get("outcome") or "unknown"
+            rate = h.get("rate")
+            rate_s = f" (engagement rate {rate})" if rate is not None else ""
+            lines.append(f"- [{outcome}]{rate_s}: {text}")
+        return "\n".join(lines)
 
     def _build_prompt(
         self,
@@ -40,6 +56,7 @@ class ViralityPredictor:
         audience_map: dict[str, Any],
         trend_data: dict[str, Any],
         prompt_type: str,
+        history: list[dict[str, Any]] | None = None,
     ) -> str:
         return f"""
 You are a viral content strategist for the Indian social media market (Instagram + LinkedIn).
@@ -56,13 +73,19 @@ Today's trends:
 
 Prompt type: {prompt_type}
 
+REAL PAST PERFORMANCE for this business (use to ground your judgment — favor
+patterns similar to winners, penalize patterns similar to losers):
+{self._format_history(history)}
+
 Content prompt to evaluate:
 """
         + f'"""{prompt_text}"""\n'
         + """
 Evaluate like a senior growth marketer. Consider: hook strength (first 3 words),
 emotional trigger, specificity, Indian cultural relevance, platform fit,
-scroll-stopping potential, shareability, and fit with the audience map.
+scroll-stopping potential, shareability, and fit with the audience map. Weight
+the REAL PAST PERFORMANCE above: if this prompt resembles a proven winner, score
+it higher; if it resembles a proven loser, score it lower.
 
 Respond ONLY with JSON:
 {

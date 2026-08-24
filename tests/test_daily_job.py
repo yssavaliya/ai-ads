@@ -34,3 +34,47 @@ def test_attach_posting_brief_sets_caption_and_time():
     assert "recommended_post_time" in prompts[0]
     assert "first_comment" in prompts[0]
     assert "@aimagix" in prompts[0]["first_comment"]
+
+
+def test_recommend_post_time_uses_audience_signal():
+    pipe = DailyPipeline()
+    out = pipe._recommend_post_time(
+        {"timezone": "Asia/Kolkata"},
+        {},
+        {"personas": [{"best_posting_times": "Tue-Thu 6-9 PM IST"}]},
+    )
+    assert "09:00 PM" in out
+
+
+def test_recommend_post_time_falls_back_without_audience():
+    pipe = DailyPipeline()
+    out = pipe._recommend_post_time({"timezone": "Asia/Kolkata"}, {})
+    assert "at" in out
+
+
+def test_dedupe_drops_near_duplicates():
+    pipe = DailyPipeline()
+    prompts = [
+        {"prompt_text": "5 home workouts for busy professionals", "virality_score": 80},
+        {"prompt_text": "car maintenance tips for beginners", "virality_score": 70},
+    ]
+    recent = ["5 home workouts for busy indian professionals #fitness"]
+    kept = pipe._dedupe_prompts(prompts, recent)
+    assert len(kept) == 1
+    assert kept[0]["prompt_text"].startswith("car maintenance")
+
+
+def test_dedupe_never_returns_empty():
+    pipe = DailyPipeline()
+    prompts = [{"prompt_text": "5 home workouts for busy professionals", "virality_score": 80}]
+    recent = ["5 home workouts for busy indian professionals #fitness"]
+    kept = pipe._dedupe_prompts(prompts, recent)
+    assert len(kept) == 1
+
+
+def test_weight_boost_sign():
+    from src.generation.virality_gate import ViralityGate
+
+    assert ViralityGate._weight_boost(None, {"format": "reel"}) == 0.0
+    assert ViralityGate._weight_boost({"formats::reel": 1.5}, {"format": "reel"}) > 0
+    assert ViralityGate._weight_boost({"formats::reel": 0.2}, {"format": "reel"}) < 0

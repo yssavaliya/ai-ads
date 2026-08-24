@@ -33,9 +33,12 @@ class ViralityGate:
         trend_data: dict[str, Any],
         prompt_types: list[str],
         weights: dict[str, Any] | None = None,
+        history: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
         """Returns up to 3 prompts that meet the threshold (diverse types),
-        or the best available ones."""
+        or the best available ones. Learned `weights` bias selection toward
+        proven format/angle combos; `history` grounds the predictor in real
+        past performance."""
         selected: dict[str, dict[str, Any]] = {}
         best_overall: dict[str, Any] | None = None
         best_score = -1
@@ -63,6 +66,7 @@ class ViralityGate:
                     audience_map,
                     trend_data,
                     v.get("prompt_type", "educational"),
+                    history=history,
                 )
                 v["virality_score"] = prediction["virality_score"]
                 v["virality_label"] = prediction["virality_label"]
@@ -76,12 +80,14 @@ class ViralityGate:
 
             for v in scored:
                 score = v["virality_score"]
-                if score > best_score:
-                    best_score = score
+                combined = score + self._weight_boost(weights, v)
+                v["_combined"] = combined
+                if combined > best_score:
+                    best_score = combined
                     best_overall = v
                 if score >= self.threshold:
                     ptype = v.get("prompt_type", "educational")
-                    if ptype not in selected or selected[ptype]["virality_score"] < score:
+                    if ptype not in selected or selected[ptype].get("_combined", 0) < combined:
                         selected[ptype] = v
 
             if len(selected) >= 3:
@@ -116,12 +122,14 @@ class ViralityGate:
                 refined["reasoning"] = prediction["reasoning"]
                 refined["improvement_hints"] = prediction.get("improvement_hints", [])
                 refined["generation_attempt"] = attempt
+                refined_combined = refined["virality_score"] + self._weight_boost(weights, refined)
+                refined["_combined"] = refined_combined
                 if refined["virality_score"] >= self.threshold:
                     ptype = refined.get("prompt_type", "educational")
-                    if ptype not in selected or selected[ptype]["virality_score"] < refined["virality_score"]:
+                    if ptype not in selected or selected[ptype].get("_combined", 0) < refined_combined:
                         selected[ptype] = refined
-                if refined["virality_score"] > best_score:
-                    best_score = refined["virality_score"]
+                if refined_combined > best_score:
+                    best_score = refined_combined
                     best_overall = refined
 
         results = list(selected.values())
@@ -141,6 +149,29 @@ class ViralityGate:
             len(results), max((v["virality_score"] for v in results), default=0), self.threshold,
         )
         return results[:3]
+
+    @staticmethod
+    def _weight_boost(
+        weights: dict[str, Any] | None, v: dict[str, Any]
+    ) -> float:
+        """Small nudge so proven combos (weight > 1) win ties over unproven or
+        penalized ones (weight < 1). Keeps the virality score as the primary
+        signal but makes the self-learning loop actually steer generation."""
+        if not weights:
+            return 0.0
+        total, n = 0.0, 0
+        for dim, key in (
+            ("formats", v.get("format")),
+            ("topics", v.get("prompt_type")),
+            ("audience_segments", v.get("audience_segment")),
+        ):
+            if key:
+                val = weights.get(f"{dim}::{key}")
+                if val is not None:
+                    total += val
+                    n += 1
+        avg = (total / n) if n else 1.0
+        return 6.0 * (avg - 1.0)
 
     @staticmethod
     def _collect_hints(scored: list[dict[str, Any]]) -> list[str]:
