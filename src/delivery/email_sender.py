@@ -266,7 +266,7 @@ class EmailSender:
         for path in sorted(
             paths, key=lambda p: -Path(p).stat().st_size if Path(p).exists() else 0
         ):
-            size = Path(path).stat().st_size if Path(p).exists() else 0
+            size = Path(path).stat().st_size if Path(path).exists() else 0
             if total + size > limit_bytes:
                 # Drop even the first/largest file if it alone would breach the
                 # cap (a single oversized Reel must not be attached verbatim).

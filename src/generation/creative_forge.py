@@ -184,7 +184,7 @@ class CreativeForge:
         font = self._load_font(font_size)
         lines = self._wrap_text(draw, text.upper(), font, max_width=int(w * 0.86))
         line_height = int(font_size * 1.28)
-        pad_x, pad_y = int(w * 0.055), int(h * 0.05)
+        pad_y = int(h * 0.05)
 
         block_h = line_height * len(lines) + 2 * pad_y
         band_top = h - int(h * 0.075) - block_h  # keep 7.5% bottom safe area clear

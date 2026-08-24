@@ -21,7 +21,8 @@ from src.learning.auto_learner import AutoLearner
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
 from src.shared.utils import load_json, save_json
-from src.storage.models import Base, Business, Prompt, PromptType, SessionLocal, engine as db_engine
+from src.storage.models import Base, Business, Prompt, PromptType, SessionLocal
+from src.storage.models import engine as db_engine
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +128,7 @@ class LeadPipeline:
             }
             scored_leads.append(lead)
 
-        scored_leads.sort(key=lambda l: l["opportunity_score"], reverse=True)
+        scored_leads.sort(key=lambda lead: lead["opportunity_score"], reverse=True)
         top_leads = scored_leads[: config["target_count"]]
 
         db = SessionLocal()
@@ -219,7 +220,7 @@ class LeadPipeline:
             "candidates_found": len(candidates),
             "eligible_scored": len(scored_leads),
             "top_leads": len(digest),
-            "prompts_generated": sum(len(l.get("prompts") or []) for l in digest),
+            "prompts_generated": sum(len(lead.get("prompts") or []) for lead in digest),
             "prompt_failures": prompt_failures,
             "learning": learning,
             "email_sent": email_ok,
@@ -247,7 +248,7 @@ class LeadPipeline:
         We hard-drop overseas signals, then require at least one positive
         local signal (configured city, India/Gujarat marker, or .in TLD).
         Leads with neither are skipped — quality over quantity."""
-        locations = [l.lower() for l in config.get("locations", [])]
+        locations = [loc.lower() for loc in config.get("locations", [])]
         name = (candidate.get("name") or "").lower()
         domain = (candidate.get("website_url") or "").lower()
         handle = (candidate.get("instagram_handle") or "").lower()
@@ -267,7 +268,7 @@ class LeadPipeline:
         """Include previously-discovered eligible businesses (from the DB) in
         the digest so it keeps delivering content instead of going empty once
         the good leads have been delivered once and parked in the seen-cache."""
-        exclude = {l.get("instagram_handle", "").lower() for l in top_leads}
+        exclude = {lead.get("instagram_handle", "").lower() for lead in top_leads}
         try:
             businesses = (
                 db.query(Business)
@@ -318,7 +319,7 @@ class LeadPipeline:
                 }
             )
         merged = top_leads + known
-        merged.sort(key=lambda l: l.get("opportunity_score", 0), reverse=True)
+        merged.sort(key=lambda lead: lead.get("opportunity_score", 0), reverse=True)
         return merged[: config["target_count"]]
 
     def _learning_pass(self) -> dict[str, Any]:
