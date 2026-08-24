@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import random
 import sys
@@ -315,26 +316,62 @@ class DailyPipeline:
 
     def _load_history(self, db: Any, biz: Any) -> list[dict[str, Any]]:
         """Real past performance to ground the predictor (#1): recent prompts
-        that got explicit human feedback, with their outcome."""
+        with their outcome. Combines (a) explicit human button feedback AND
+        (b) auto-learned outcomes from scraped engagement — so the predictor
+        stays grounded even when the human doesn't click the email buttons."""
         from datetime import timedelta
 
         from src.storage.models import FeedbackType, Prompt
 
         cutoff = datetime.utcnow() - timedelta(days=30)
-        rows = (
+        prompts = (
             db.query(Prompt)
-            .filter(Prompt.business_id == biz.id, Prompt.sent_at >= cutoff, Prompt.feedback.isnot(None))
-            .order_by(Prompt.sent_at.desc())
-            .limit(12)
+            .filter(Prompt.business_id == biz.id, Prompt.sent_at >= cutoff)
             .all()
         )
-        history = []
-        for p in rows:
+        text_by_id = {p.id: (p.prompt_text or "") for p in prompts}
+
+        history: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for p in prompts:
+            if not p.feedback:
+                continue
             outcome = "good" if p.feedback == FeedbackType.GOOD else (
                 "bad" if p.feedback in (FeedbackType.BAD, FeedbackType.REGENERATE) else "unknown"
             )
-            history.append({"prompt_text": p.prompt_text or "", "outcome": outcome})
-        return history
+            t = p.prompt_text or ""
+            history.append({"prompt_text": t, "outcome": outcome})
+            seen.add(t[:120])
+
+        # Enrich with AUTO-learned outcomes (real engagement scraped from the
+        # business's own posts) — the richer, always-present signal.
+        for rec in self._read_engagement_log():
+            pid = rec.get("prompt_id")
+            outcome = rec.get("outcome")
+            if pid in text_by_id and outcome:
+                t = text_by_id[pid]
+                if t[:120] in seen:
+                    continue
+                history.append({"prompt_text": t, "outcome": outcome})
+                seen.add(t[:120])
+
+        return history[:15]
+
+    @staticmethod
+    def _read_engagement_log() -> list[dict[str, Any]]:
+        """Durable, git-tracked auto-learning records (see auto_learner)."""
+        path = Path(settings.data_dir) / "engagement_log.jsonl"
+        if not path.exists():
+            return []
+        out: list[dict[str, Any]] = []
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line:
+                    out.append(json.loads(line))
+        except Exception as exc:
+            logger.warning("Failed to read engagement log: %s", exc)
+        return out
 
     def _recent_prompt_texts(self, db: Any, biz: Any) -> list[str]:
         from datetime import timedelta

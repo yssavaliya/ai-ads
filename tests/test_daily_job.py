@@ -78,3 +78,27 @@ def test_weight_boost_sign():
     assert ViralityGate._weight_boost(None, {"format": "reel"}) == 0.0
     assert ViralityGate._weight_boost({"formats::reel": 1.5}, {"format": "reel"}) > 0
     assert ViralityGate._weight_boost({"formats::reel": 0.2}, {"format": "reel"}) < 0
+
+
+def test_read_engagement_log_parses(tmp_path, monkeypatch):
+    from src.shared.config import settings
+    from src.scheduler.daily_job import DailyPipeline
+
+    log = tmp_path / "engagement_log.jsonl"
+    log.write_text(
+        '{"prompt_id": 1, "outcome": "good", "rate": 0.05}\n'
+        '{"prompt_id": 2, "outcome": "bad", "rate": 0.001}\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings, "data_dir", str(tmp_path))
+    records = DailyPipeline._read_engagement_log()
+    assert len(records) == 2
+    assert records[0]["outcome"] == "good"
+
+
+def test_read_engagement_log_missing_returns_empty(tmp_path, monkeypatch):
+    from src.shared.config import settings
+    from src.scheduler.daily_job import DailyPipeline
+
+    monkeypatch.setattr(settings, "data_dir", str(tmp_path))
+    assert DailyPipeline._read_engagement_log() == []
