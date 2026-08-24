@@ -13,8 +13,8 @@ import httpx
 
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
-from src.shared.utils import load_businesses, load_weights, save_weights
-from src.storage.models import Business, FeedbackType, Prompt, SessionLocal
+from src.shared.utils import load_weights, save_weights
+from src.storage.models import Business, FeedbackType, Prompt, PromptType, SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -119,8 +119,9 @@ def process_feedback() -> int:
                 post_id = code_match.group(1)
                 post_url = f"https://instagram.com/p/{post_id}"
             post_id = post_id.rstrip("/").split("/")[-1]
-            from src.storage.models import Engagement, Platform
             from datetime import datetime
+
+            from src.storage.models import Engagement, Platform
 
             existing = (
                 db.query(Engagement)
@@ -200,8 +201,6 @@ def process_feedback() -> int:
 def regenerate_prompt(prompt: Any, db: Any) -> bool:
     """Generate a fresh variant for a prompt the user wanted redone, render its
     asset, persist it, and email it. Returns True if a replacement was sent."""
-    from datetime import datetime
-
     from src.delivery.email_sender import EmailSender
     from src.generation.creative_forge import CreativeForge
     from src.generation.prompt_forge import PromptForge
@@ -209,7 +208,6 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
     from src.learning.bayesian_updater import BayesianUpdater
     from src.scheduler.daily_job import DailyPipeline
     from src.shared.utils import load_businesses
-    from src.storage.models import Business, Prompt, PromptType
 
     biz = db.get(Business, prompt.business_id)
     if biz is None:

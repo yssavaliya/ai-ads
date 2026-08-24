@@ -5,8 +5,8 @@ import base64
 import logging
 import random
 import re
-from pathlib import Path
 import urllib.parse
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 

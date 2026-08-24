@@ -112,7 +112,7 @@ class SocialScraper:
     # a client timeout below that silently kills every run with a TimeoutError.
     APIFY_TIMEOUT = httpx.Timeout(320, connect=30.0)
 
-    def _apify_error_detail(self, resp: "httpx.Response") -> str:
+    def _apify_error_detail(self, resp: httpx.Response) -> str:
         body = ""
         try:
             body = (resp.text or "")[:300]

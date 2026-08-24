@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 from sqlalchemy import (
     JSON,
     Column,
     DateTime,
-    Enum as SQLEnum,
     Float,
     ForeignKey,
     Index,
@@ -19,6 +18,9 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     event,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -35,7 +37,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class PromptType(str, Enum):
+class PromptType(StrEnum):
     EDUCATIONAL = "educational"
     STORYTELLING = "storytelling"
     SOCIAL_PROOF = "social_proof"
@@ -46,13 +48,13 @@ class PromptType(str, Enum):
     TREND_JACKING = "trend_jacking"
 
 
-class FeedbackType(str, Enum):
+class FeedbackType(StrEnum):
     GOOD = "good"
     BAD = "bad"
     REGENERATE = "regenerate"
 
 
-class Platform(str, Enum):
+class Platform(StrEnum):
     INSTAGRAM = "instagram"
     LINKEDIN = "linkedin"
     TWITTER = "twitter"
@@ -83,9 +85,9 @@ class Business(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    prompts: Mapped[list["Prompt"]] = relationship(back_populates="business", cascade="all, delete-orphan")
-    competitors: Mapped[list["Competitor"]] = relationship(back_populates="business", cascade="all, delete-orphan")
-    weights: Mapped[list["Weight"]] = relationship(back_populates="business", cascade="all, delete-orphan")
+    prompts: Mapped[list[Prompt]] = relationship(back_populates="business", cascade="all, delete-orphan")
+    competitors: Mapped[list[Competitor]] = relationship(back_populates="business", cascade="all, delete-orphan")
+    weights: Mapped[list[Weight]] = relationship(back_populates="business", cascade="all, delete-orphan")
 
 
 class Prompt(Base):
@@ -112,8 +114,8 @@ class Prompt(Base):
     asset_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    business: Mapped["Business"] = relationship(back_populates="prompts")
-    engagements: Mapped[list["Engagement"]] = relationship(back_populates="prompt", cascade="all, delete-orphan")
+    business: Mapped[Business] = relationship(back_populates="prompts")
+    engagements: Mapped[list[Engagement]] = relationship(back_populates="prompt", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_prompts_business_sent", "business_id", "sent_at"),
@@ -139,7 +141,7 @@ class Engagement(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    prompt: Mapped["Prompt"] = relationship(back_populates="engagements")
+    prompt: Mapped[Prompt] = relationship(back_populates="engagements")
 
     __table_args__ = (
         Index("ix_engagements_prompt_fetched", "prompt_id", "fetched_at"),
@@ -162,7 +164,7 @@ class Competitor(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    business: Mapped["Business"] = relationship(back_populates="competitors")
+    business: Mapped[Business] = relationship(back_populates="competitors")
 
     __table_args__ = (
         UniqueConstraint("business_id", "platform", "handle", name="uq_competitor_business_platform_handle"),
@@ -198,7 +200,7 @@ class Weight(Base):
     sample_count: Mapped[int] = mapped_column(Integer, default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    business: Mapped["Business"] = relationship(back_populates="weights")
+    business: Mapped[Business] = relationship(back_populates="weights")
 
     __table_args__ = (
         UniqueConstraint("business_id", "topic", "format", "audience_segment", name="uq_weight_business_topic_format_audience"),

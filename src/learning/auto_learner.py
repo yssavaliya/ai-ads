@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import func
 
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
-from src.storage.models import Business, Engagement, Platform, Prompt, SessionLocal
 from src.shared.utils import load_businesses
+from src.storage.models import Business, Engagement, Platform, Prompt, SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -403,7 +403,7 @@ class AutoLearner:
         if isinstance(value, datetime):
             return value.replace(tzinfo=None)
         if isinstance(value, (int, float)) and value > 1e9:
-            return datetime.fromtimestamp(value, tz=timezone.utc).replace(tzinfo=None)
+            return datetime.fromtimestamp(value, tz=UTC).replace(tzinfo=None)
         if isinstance(value, str):
             try:
                 return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
