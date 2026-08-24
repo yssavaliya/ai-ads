@@ -119,7 +119,6 @@ class EmailSender:
 
     def send_daily_prompts(self, business: dict[str, Any], prompts: list[dict[str, Any]]) -> bool:
         template = self._env.get_template("daily_prompt.html")
-        html = template.render(business=business, prompts=prompts, date_str=self._today_str())
         subject = f"🎯 Tomorrow's {len(prompts)} Viral Content Prompts for {business['name']}"
 
         inline: dict[str, str] = {}
@@ -139,6 +138,18 @@ class EmailSender:
                 if Path(asset).exists():
                     inline[cid] = asset
                 p["asset_cid"] = cid
+
+        # Gmail caps messages near 25MB. If the Reel MP4s push us over, attach
+        # only the lightweight preview frames and tell the reader the full
+        # assets are in the workflow run artifact (gap #10: email size safety).
+        attachments, dropped = self._size_safe_attachments(attachments)
+        if dropped:
+            for p in prompts:
+                if p.get("asset_type") == "reel":
+                    p["asset_note"] = (
+                        "Full Reel in the workflow run artifact (email size limit). "
+                        "Preview frame shown inline."
+                    )
 
         html = template.render(business=business, prompts=prompts, date_str=self._today_str())
         return self.send(business["email"], subject, html, inline_images=inline, attachments=attachments)
@@ -184,6 +195,7 @@ class EmailSender:
                     p["asset_cid"] = cid
                 pi += 1
 
+        attachments, _ = self._size_safe_attachments(attachments)
         html = template.render(leads=leads, date_str=self._today_str())
         return self.send(to, subject, html, inline_images=inline, attachments=attachments)
 
@@ -227,6 +239,23 @@ class EmailSender:
         logger.info("DRY RUN: preview written to %s (attachments: %d)", out_html, len(copied))
         print(f"[dry-run] email preview: {out_html} ({len(attachments)} attachments)")
         return True
+
+    @staticmethod
+    def _size_safe_attachments(paths: list[str], limit_bytes: int = 22_000_000) -> tuple[list[str], int]:
+        """Keep attachments under `limit_bytes` (Gmail ~25MB cap, with margin).
+        Drops the largest files first (Reels) and returns (kept, dropped_count)."""
+        kept: list[str] = []
+        total = 0
+        dropped = 0
+        # Sort descending by size so we drop the heaviest (Reels) first.
+        for path in sorted(paths, key=lambda p: -Path(p).stat().st_size if Path(p).exists() else 0):
+            size = Path(path).stat().st_size if Path(path).exists() else 0
+            if total + size > limit_bytes and kept:
+                dropped += 1
+                continue
+            kept.append(path)
+            total += size
+        return kept, dropped
 
     @staticmethod
     def _guess_type(path: Path) -> tuple[str, str]:

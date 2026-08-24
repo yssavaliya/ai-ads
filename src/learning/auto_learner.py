@@ -51,6 +51,28 @@ def caption_similarity(post_caption: str, prompt_text: str) -> float:
     return max(jaccard_similarity(post_caption, prompt_text), containment(post_caption, prompt_text))
 
 
+_POSITIVE = {
+    "love", "great", "amazing", "awesome", "fire", "best", "cool", "nice", "want",
+    "need", "please", "superb", "helpful", "inspiring", "beautiful", "perfect",
+    "yes", "🔥", "❤", "💜", "💯", "👏", "😍", "🙏", "💪",
+}
+_NEGATIVE = {
+    "bad", "worst", "hate", "boring", "ugly", "fake", "scam", "disappoint",
+    "lazy", "weak", "cringe", "trash", "avoid", "no", "not", "why", "annoying",
+    "confusing", "hard", "difficult", "useless",
+}
+
+
+def comment_sentiment(texts: list[str]) -> int:
+    """Net sentiment of a list of comment strings. Positive = more love than hate."""
+    net = 0
+    for t in texts or []:
+        toks = {w for w in re.split(r"[^a-z0-9#]+", (t or "").lower()) if len(w) > 1}
+        net += sum(1 for w in toks if w in _POSITIVE)
+        net -= sum(1 for w in toks if w in _NEGATIVE)
+    return net
+
+
 def engagement_rate(post: dict[str, Any], followers: int | None) -> float:
     """Likes/comments/shares weighted vs reach (or followers as fallback)."""
     likes = int(post.get("likes") or 0)
@@ -100,7 +122,7 @@ class AutoLearner:
         details = []
         for prompt_id, prompt_type, prompt_text, post, segment in matched:
             rate = engagement_rate(post, followers)
-            outcome = self._decide_outcome(post, followers, benchmark, bench_n)
+            outcome = self._decide_outcome(post, followers, benchmark, bench_n, post.get("comments_text"))
             self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome)
             self.updater.record(
                 business_id,
@@ -154,25 +176,36 @@ class AutoLearner:
 
     @staticmethod
     def _decide_outcome(
-        post: dict[str, Any], followers: int | None, benchmark: float, bench_n: int
+        post: dict[str, Any], followers: int | None, benchmark: float, bench_n: int,
+        comments_text: list[str] | None = None,
     ) -> str:
         """good/bad for a matched post.
 
         With enough history we compare against the business's own median
         engagement rate. With too few posts (typical for a brand-new account)
         we use an absolute bar so the loop still gets a real negative signal
-        instead of everything reading 'good' (the old 0.01 floor did)."""
+        instead of everything reading 'good' (the old 0.01 floor did).
+
+        Comment text is a second signal: a wall of negative comments on a
+        post that merely cleared the like bar flips the outcome to 'bad' so
+        the learner doesn't reward content people disliked."""
         rate = engagement_rate(post, followers)
         likes = int(post.get("likes") or 0)
         comments = int(post.get("comments") or 0)
         if bench_n >= MIN_POSTS_FOR_BENCHMARK:
-            return "good" if rate >= benchmark else "bad"
+            base = "good" if rate >= benchmark else "bad"
         # Not enough history: a post that drew any real reaction is good; a
         # total flop is bad. Avoids penalizing a tiny account's first tries
         # while still learning from genuine duds.
-        if likes >= 2 or comments >= 1:
-            return "good"
-        return "bad"
+        elif likes >= 2 or comments >= 1:
+            base = "good"
+        else:
+            base = "bad"
+
+        sentiment = comment_sentiment(comments_text or [])
+        if sentiment <= -2:
+            return "bad"
+        return base
 
     def _match(
         self, posts: list[dict[str, Any]], prompts: list[dict[str, Any]]
