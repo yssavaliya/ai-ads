@@ -1,25 +1,25 @@
 {
-  "generated_at": "2026-08-23T12:18:17.015686",
+  "generated_at": "2026-08-24T04:19:06.282834",
   "leads": [
     {
-      "name": "McCarver & Moser",
-      "website_url": "https://www.mccarvermoser.com/",
-      "instagram_handle": "mccarverandmoser",
+      "name": "Homeof VA",
+      "website_url": "https://homeofva.org/",
+      "instagram_handle": "homeofvagabonds",
       "linkedin_handle": "",
-      "niche": "jewellery store",
+      "niche": "home decor",
       "location": "Ahmedabad",
       "found_via": "search",
-      "website_title": "McCarver & Moser Jewelers | Fine Jewelry, Diamonds & Watches | Sarasota, FL",
-      "follower_count": 3167,
+      "website_title": "Home of VA - Housing Opportunities Made Equal HOME of VA",
+      "follower_count": 548,
       "opportunity_score": 65,
       "opportunity_reasons": [
-        "3167 followers (sweet spot)",
+        "548 followers (sweet spot)",
         "limited recent activity",
         "no engagement data yet",
         "has website (full profile available)",
         "has social handle"
       ],
-      "followers": 3167,
+      "followers": 548,
       "prompts": [],
       "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
     }
