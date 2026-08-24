@@ -207,7 +207,7 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
     from src.generation.prompt_forge import PromptForge
     from src.generation.virality_gate import ViralityGate
     from src.learning.bayesian_updater import BayesianUpdater
-    from src.scheduler.daily_job import DailyJob
+    from src.scheduler.daily_job import DailyPipeline
     from src.shared.utils import load_businesses
     from src.storage.models import Business, Prompt, PromptType
 
@@ -232,15 +232,15 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
     v["prompt_type"] = ptype
 
     gate = ViralityGate()
-    res = gate.predictor.score(v["prompt_text"], history=[])
-    v["virality_score"] = res.get("score")
-    v["virality_label"] = res.get("label")
-    v["virality_probability"] = res.get("probability")
+    res = gate.predictor.score(v["prompt_text"], profile, audience_map, {}, ptype, history=[])
+    v["virality_score"] = res.get("virality_score")
+    v["virality_label"] = res.get("virality_label")
+    v["virality_probability"] = res.get("virality_probability")
     v["key_factors"] = res.get("key_factors")
     v["risks"] = res.get("risks")
     v["reasoning"] = res.get("reasoning")
 
-    dj = DailyJob()
+    dj = DailyPipeline()
     dj._attach_posting_brief(business, [v], {}, audience_map)
     try:
         creative = CreativeForge()
