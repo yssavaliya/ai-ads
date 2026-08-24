@@ -68,8 +68,8 @@ def extract_json_text(text: str) -> str:
 
 
 class LLMClient:
-    """LLM interface — free tiers only: Groq API → Gemini API → Pollinations
-    (keyless last resort). No local models are ever run on CPU."""
+    """LLM interface — free tiers only: Groq API → Gemini API.
+    No local models are ever run on CPU."""
 
     def __init__(self, timeout_seconds: int | None = None, command: str | None = None) -> None:
         self.timeout_seconds = timeout_seconds or 60
@@ -89,11 +89,6 @@ class LLMClient:
 
         logger.info("[%s] Groq unavailable; trying Gemini", label or "llm")
         result = self._try_gemini(prompt, label, temperature)
-        if result is not None:
-            return result
-
-        logger.info("[%s] Gemini unavailable; trying Pollinations (keyless)", label or "llm")
-        result = self._try_pollinations(prompt, label, temperature)
         if result is not None:
             return result
 
@@ -169,36 +164,6 @@ class LLMClient:
                 if attempt < max_retries:
                     time.sleep(2 * attempt)
         raise last_exc  # type: ignore[misc]
-
-    def _try_pollinations(self, prompt: str, label: str | None, temperature: float) -> LLMResult | None:
-        """Keyless free fallback (text.pollinations.ai GET API) — anonymous tier
-        is rate-limited and low-quality; loud logs make its use visible."""
-        try:
-            import httpx
-            from urllib.parse import quote
-
-            start = time.monotonic()
-            with httpx.Client(timeout=120) as client:
-                response = client.get(
-                    f"https://text.pollinations.ai/{quote(prompt, safe='')}",
-                    params={"model": "openai-fast"},
-                )
-                response.raise_for_status()
-                content = response.text.strip()
-            if not content or content.startswith('{"error"'):
-                logger.error("Pollinations returned no usable content for %s", label or "llm")
-                return None
-            logger.warning(
-                "::warning::[%s] used Pollinations fallback (keyless, lowest quality) in %.1fs "
-                "— set GROQ_API_KEY for reliable output",
-                label or "llm", time.monotonic() - start,
-            )
-            return LLMResult(
-                stdout=strip_markdown_fences(content), stderr="", exit_code=0, elapsed_seconds=time.monotonic() - start
-            )
-        except Exception as exc:
-            logger.error("Pollinations failed for %s: %s", label or "llm", exc)
-            return None
 
 
 def run_llm(prompt: str, label: str | None = None, temperature: float = 0.7) -> str:

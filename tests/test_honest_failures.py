@@ -20,7 +20,6 @@ def test_llm_chain_raises_when_all_providers_fail():
     with (
         patch.object(client, "_try_groq", return_value=None),
         patch.object(client, "_try_gemini", return_value=None),
-        patch.object(client, "_try_pollinations", return_value=None),
     ):
         with pytest.raises(AllProvidersFailedError):
             client.run("x", label="unit")

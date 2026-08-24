@@ -7,7 +7,7 @@ environment, then:
     PYTHONPATH=. python scripts/check_llm.py
 
 It exercises the SAME code paths the pipeline uses (LLMClient._try_groq /
-_try_gemini / _try_pollinations), so a pass here means the workflow will also
+_try_gemini), so a pass here means the workflow will also
 produce prompts. Exit code 0 = at least one provider produced output.
 """
 
@@ -38,7 +38,6 @@ def main() -> int:
     for name, method in [
         ("groq", client._try_groq),
         ("gemini", client._try_gemini),
-        ("pollinations", client._try_pollinations),
     ]:
         print(f"\n=== {name} ===")
         try:
