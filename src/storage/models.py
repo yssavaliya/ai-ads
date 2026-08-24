@@ -87,7 +87,6 @@ class Business(Base):
 
     prompts: Mapped[list[Prompt]] = relationship(back_populates="business", cascade="all, delete-orphan")
     competitors: Mapped[list[Competitor]] = relationship(back_populates="business", cascade="all, delete-orphan")
-    weights: Mapped[list[Weight]] = relationship(back_populates="business", cascade="all, delete-orphan")
 
 
 class Prompt(Base):
@@ -186,41 +185,6 @@ class Trend(Base):
     __table_args__ = (
         UniqueConstraint("hashtag", "platform", "fetched_at", name="uq_trend_hashtag_platform_date"),
         Index("ix_trends_platform_fetched", "platform", "fetched_at"),
-    )
-
-
-class Weight(Base):
-    __tablename__ = "weights"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    business_id: Mapped[int] = mapped_column(Integer, ForeignKey("businesses.id"), nullable=False)
-    topic: Mapped[str] = mapped_column(String(100), nullable=False)
-    format: Mapped[str] = mapped_column(String(50), nullable=False)
-    audience_segment: Mapped[str] = mapped_column(String(100), nullable=False)
-    weight: Mapped[float] = mapped_column(Float, default=1.0)
-    sample_count: Mapped[int] = mapped_column(Integer, default=0)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    business: Mapped[Business] = relationship(back_populates="weights")
-
-    __table_args__ = (
-        UniqueConstraint("business_id", "topic", "format", "audience_segment", name="uq_weight_business_topic_format_audience"),
-    )
-
-
-class WeeklyReport(Base):
-    __tablename__ = "weekly_reports"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    business_id: Mapped[int] = mapped_column(Integer, ForeignKey("businesses.id"), nullable=False)
-    week_start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    week_end: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    report_json: Mapped[dict] = mapped_column(JSON, nullable=False)
-    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    __table_args__ = (
-        UniqueConstraint("business_id", "week_start", name="uq_weekly_report_business_week"),
     )
 
 
