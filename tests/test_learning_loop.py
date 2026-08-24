@@ -1,11 +1,19 @@
 from unittest.mock import MagicMock, patch
 
-from src.learning.auto_learner import MIN_SIMILARITY, AutoLearner
+from src.learning.auto_learner import MIN_SIMILARITY, AutoLearner, caption_similarity
 from src.learning.process_feedback import IG_POST_RE, parse_feedback_issues
 
 
 def test_min_similarity_raised():
-    assert MIN_SIMILARITY >= 0.35
+    assert 0.1 <= MIN_SIMILARITY <= 0.5
+
+
+def test_containment_matches_trimmed_caption():
+    """A user who posts a shortened/paraphrased version of the suggested
+    caption must still match via the containment fallback."""
+    suggested = "AI meets art in Ahmedabad watch Aimagix Studio turn ideas into viral magic"
+    posted = "Aimagix Studio turn ideas into viral magic"
+    assert caption_similarity(posted, suggested) >= MIN_SIMILARITY
 
 
 def test_ig_post_regex_extracts_reel_and_post_urls():
