@@ -102,3 +102,27 @@ def test_read_engagement_log_missing_returns_empty(tmp_path, monkeypatch):
 
     monkeypatch.setattr(settings, "data_dir", str(tmp_path))
     assert DailyPipeline._read_engagement_log() == []
+
+
+def test_explore_targets_unexplored_format(monkeypatch):
+    pipe = DailyPipeline()
+    captured = {}
+
+    def fake_run(profile, audience_map, trend_data, prompt_types, weights):
+        captured["types"] = prompt_types
+        return [{
+            "prompt_type": prompt_types[0], "hook": "h", "prompt_text": "t",
+            "hashtags": ["#x"], "format": "reel", "audience_segment": "s",
+        }]
+
+    monkeypatch.setattr(pipe.gate, "run", fake_run)
+    business = {"prompt_types": ["educational", "storytelling", "social_proof"]}
+    # educational already used AND proven (weight 1.5) -> should explore a blind spot
+    pipe._explore_variant(business, {}, {}, {}, {"topics::educational": 1.5}, ["educational"])
+    assert captured["types"][0] in ("storytelling", "social_proof")
+
+
+def test_match_window_widened():
+    from src.learning.auto_learner import POST_MATCH_WINDOW_DAYS
+
+    assert POST_MATCH_WINDOW_DAYS == 21

@@ -15,7 +15,8 @@ from src.shared.utils import load_businesses
 logger = logging.getLogger(__name__)
 
 MIN_SIMILARITY = 0.30          # min caption/prompt token overlap to count as a match
-POST_MATCH_WINDOW_DAYS = 10    # how many days after a prompt the user may have posted
+POST_MATCH_WINDOW_DAYS = 21    # how many days after a prompt the user may have posted
+                                  # (manual posting is async; 10d missed late posts)
 MATCH_LOOKBACK_DAYS = 14       # how far back to look for sent prompts
 BENCHMARK_LOOKBACK_DAYS = 30   # median engagement window
 NO_HISTORY_BENCHMARK = 0.01    # fallback "good post" bar when a business has no
