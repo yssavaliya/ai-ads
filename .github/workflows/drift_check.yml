@@ -47,7 +47,15 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
         run: |
           body=$(tail -n 15 /tmp/drift.log | sed 's/"/\\"/g' | tr '\n' ' ')
-          gh issue create \
-            --repo "$GITHUB_REPO" \
-            --title "🚨 Model/API drift detected $(date -u +'%Y-%m-%d')" \
-            --body "The scheduled drift check failed — LLM providers returned no output. This usually means a retired model name or an invalid/quota-exhausted key. Last log lines: \`\`\`${body}\`\`\` Run the 'Secrets Verify' workflow for a full diagnosis."
+          prefix="🚨 Model/API drift detected"
+          existing=$(gh issue list --repo "$GITHUB_REPO" --state open --limit 50 \
+            --json number,title --jq '.[] | select(.title | startswith("'"$prefix"'")) | .number' | head -n1)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPO" \
+              --body "Still failing as of $(date -u +'%Y-%m-%dT%H:%M:%SZ'). Last log lines: \`\`\`${body}\`\`\`"
+          else
+            gh issue create \
+              --repo "$GITHUB_REPO" \
+              --title "${prefix} $(date -u +'%Y-%m-%d')" \
+              --body "The scheduled drift check failed — LLM providers returned no output. This usually means a retired model name or an invalid/quota-exhausted key. Last log lines: \`\`\`${body}\`\`\` Run the 'Secrets Verify' workflow for a full diagnosis."
+          fi
