@@ -21,10 +21,6 @@ concurrency:
   group: ai-ads-repo-state
   cancel-in-progress: false
 
-concurrency:
-  group: ai-ads-repo-state
-  cancel-in-progress: false
-
 jobs:
   leads:
     runs-on: ubuntu-latest
