@@ -240,9 +240,16 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.close()
 
 
+_init_done = False
+
+
 def init_db() -> None:
+    global _init_done
+    if _init_done:
+        return
     Base.metadata.create_all(bind=engine)
     _migrate()
+    _init_done = True
 
 
 def _migrate() -> None:
@@ -272,3 +279,8 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# Guarantee schema + additive migrations run on import of this module, so no
+# entry point can ever query a stale (pre-migration) cached agent.db.
+init_db()
