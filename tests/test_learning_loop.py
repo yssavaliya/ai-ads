@@ -106,3 +106,78 @@ def test_parse_feedback_issue_includes_posted(monkeypatch):
     assert len(issues) == 1
     assert issues[0]["feedback"] == "posted"
     assert issues[0]["prompt_id"] == 12
+
+
+def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
+    """Regression: engagement.yml runs hourly, so the same post is re-scraped
+    repeatedly. The Bayesian weights must update only on the FIRST sighting,
+    or trials (and thus the weights) inflate every run."""
+    import os
+    from datetime import datetime, timedelta
+
+    os.environ["DATABASE_PATH"] = str(tmp_path / "t.db")
+    from src.shared.config import settings
+
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    from src.learning.auto_learner import AutoLearner
+    from src.learning.bayesian_updater import BayesianUpdater
+    from src.storage.models import (
+        Base,
+        Business,
+        Prompt,
+        PromptType,
+        SessionLocal,
+        engine as db_engine,
+    )
+
+    Base.metadata.create_all(bind=db_engine)
+    db = SessionLocal()
+    try:
+        biz = Business(name="InflateBiz", email="x@y.z", virality_threshold=75)
+        db.add(biz)
+        db.commit()
+        db.refresh(biz)
+        prompt = Prompt(
+            business_id=biz.id,
+            prompt_text="unique inflate phrase alpha beta gamma delta",
+            prompt_type=PromptType.EDUCATIONAL,
+            sent_at=datetime.utcnow() - timedelta(days=1),
+        )
+        db.add(prompt)
+        db.commit()
+        db.refresh(prompt)
+
+        social = {
+            "handle": "inflatebiz",
+            "follower_count": 1000,
+            "posts": [
+                {
+                    "post_id": "INFLATE1",
+                    "caption": "unique inflate phrase alpha beta gamma delta",
+                    "likes": 5,
+                    "comments": 1,
+                    "shares": 0,
+                    "saves": 0,
+                    "reach": 0,
+                    "posted_at": (datetime.utcnow() - timedelta(hours=20)).isoformat(),
+                }
+            ],
+        }
+        learner = AutoLearner()
+        learner.run_for_business(biz.id, social, db)
+        learner.run_for_business(biz.id, social, db)  # re-scrape same post
+
+        edu = BayesianUpdater().get_weights(biz.id)["topics"]["educational"]
+        assert edu["trials"] == 1, edu
+        assert edu["hits"] == 1, edu
+
+        # Durable log must now actually be written (it was silently failing
+        # before the settings import fix) and must NOT duplicate per re-scrape.
+        from pathlib import Path as _Path
+
+        log = _Path(tmp_path) / "engagement_log.jsonl"
+        assert log.exists(), "engagement_log.jsonl was not written"
+        inflate_lines = [l for l in log.read_text().splitlines() if "INFLATE1" in l]
+        assert len(inflate_lines) == 1, inflate_lines
+    finally:
+        db.close()

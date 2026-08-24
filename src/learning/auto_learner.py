@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import func
 
 from src.learning.bayesian_updater import BayesianUpdater
+from src.shared.config import settings
 from src.storage.models import Business, Engagement, Platform, Prompt, SessionLocal
 from src.shared.utils import load_businesses
 
@@ -124,15 +125,19 @@ class AutoLearner:
         for prompt_id, prompt_type, prompt_text, post, segment in matched:
             rate = engagement_rate(post, followers)
             outcome = self._decide_outcome(post, followers, benchmark, bench_n, post.get("comments_text"))
-            self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome)
-            self.updater.record(
-                business_id,
-                outcome,
-                prompt_type=prompt_type,
-                format=post.get("format"),
-                audience_segment=segment,
-            )
-            learned += 1
+            recorded = self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome)
+            # Only update the Bayesian weights on the FIRST sighting of this
+            # post — re-scrapes refresh stored engagement but must not inflate
+            # the trial count (engagement.yml runs hourly).
+            if recorded:
+                self.updater.record(
+                    business_id,
+                    outcome,
+                    prompt_type=prompt_type,
+                    format=post.get("format"),
+                    audience_segment=segment,
+                )
+                learned += 1
             details.append(
                 {"prompt_id": prompt_id, "post_id": post.get("post_id"), "rate": round(rate, 4), "outcome": outcome}
             )
@@ -291,10 +296,14 @@ class AutoLearner:
         post: dict[str, Any],
         rate: float,
         outcome: str,
-    ) -> None:
+    ) -> bool:
+        """Persist one learning event. Returns True only the FIRST time a given
+        (prompt, post) pair is seen — subsequent hourly re-scrapes refresh the
+        stored engagement but must NOT re-run the Bayesian weight update, or
+        trials (and thus the weights) get inflated every run."""
         prompt = db.get(Prompt, prompt_id)
         if prompt is None:
-            return
+            return False
 
         from src.storage.models import FeedbackType
 
@@ -303,19 +312,23 @@ class AutoLearner:
         db.add(prompt)
 
         platform = Platform.LINKEDIN if post.get("platform") == "linkedin" else Platform.INSTAGRAM
+        post_id = str(post.get("post_id") or "")[:100]
         existing = (
             db.query(Engagement)
-            .filter(Engagement.prompt_id == prompt_id, Engagement.post_id == str(post.get("post_id") or ""))
+            .filter(Engagement.prompt_id == prompt_id, Engagement.post_id == post_id)
             .first()
         )
+        is_new = existing is None
         if existing:
+            # Refresh stored engagement (likes/comments grow over time) but do
+            # not treat it as a new learning event.
             db.delete(existing)
             db.flush()
 
         engagement = Engagement(
             prompt_id=prompt_id,
             platform=platform,
-            post_id=str(post.get("post_id") or "")[:100],
+            post_id=post_id,
             post_url=str(post.get("url") or "")[:500] or None,
             likes=int(post.get("likes") or 0),
             comments=int(post.get("comments") or 0),
@@ -327,7 +340,9 @@ class AutoLearner:
         )
         db.add(engagement)
         db.commit()
-        self._log_engagement(prompt_id, post, rate, outcome)
+        if is_new:
+            self._log_engagement(prompt_id, post, rate, outcome)
+        return is_new
 
     @staticmethod
     def _log_engagement(prompt_id: int, post: dict[str, Any], rate: float, outcome: str) -> None:
