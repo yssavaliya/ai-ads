@@ -1,4 +1,50 @@
 {
-  "generated_at": "2026-08-24T17:16:48.593730",
-  "leads": []
+  "generated_at": "2026-08-31T10:05:17.811210",
+  "leads": [
+    {
+      "name": "Groovy DuckBakery",
+      "website_url": "https://www.groovyduckbakery.com/",
+      "instagram_handle": "groovyduckbakery",
+      "linkedin_handle": "",
+      "niche": "bakery",
+      "location": "Ahmedabad",
+      "found_via": "search",
+      "website_title": "Groovy Duck Bakery – Raleigh, NC",
+      "follower_count": 12878,
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "12878 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 12878,
+      "prompts": [],
+      "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
+    },
+    {
+      "name": "The Cupcake Shoppe",
+      "website_url": "https://thecupcakeshopperaleigh.com/",
+      "instagram_handle": "thecupcakeshopperaleigh",
+      "linkedin_handle": "",
+      "niche": "bakery",
+      "location": "Ahmedabad",
+      "found_via": "search",
+      "website_title": "The Cupcake Shoppe-Raleigh’s cupcake boutique and bakery",
+      "contact_email": "thecupcakeshopperaleigh@gmail.com",
+      "follower_count": 17952,
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "17952 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 17952,
+      "prompts": [],
+      "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
+    }
+  ]
 }
