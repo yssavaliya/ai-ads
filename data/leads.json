@@ -1,4 +1,116 @@
 {
-  "generated_at": "2026-09-28T10:11:01.902213",
-  "leads": []
+  "generated_at": "2026-10-05T10:51:34.994277",
+  "leads": [
+    {
+      "name": "MK DECOR",
+      "website_url": "http://www.mkdecor.co.in",
+      "instagram_handle": "mkdecor_wallpaper_ahmedabad",
+      "linkedin_handle": "",
+      "niche": "home decor",
+      "location": "Ahmedabad",
+      "follower_count": 5201,
+      "found_via": "instagram-search",
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "5201 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 5201,
+      "prompts": [],
+      "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
+    },
+    {
+      "name": "Gujarat Decor",
+      "website_url": "https://www.gujaratdecor.com/",
+      "instagram_handle": "gujarat_decor33",
+      "linkedin_handle": "",
+      "niche": "home decor",
+      "location": "Ahmedabad",
+      "found_via": "search",
+      "website_title": "Gujarat Decor | Furnishings, Fabrics & Interior | Ahmedabad",
+      "follower_count": 1614,
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "1614 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 1614,
+      "prompts": [],
+      "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
+    },
+    {
+      "name": "Sajj Decor",
+      "website_url": "http://sajjdecor.com/",
+      "instagram_handle": "sajjdecorofficial",
+      "linkedin_handle": "",
+      "niche": "home decor",
+      "location": "Ahmedabad",
+      "found_via": "search",
+      "website_title": "Sajj Decor",
+      "contact_email": "lead4@example.invalid",
+      "follower_count": 1478,
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "1478 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 1478,
+      "prompts": [],
+      "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
+    },
+    {
+      "name": "KEPH Design Studio",
+      "website_url": "https://www.kephdesign.com/",
+      "instagram_handle": "keph.design.studio",
+      "linkedin_handle": "",
+      "niche": "home decor",
+      "location": "Ahmedabad",
+      "found_via": "search",
+      "website_title": "KEPH Design Studio | Lighting . Home Decor . Furniture . Tableware",
+      "contact_email": "lead2@example.invalid",
+      "follower_count": 10340,
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "10340 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 10340,
+      "prompts": [],
+      "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
+    },
+    {
+      "name": "Daamaira",
+      "website_url": "https://daamaira.com/pages/daamaira-home-decor-store-in-ahmedabad",
+      "instagram_handle": "daamairahome",
+      "linkedin_handle": "",
+      "niche": "home decor",
+      "location": "Ahmedabad",
+      "found_via": "search",
+      "website_title": "Home Decor Store in Ahmedabad | Daamaira Luxury Home Decor",
+      "follower_count": 9225,
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "9225 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 9225,
+      "prompts": [],
+      "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
+    }
+  ]
 }
