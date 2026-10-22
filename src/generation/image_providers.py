@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_ORDER = "pollinations,gemini,huggingface,together,cloudflare"
 
+# api-inference.huggingface.co no longer resolves and the hf-inference router answered 410 Gone for
+# FLUX in the first real run. Kept as a list (and overridable) so a new endpoint is a one-line change.
 HF_IMAGE_URLS = (
     "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
-    "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",  # legacy
 )
 
 

@@ -169,3 +169,13 @@ def test_predictor_prompt_survives_awkward_content(prompt_text):
 
     sent = ViralityPredictor.__new__(ViralityPredictor)._build_prompt(prompt_text, {}, {}, {}, "educational")
     assert prompt_text in sent and sent.rstrip().endswith("}")
+
+
+def test_predictor_context_is_bounded_so_back_to_back_scoring_fits_a_free_token_budget():
+    from src.intelligence.virality_predictor import CONTEXT_CHARS, ViralityPredictor
+
+    huge = {"blob": "x" * 50_000}
+    sent = ViralityPredictor.__new__(ViralityPredictor)._build_prompt("TEXT", huge, huge, huge, "educational")
+    assert CONTEXT_CHARS <= 2500
+    assert len(sent) < 3 * (CONTEXT_CHARS + 200) + 2500  # three bounded context blocks + the fixed instructions
+    assert "TEXT" in sent and "Respond ONLY with JSON" in sent
