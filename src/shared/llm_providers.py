@@ -145,7 +145,7 @@ def classify(exc: BaseException) -> Failure:
         return Failure("quota", 3600.0, "provider")  # prepaid credits gone: don't retry within the hour
     if msg.startswith("non-json response"):
         return Failure("bad_response", 600.0, "provider")  # endpoint answered with something that is not an API reply
-    if status == 404 or "model_not_found" in msg or "does not exist" in msg or "not found" in msg:
+    if status in (404, 410) or "model_not_found" in msg or "does not exist" in msg or "not found" in msg:
         return Failure("model", math.inf, "model")
     if status == 429 or any(k in msg for k in ("rate limit", "rate_limit", "quota", "resource_exhausted", "too many requests")):
         retry_after = 0.0

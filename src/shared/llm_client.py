@@ -96,6 +96,7 @@ class LLMClient:
     (see run_json). No local models are ever run on CPU."""
 
     MAX_COOLDOWN_WAIT = 90.0  # if everything is rate limited, wait at most this long once
+    SHORT_RETRY_AFTER = 8.0   # a 429 asking for <= this many seconds is waited out on the same model
 
     def __init__(self, timeout_seconds: int | None = None) -> None:
         self.timeout_seconds = timeout_seconds or 60
@@ -275,7 +276,12 @@ class LLMClient:
                 )
             except Exception as exc:  # noqa: BLE001 - provider SDK raises many types
                 last_exc = exc
-                if classify(exc).kind != "transient":
+                failure = classify(exc)
+                if failure.kind == "rate_limit" and failure.cooldown <= LLMClient.SHORT_RETRY_AFTER and attempt < max_retries:
+                    # "try again in 1.4s": the best model is still the best choice, so wait for it
+                    time.sleep(failure.cooldown + 0.3)
+                    continue
+                if failure.kind != "transient":
                     break
                 if attempt < max_retries:
                     time.sleep(2 * attempt)

@@ -379,3 +379,28 @@ def test_default_fallback_models_are_ones_the_real_keys_offer():
     s = Settings()
     assert "llama-3.3-70b-versatile" not in s.groq_fallback_models and "gpt-oss-20b" in s.groq_fallback_models
     assert "gemini-2.0-flash" not in s.gemini_fallback_models and "gemini-3" in s.gemini_fallback_models
+
+
+def test_short_retry_after_is_waited_out_on_the_same_model(chain, monkeypatch):
+    """Real log: Groq said "try again in 1.4s"; hopping to weaker models/providers was worse."""
+    sleeps: list[float] = []
+    monkeypatch.setattr(lc.time, "sleep", lambda s: sleeps.append(s))
+    net = chain({("groq", "groq-big"): [ApiError(429, "rate limit", {"retry-after": "1.4"}), "answer from the best model"]})
+    result = LLMClient().run("hi")
+    assert (result.provider, result.model, result.stdout) == ("groq", "groq-big", "answer from the best model")
+    assert sleeps and 1.3 < sleeps[0] < 2.0
+    assert net.calls == [("https://api.groq.com/openai/v1", "groq-big")] * 2  # no hop to groq-small / gemini
+
+
+def test_long_retry_after_is_not_waited_out_inline(chain, monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr(lc.time, "sleep", lambda s: sleeps.append(s))
+    chain({
+        ("groq", "groq-big"): [ApiError(429, "rate limit", {"retry-after": "45"})],
+        ("groq", "groq-small"): ["small"],
+    })
+    assert LLMClient().run("hi").model == "groq-small" and sleeps == []
+
+
+def test_gone_models_are_permanently_skipped():
+    assert lp.classify(ApiError(410, "Gone")).kind == "model"

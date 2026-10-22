@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 VIRALITY_LABELS = {"LOW", "MEDIUM", "HIGH"}
 
+# The gate scores ~5 variants back to back with identical context. 5000 chars x 3 blocks x 5 calls
+# blew through Groq's free per-minute token limit; 2500 keeps the signal and halves the load.
+CONTEXT_CHARS = 2500
+
 
 class ViralityPredictor:
     """Scores a content prompt 0-100 for virality potential on Instagram/LinkedIn
@@ -66,13 +70,13 @@ You are a viral content strategist for the Indian social media market (Instagram
 Predict the virality potential of a content prompt for this business.
 
 Business profile:
-{untrusted(json.dumps(business_profile, indent=2, default=str)[:5000])}
+{untrusted(json.dumps(business_profile, indent=2, default=str)[:CONTEXT_CHARS])}
 
 Audience map:
-{json.dumps(audience_map, indent=2, default=str)[:5000]}
+{json.dumps(audience_map, indent=2, default=str)[:CONTEXT_CHARS]}
 
 Today's trends:
-{json.dumps(trend_data, indent=2, default=str)[:5000]}
+{json.dumps(trend_data, indent=2, default=str)[:CONTEXT_CHARS]}
 
 Prompt type: {prompt_type}
 

@@ -152,3 +152,16 @@ def test_gemini_image_tries_the_next_configured_model(net, forge, monkeypatch):
     net.routes["generativelanguage.googleapis.com"] = handler
     assert Image.open(forge.generate_image("p", 64, 64, "g")).size == (64, 64)
     assert net.requested == ["generativelanguage.googleapis.com"] * 2
+
+
+def test_dead_hugging_face_endpoints_are_gone_and_410_is_permanent(net, forge, monkeypatch):
+    """First real run: router 410 Gone and api-inference.huggingface.co did not even resolve."""
+    assert ip.HF_IMAGE_URLS and not any("api-inference" in u for u in ip.HF_IMAGE_URLS)
+    monkeypatch.setattr(settings, "image_provider_order", "huggingface,pollinations")
+    monkeypatch.setattr(settings, "hf_token", "t")
+    net.routes["router.huggingface.co"] = httpx.Response(410, text="Gone")
+    net.routes["image.pollinations.ai"] = httpx.Response(200, content=_png())
+    forge.generate_image("one", 64, 64, "a")
+    net.requested.clear()
+    forge.generate_image("two", 64, 64, "b")
+    assert "router.huggingface.co" not in net.requested  # 410 is not retried every image

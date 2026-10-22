@@ -55,6 +55,26 @@ class CreativeForge:
         self._card_color: tuple[int, int, int] = (31, 111, 104)
         self._pending_warnings: list[str] = []
 
+    @staticmethod
+    def _run_ffmpeg(cmd: list[str], timeout: int, what: str) -> None:
+        """Run ffmpeg; on failure raise with ffmpeg's own error (the bare CalledProcessError
+        only said "exit status 4294967294", which hid the real cause in production)."""
+        proc = subprocess.run(cmd, capture_output=True, timeout=timeout)  # noqa: S603 - fixed argv
+        if proc.returncode != 0:
+            tail = proc.stderr.decode("utf-8", "replace").strip().splitlines()[-4:]
+            raise CreativeForgeError(f"{what}: ffmpeg exit {proc.returncode}: {' | '.join(tail)[:400]}")
+
+    @staticmethod
+    def _write_concat_list(paths: list[str], list_path: Path) -> None:
+        """ffmpeg's concat demuxer resolves RELATIVE entries against the list file's own
+        folder, so a list holding 'logs/assets/x.mp4' next to logs/assets/ looked for
+        logs/assets/logs/assets/x.mp4. Always write absolute, quote-escaped paths."""
+        lines = []
+        for p in paths:
+            absolute = Path(p).resolve().as_posix().replace("'", "'\\''")
+            lines.append(f"file '{absolute}'")
+        list_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
     def _take_warnings(self) -> list[str]:
         taken, self._pending_warnings = self._pending_warnings, []
         return taken
@@ -291,12 +311,11 @@ class CreativeForge:
 
         durations = [self._wav_duration(w) for w in wavs]
         concat_list = work / "list.txt"
-        concat_list.write_text("\n".join(f"file '{w}'" for w in wavs), encoding="utf-8")
+        self._write_concat_list(wavs, concat_list)
         full = work / "voiceover.wav"
-        subprocess.run(  # noqa: S603 - fixed argv
-            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list),
-             "-c", "copy", str(full)],
-            capture_output=True, timeout=120, check=True,
+        self._run_ffmpeg(
+            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", str(full)],
+            120, "voiceover concat",
         )
         return str(full), durations
 
@@ -358,7 +377,7 @@ class CreativeForge:
                     "-t", f"{dur:.2f}", "-r", str(FPS),
                     "-c:v", "libx264", "-preset", "veryfast", seg,
                 ]
-                subprocess.run(cmd, capture_output=True, timeout=300, check=True)  # noqa: S603
+                self._run_ffmpeg(cmd, 300, f"beat {i} segment")
                 seg_files.append(seg)
 
             if len(seg_files) == 1:
@@ -378,18 +397,18 @@ class CreativeForge:
                     )
                     prev = out_lbl
                 fc = ";".join(filter_parts)
+                tmp = out_path.replace(".mp4", "-xfade.mp4")
                 xfade_cmd = (
                     ["ffmpeg", "-y"] + inputs
-                    + ["-filter_complex", fc, "-map", prev]
+                    + ["-filter_complex", fc, "-map", prev,
+                       "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", tmp]
                 )
-                tmp = out_path.replace(".mp4", "-xfade.mp4")
-                proc = subprocess.run(xfade_cmd, capture_output=True, timeout=600)  # noqa: S603
-                if proc.returncode != 0:
-                    logger.warning("::warning::xfade failed; falling back to plain concat")
-                    tmp = self._plain_concat(seg_files, out_path)
-                elif os.path.exists(tmp) and os.path.getsize(tmp) > 0:
-                    pass
-                else:
+                try:
+                    self._run_ffmpeg(xfade_cmd, 600, "xfade")
+                    if not (os.path.exists(tmp) and os.path.getsize(tmp) > 0):
+                        raise CreativeForgeError("xfade produced no output")
+                except CreativeForgeError as exc:
+                    logger.warning("::warning::xfade failed (%s); falling back to plain concat", exc)
                     tmp = self._plain_concat(seg_files, out_path)
 
             mux_cmd = ["ffmpeg", "-y", "-i", tmp]
@@ -398,7 +417,7 @@ class CreativeForge:
             else:
                 mux_cmd += ["-c:v", "copy"]
             mux_cmd += [out_path]
-            subprocess.run(mux_cmd, capture_output=True, timeout=300, check=True)  # noqa: S603
+            self._run_ffmpeg(mux_cmd, 300, "mux")
         except Exception as exc:
             raise CreativeForgeError(f"ffmpeg assembly failed: {exc}") from exc
         finally:
@@ -408,23 +427,22 @@ class CreativeForge:
                 except OSError:
                     pass
 
-    @staticmethod
-    def _plain_concat(seg_files: list[str], out_path: str) -> str:
-        lst = out_path.replace(".mp4", "-list.txt")
-        Path(lst).write_text("\n".join(f"file '{s}'" for s in seg_files), encoding="utf-8")
+    def _plain_concat(self, seg_files: list[str], out_path: str) -> str:
+        lst = Path(out_path.replace(".mp4", "-list.txt"))
+        self._write_concat_list(seg_files, lst)
         tmp = out_path.replace(".mp4", "-concat.mp4")
-        subprocess.run(  # noqa: S603 - fixed argv
-            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", tmp],
-            capture_output=True, timeout=300, check=True,
+        self._run_ffmpeg(
+            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", tmp],
+            300, "plain concat",
         )
         return tmp
 
     def _extract_thumbnail(self, video_path: str, base_name: str) -> str | None:
         thumb = self.output_dir / f"{self._slug(base_name)}-thumb.png"
         try:
-            subprocess.run(  # noqa: S603 - fixed argv
+            self._run_ffmpeg(
                 ["ffmpeg", "-y", "-i", video_path, "-ss", "00:00:01", "-frames:v", "1", str(thumb)],
-                capture_output=True, timeout=120, check=True,
+                120, "thumbnail",
             )
             return str(thumb)
         except Exception as exc:

@@ -209,7 +209,7 @@ def test_utc_now_naive_is_naive_and_current():
     assert abs((datetime.now(UTC).replace(tzinfo=None) - now).total_seconds()) < 5
 
 
-def test_hf_falls_back_to_legacy_endpoint(monkeypatch):
+def test_hf_image_uses_the_router_endpoint(monkeypatch):
     from src.generation import creative_forge as cf
 
     png = b"\x89PNG" + b"0" * 2000
@@ -217,13 +217,13 @@ def test_hf_falls_back_to_legacy_endpoint(monkeypatch):
 
     def handler(request: httpx.Request) -> httpx.Response:
         urls.append(str(request.url))
-        return httpx.Response(404) if "router" in request.url.host else httpx.Response(200, content=png)
+        return httpx.Response(200, content=png)
 
     real_client = httpx.Client
     monkeypatch.setattr(httpx, "Client", lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw))
     monkeypatch.setattr(settings, "hf_token", "tok")
     assert cf.CreativeForge()._hf_image("p", 100, 100) == png
-    assert "router" in urls[0] and "api-inference" in urls[1]
+    assert len(urls) == 1 and "router.huggingface.co" in urls[0]
 
 
 def test_package_config_exposes_src_namespace():
