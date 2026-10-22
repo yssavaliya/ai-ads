@@ -39,8 +39,8 @@ class Settings(BaseSettings):
 
     # Extra models tried (same key) when the primary model is rate limited / retired.
     # Groq and Gemini enforce limits per model, so a sibling model has its own quota.
-    groq_fallback_models: str = Field(default="llama-3.3-70b-versatile,llama-3.1-8b-instant")
-    gemini_fallback_models: str = Field(default="gemini-2.5-flash,gemini-2.0-flash")
+    groq_fallback_models: str = Field(default="openai/gpt-oss-20b,qwen/qwen3.8-27b")
+    gemini_fallback_models: str = Field(default="gemini-3.5-flash,gemini-3.1-flash-lite,gemini-flash-latest")
 
     # More free providers, tried in LLM_PROVIDER_ORDER when the ones above fail.
     llm_provider_order: str = Field(
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     # is rendered when all of them fail so a post never ships without a visual.
     image_provider_order: str = Field(default="pollinations,gemini,huggingface,together,cloudflare")
     image_card_fallback: bool = Field(default=True, description="Render a local branded card when every image provider fails")
-    gemini_image_model: str = Field(default="gemini-2.5-flash-image")
+    gemini_image_model: str = Field(default="gemini-3.1-flash-image,gemini-2.5-flash-image", description="Comma-separated, tried in order")
     together_api_key: str | None = Field(default=None, description="Together AI key (free FLUX.1-schnell)")
     together_image_model: str = Field(default="black-forest-labs/FLUX.1-schnell-Free")
     cloudflare_account_id: str | None = Field(default=None, description="Cloudflare Workers AI account id")
