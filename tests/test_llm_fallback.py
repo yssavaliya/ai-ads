@@ -364,3 +364,18 @@ def test_unconfigured_providers_are_skipped_silently(chain, caplog):
     with caplog.at_level(logging.INFO):
         LLMClient().run("hi")
     assert "mistral" not in caplog.text and "openrouter" not in caplog.text
+
+
+def test_reasoning_blocks_are_stripped_from_answers(chain):
+    chain({("groq", "groq-big"): ['<think>let me {reason} about it</think>\n{"score": 90}']})
+    result = LLMClient().run("hi")
+    assert result.stdout == '{"score": 90}'
+    assert LLMClient().run_json("hi") == {"score": 90}
+
+
+def test_default_fallback_models_are_ones_the_real_keys_offer():
+    """From the Drift Check's list_models output: llama-3.x on Groq and gemini-2.x were
+    404/retired for this account; gpt-oss-20b / qwen3.8 / gemini-3.x are offered."""
+    s = Settings()
+    assert "llama-3.3-70b-versatile" not in s.groq_fallback_models and "gpt-oss-20b" in s.groq_fallback_models
+    assert "gemini-2.0-flash" not in s.gemini_fallback_models and "gemini-3" in s.gemini_fallback_models

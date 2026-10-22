@@ -81,29 +81,38 @@ def huggingface(prompt: str, width: int, height: int) -> bytes | None:
 
 
 def gemini_image(prompt: str, width: int, height: int) -> bytes | None:
-    """Free tier of the Gemini image model (re-uses GEMINI_API_KEY)."""
+    """Free tier of the Gemini image models (re-uses GEMINI_API_KEY); each model listed in
+    GEMINI_IMAGE_MODEL is tried in order."""
     if not settings.gemini_api_key:
         return None
-    model = settings.gemini_image_model
-    with httpx.Client(timeout=180) as client:
-        resp = client.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-            headers={"x-goog-api-key": settings.gemini_api_key, "Content-Type": "application/json"},
-            json={
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"responseModalities": ["IMAGE", "TEXT"]},
-            },
-        )
-        resp.raise_for_status()
-        payload = resp.json()
-    for candidate in payload.get("candidates", []):
-        for part in (candidate.get("content") or {}).get("parts", []):
-            inline = part.get("inlineData") or part.get("inline_data")
-            if inline and inline.get("data"):
-                data = base64.b64decode(inline["data"])
-                if is_image(data):
-                    return data
-    logger.error("Gemini image model returned no image")
+    last: Exception | None = None
+    for model in csv(settings.gemini_image_model):
+        try:
+            with httpx.Client(timeout=180) as client:
+                resp = client.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                    headers={"x-goog-api-key": settings.gemini_api_key, "Content-Type": "application/json"},
+                    json={
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"responseModalities": ["IMAGE", "TEXT"]},
+                    },
+                )
+                resp.raise_for_status()
+                payload = resp.json()
+        except Exception as exc:  # noqa: BLE001 - try the next model, then report
+            last = exc
+            logger.error("Gemini image model %s failed: %s", model, exc)
+            continue
+        for candidate in payload.get("candidates", []):
+            for part in (candidate.get("content") or {}).get("parts", []):
+                inline = part.get("inlineData") or part.get("inline_data")
+                if inline and inline.get("data"):
+                    data = base64.b64decode(inline["data"])
+                    if is_image(data):
+                        return data
+        logger.error("Gemini image model %s returned no image", model)
+    if last is not None:
+        raise last
     return None
 
 

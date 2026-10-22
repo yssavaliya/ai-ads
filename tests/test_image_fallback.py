@@ -136,3 +136,19 @@ def test_provider_order_is_configurable(net, forge, monkeypatch):
     net.routes["router.huggingface.co"] = httpx.Response(200, content=_png())
     forge.generate_image("p", 64, 64, "x")
     assert net.requested == ["router.huggingface.co"]
+
+
+def test_gemini_image_tries_the_next_configured_model(net, forge, monkeypatch):
+    monkeypatch.setattr(settings, "image_provider_order", "gemini")
+    monkeypatch.setattr(settings, "gemini_api_key", "k")
+    monkeypatch.setattr(settings, "gemini_image_model", "img-new,img-old")
+    png = base64.b64encode(_png((64, 64))).decode()
+
+    def handler(request):
+        if "img-new" in str(request.url):
+            return httpx.Response(404, text="model not available")
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"inlineData": {"data": png}}]}}]})
+
+    net.routes["generativelanguage.googleapis.com"] = handler
+    assert Image.open(forge.generate_image("p", 64, 64, "g")).size == (64, 64)
+    assert net.requested == ["generativelanguage.googleapis.com"] * 2
