@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}{{ business.name }} · Content Hub{% endblock %}
+{% block nav %}
+<nav class="nav">
+  <a href="#latest">Prompts</a>
+  {% if weekly %}<a href="#weekly">Weekly</a>{% endif %}
+</nav>
+{% endblock %}
+
+{% block content %}
+<section class="head">
+  <div>
+    <h1>{{ business.name }}</h1>
+    <p class="muted">
+      {{ total }} prompt{{ '' if total == 1 else 's' }} from the last {{ retention }} days
+      {% if business.instagram_handle %}· <a href="https://instagram.com/{{ business.instagram_handle }}" target="_blank" rel="noopener">@{{ business.instagram_handle }}</a>{% endif %}
+      {% if business.website_url %}· <a href="{{ business.website_url }}" target="_blank" rel="noopener">website</a>{% endif %}
+    </p>
+  </div>
+</section>
+
+{% for n in notices %}
+<div class="banner warn">⚠️ <strong>{{ n.date|pretty_date }}:</strong> {{ n.message }}</div>
+{% endfor %}
+
+{% if about %}
+<details class="about">
+  <summary>About this setup</summary>
+  <p>Onboarded {{ about.onboarded }}{% if about.title %} · site: {{ about.title }}{% endif %}{% if about.pages %} · {{ about.pages }} pages analysed{% endif %}</p>
+  {% if about.description %}<p class="muted">{{ about.description }}</p>{% endif %}
+  {% if about.headings %}<p class="muted">Key themes: {{ about.headings|join(' · ') }}</p>{% endif %}
+</details>
+{% endif %}
+
+{% if days %}
+<section class="toolbar" aria-label="Filters">
+  <input id="q" type="search" placeholder="Search prompts, captions, hashtags…" aria-label="Search">
+  <div class="chips" id="type-chips">
+    <button class="chip active" data-type="">All</button>
+    {% for t in types %}<button class="chip" data-type="{{ t }}">{{ t|pretty_type }}</button>{% endfor %}
+  </div>
+  <label class="toggle"><input type="checkbox" id="hide-posted"> Hide posted</label>
+</section>
+{% endif %}
+
+<div id="latest"></div>
+{% for day in days %}
+<section class="day" data-day="{{ day.date }}">
+  <h2>{{ day.date|pretty_date }} <span class="count">{{ day.entries|length }}</span></h2>
+  <div class="grid">
+    {% for e in day.entries %}
+    <article class="card" id="{{ e.id }}" data-id="{{ e.id }}" data-type="{{ e.prompt_type }}"
+             data-search="{{ (e.prompt_type|replace('_', ' ') ~ ' ' ~ e.format ~ ' ' ~ e.title ~ ' ' ~ e.hook ~ ' ' ~ e.caption ~ ' ' ~ e.prompt_text ~ ' ' ~ e.hashtags|join(' '))|lower }}">
+      {% if e.asset %}
+      <div class="media">
+        {% if e.asset.type == 'reel' %}
+          {% if e.asset.video %}
+          <video controls preload="none" playsinline {% if e.asset.poster %}poster="{{ root }}{{ e.asset.poster }}"{% endif %} src="{{ root }}{{ e.asset.video }}"></video>
+          <a class="dl" href="{{ root }}{{ e.asset.video }}" download>⬇ Download Reel (MP4)</a>
+          {% elif e.asset.poster %}
+          <img loading="lazy" src="{{ root }}{{ e.asset.poster }}" alt="{{ e.title }} (preview)">
+          <p class="muted small">The full Reel was too large to publish here.</p>
+          {% endif %}
+        {% else %}
+          <a href="{{ root }}{{ e.asset.image }}" target="_blank" rel="noopener"><img loading="lazy" src="{{ root }}{{ e.asset.thumb }}" alt="{{ e.title }}"></a>
+          <a class="dl" href="{{ root }}{{ e.asset.image }}" download>⬇ Download image</a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="body">
+        <div class="badges">
+          <span class="badge type">{{ e.prompt_type|pretty_type }}</span>
+          {% if e.score is not none %}<span class="badge score {{ 'hi' if e.score >= 80 else ('mid' if e.score >= 60 else 'lo') }}">{{ e.score }}/100</span>{% endif %}
+          {% if e.format %}<span class="badge">{{ e.format }}</span>{% endif %}
+          {% if e.platform_focus %}<span class="badge">{{ e.platform_focus }}</span>{% endif %}
+        </div>
+        <h3>{{ e.title or e.hook }}</h3>
+        {% if e.hook %}<blockquote>{{ e.hook }}</blockquote>{% endif %}
+
+        {% if e.caption %}
+        <div class="block">
+          <div class="block-head"><strong>📋 Caption</strong><button class="copy" data-copy="#cap-{{ e.id }}">Copy</button></div>
+          <p class="pre" id="cap-{{ e.id }}">{{ e.caption }}</p>
+        </div>
+        {% endif %}
+
+        {% if e.recommended_post_time %}<p class="time">🕒 Best time: <strong>{{ e.recommended_post_time }}</strong></p>{% endif %}
+
+        {% if e.first_comment %}
+        <div class="block alt">
+          <div class="block-head"><strong>💬 First comment</strong><button class="copy" data-copy="#fc-{{ e.id }}">Copy</button></div>
+          <p class="pre" id="fc-{{ e.id }}">{{ e.first_comment }}</p>
+        </div>
+        {% endif %}
+
+        <details open>
+          <summary>🎯 Creative brief / prompt</summary>
+          <div class="block-head"><span class="muted small">{% if e.audience_segment %}Audience: {{ e.audience_segment }}{% endif %}</span><button class="copy" data-copy="#pt-{{ e.id }}">Copy</button></div>
+          <p class="pre" id="pt-{{ e.id }}">{{ e.prompt_text }}</p>
+        </details>
+
+        {% if e.reasoning or e.key_factors or e.risks or e.angle %}
+        <details>
+          <summary>📈 Why it should work</summary>
+          {% if e.angle %}<p><strong>Angle:</strong> {{ e.angle }}</p>{% endif %}
+          {% if e.reasoning %}<p>{{ e.reasoning }}</p>{% endif %}
+          {% if e.key_factors %}<p class="small"><strong>Strengths:</strong></p><ul>{% for f in e.key_factors %}<li>{{ f }}</li>{% endfor %}</ul>{% endif %}
+          {% if e.risks %}<p class="small"><strong>Risks:</strong></p><ul>{% for r in e.risks %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+        </details>
+        {% endif %}
+
+        {% if e.warnings %}<p class="banner warn small">⚠️ {{ e.warnings|join(' · ') }}</p>{% endif %}
+
+        <div class="actions">
+          <label class="posted"><input type="checkbox" class="posted-box"> Posted</label>
+          {% if e.feedback_links %}
+          <span class="fb">
+            {% if e.feedback_links.good %}<a href="{{ e.feedback_links.good }}" target="_blank" rel="noopener" title="Great">👍</a>{% endif %}
+            {% if e.feedback_links.bad %}<a href="{{ e.feedback_links.bad }}" target="_blank" rel="noopener" title="Miss">👎</a>{% endif %}
+            {% if e.feedback_links.regenerate %}<a href="{{ e.feedback_links.regenerate }}" target="_blank" rel="noopener" title="Redo">🔄</a>{% endif %}
+            {% if e.feedback_links.posted %}<a class="primary" href="{{ e.feedback_links.posted }}" target="_blank" rel="noopener" title="Link your published post so real engagement is learned">📎 I posted this</a>{% endif %}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<p class="note">No prompts yet — the next daily run will publish them here.</p>
+{% endfor %}
+
+{% if weekly %}
+<section id="weekly" class="weekly-list">
+  <h2>Weekly deep-dives</h2>
+  <ul>
+    {% for w in weekly %}<li><a href="weekly-{{ w.date }}.html">Week of {{ w.date|pretty_date }}</a></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

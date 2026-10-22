@@ -19,4 +19,6 @@ logs/preview/*
 !logs/prompts/.gitkeep
 data/cache/
 .claude/
-site/
+/site/
+.coverage
+htmlcov/

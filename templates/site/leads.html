@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Business leads · Content Hub{% endblock %}
+{% block content %}
+<section class="head">
+  <h1>🔍 Discovered business leads</h1>
+  <p class="muted">Active on social with a real audience but weak engagement — they need help creating viral content. Sample prompts included.</p>
+</section>
+
+{% for d in digests %}
+<section class="day">
+  <h2>{{ d.date|pretty_date }} <span class="count">{{ d.leads|length }}</span></h2>
+  <div class="grid">
+    {% for lead in d.leads %}
+    <article class="card">
+      <div class="body">
+        <div class="badges">
+          {% if lead.opportunity_score is not none %}<span class="badge score {{ 'hi' if lead.opportunity_score >= 80 else ('mid' if lead.opportunity_score >= 60 else 'lo') }}">Opportunity {{ lead.opportunity_score }}/100</span>{% endif %}
+          {% if lead.niche %}<span class="badge">{{ lead.niche }}</span>{% endif %}
+        </div>
+        <h3>{{ lead.name }}</h3>
+        <p class="muted small">
+          {{ lead.followers }} followers
+          {% if lead.instagram_handle %}· <a href="https://instagram.com/{{ lead.instagram_handle }}" target="_blank" rel="noopener">@{{ lead.instagram_handle }}</a>{% endif %}
+          {% if lead.website_url %}· <a href="{{ lead.website_url }}" target="_blank" rel="noopener">website</a>{% endif %}
+        </p>
+        {% if lead.contact_email %}<p>✉️ <a href="mailto:{{ lead.contact_email }}">{{ lead.contact_email }}</a></p>
+        {% else %}<p class="banner warn small">No public contact e-mail shown — reach out via Instagram DM.</p>{% endif %}
+        {% if lead.reasons %}<ul class="small">{% for r in lead.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+        {% if lead.prompt_error %}<p class="banner warn small">⚠️ Sample prompts could not be generated: {{ lead.prompt_error }}</p>{% endif %}
+        {% for p in lead.prompts %}
+        <details>
+          <summary>{{ p.title or 'Sample prompt' }} <span class="muted small">· {{ p.prompt_type|pretty_type }}{% if p.score is not none %} · {{ p.score }}/100{% endif %}</span></summary>
+          {% if p.asset and p.asset.thumb %}<div class="media"><img loading="lazy" src="{{ root }}{{ p.asset.image or p.asset.poster or p.asset.thumb }}" alt="{{ p.title }}"></div>{% endif %}
+          <p class="pre">{{ p.prompt_text }}</p>
+        </details>
+        {% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<p class="note">No digests yet.</p>
+{% endfor %}
+{% endblock %}

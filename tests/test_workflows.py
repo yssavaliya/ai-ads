@@ -203,8 +203,11 @@ def test_setup_action_restores_gh_pages_only_when_asked():
     assert "mkdir -p site" in restore["run"]  # first run: no branch yet
 
 
-def test_site_dir_is_never_committed_to_main():
-    assert "site/" in (GH.parent / ".gitignore").read_text(encoding="utf-8").splitlines()
+def test_site_checkout_is_ignored_but_site_templates_are_not():
+    """`site/` (unanchored) also matched templates/site/ and the templates were never committed."""
+    lines = (GH.parent / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "/site/" in lines and "site/" not in lines
+    assert (GH.parent / "templates" / "site" / "base.html").exists()
 
 
 def test_ci_actionlint_knows_the_models_permission():

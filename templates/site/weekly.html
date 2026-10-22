@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Weekly report · {{ business.name }}{% endblock %}
+{% block nav %}<nav class="nav"><a href="{{ back }}">← {{ business.name }}</a></nav>{% endblock %}
+{% block content %}
+<section class="head">
+  <h1>📊 Weekly report</h1>
+  <p class="muted">{{ business.name }} · {{ date|pretty_date }}</p>
+</section>
+
+{% if report.top_performing %}
+<section class="panel"><h2>🏆 Top performing</h2>
+  {% for t in report.top_performing %}
+  <div class="block"><strong>{{ t.prompt }}</strong> <span class="muted small">· score {{ t.score }} · {{ t.feedback or 'no feedback' }}</span><p>{{ t.why }}</p></div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% for title, items in [('🧠 Audience insights', report.audience_insights), ('👀 Competitor moves', report.competitor_moves), ('📅 Suggested calendar', report.calendar), ('⚡ Recommendations', report.recommendations)] %}
+{% if items %}
+<section class="panel"><h2>{{ title }}</h2><ul>{% for i in items %}<li>{{ i }}</li>{% endfor %}</ul></section>
+{% endif %}
+{% endfor %}
+
+{% if report.content_pillars %}
+<section class="panel"><h2>🗂️ Next week's content pillars</h2>
+  {% for p in report.content_pillars %}
+  <div class="block"><strong>{{ p.pillar }}</strong> <span class="muted small">· {{ p.suggested_frequency }}</span><p>{{ p.rationale }}</p></div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if report.risk_alerts %}
+<section class="panel danger"><h2>⚠️ Risk alerts</h2><ul>{% for r in report.risk_alerts %}<li>{{ r }}</li>{% endfor %}</ul></section>
+{% endif %}
+{% endblock %}

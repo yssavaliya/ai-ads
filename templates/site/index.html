@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Content Hub{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Your content, ready to post</h1>
+  <p>Fresh, scored prompts with finished images and Reels — copy the caption, download the media, post.</p>
+</section>
+
+{% if private %}
+<p class="note">This hub is private. Open the link you were given for your business.</p>
+{% elif businesses %}
+<div class="tiles">
+  {% for b in businesses %}
+  <a class="tile" href="b/{{ b.key }}/index.html">
+    <h2>{{ b.name }}</h2>
+    <p>{{ b.count }} prompt{{ '' if b.count == 1 else 's' }}{% if b.latest %} · latest {{ b.latest|pretty_date }}{% endif %}</p>
+    {% if b.weekly %}<span class="pill">{{ b.weekly }} weekly report{{ '' if b.weekly == 1 else 's' }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="note">Nothing published yet. The first daily run will populate this page.</p>
+{% endif %}
+
+{% if leads_href %}
+<p class="more"><a href="{{ leads_href }}">🔍 Discovered business leads →</a></p>
+{% endif %}
+{% endblock %}
