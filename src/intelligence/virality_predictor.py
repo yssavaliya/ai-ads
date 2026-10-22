@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.shared.llm_client import LLMClient, extract_json_text
+from src.shared.llm_client import LLMClient, extract_json_text, untrusted
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ You are a viral content strategist for the Indian social media market (Instagram
 Predict the virality potential of a content prompt for this business.
 
 Business profile:
-{json.dumps(business_profile, indent=2, default=str)[:5000]}
+{untrusted(json.dumps(business_profile, indent=2, default=str)[:5000])}
 
 Audience map:
 {json.dumps(audience_map, indent=2, default=str)[:5000]}

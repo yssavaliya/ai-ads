@@ -4,6 +4,7 @@ import json
 import logging
 import random
 import sys
+import time
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -21,7 +22,7 @@ from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
-from src.shared.utils import load_businesses
+from src.shared.utils import load_businesses, utc_now_naive
 from src.storage.models import Business, Prompt, PromptType, SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -47,13 +48,17 @@ class DailyPipeline:
             biz = self._get_or_create_business(db, business)
             profile = self._load_profile(db, biz)
 
-            if not profile:
-                logger.warning("No profile for %s; attempting initial scrape", name)
-                profile = self._scrape_profile(business)
+            if not self._profile_has_content(profile):
+                # A failed first scrape leaves a truthy {"name", "source"} stub;
+                # keep retrying until we have real website content.
+                logger.warning("No usable profile for %s; attempting scrape", name)
+                scraped = self._scrape_profile(business)
+                profile = scraped if self._profile_has_content(scraped) else (profile or scraped)
                 biz.profile_json = profile
                 db.add(biz)
                 db.commit()
 
+            profile = profile or {}
             competitors = self._cached_intel(
                 business, "competitors",
                 lambda: self.competitors.discover_and_fetch(profile),
@@ -91,7 +96,7 @@ class DailyPipeline:
                 business, "trends",
                 lambda: self.trends.scan(profile, audience_map, competitors),
             )
-            weights = self.weights.to_forge_weights(biz.id)
+            weights = self.weights.to_forge_weights(biz.weights_key)
             history = self._load_history(db, biz)
             prompts = self.gate.run(
                 profile,
@@ -108,8 +113,8 @@ class DailyPipeline:
             if recent_texts:
                 kept = self._dedupe_prompts(prompts, recent_texts)
                 if kept:
-                    prompts = kept
                     logger.info("Dedup: %d/%d prompts kept (dropped near-duplicates)", len(kept), len(prompts))
+                    prompts = kept
 
             # EXPLORATION (gap #5): with modest probability, generate one extra
             # variant in an under-tested format/angle so the learner keeps
@@ -118,7 +123,7 @@ class DailyPipeline:
             if random.random() < 0.25:
                 try:
                     extra = self._explore_variant(
-                        business, profile, audience_map, trend_data, weights, [p.get("prompt_type") for p in prompts]
+                        business, profile, audience_map, trend_data, weights, [str(p.get("prompt_type")) for p in prompts]
                     )
                     if extra:
                         prompts.append(extra)
@@ -175,7 +180,7 @@ class DailyPipeline:
                     asset_path=p.get("asset_path"),
                     asset_type=p.get("asset_type"),
                     format=p.get("format"),
-                    sent_at=datetime.utcnow(),
+                    sent_at=None,  # stamped only once the email is really sent
                 )
                 db.add(prompt)
                 db.flush()
@@ -197,6 +202,15 @@ class DailyPipeline:
                 # the user can be re-notified by re-running the workflow.
                 logger.error("::error::Daily email for %s failed to send: %s", name, exc)
                 email_ok = False
+            if email_ok and saved:
+                # Only delivered prompts count as "sent": they feed dedup,
+                # history and auto-learning matching.
+                now = utc_now_naive()
+                for row in saved:
+                    obj = db.get(Prompt, row["prompt_id"])
+                    if obj is not None:
+                        obj.sent_at = now
+                db.commit()
             logger.info("Daily email for %s sent=%s (%d prompts)", name, email_ok, len(saved))
             return {"business": name, "prompts": len(saved), "email_sent": email_ok}
         finally:
@@ -316,7 +330,7 @@ class DailyPipeline:
             hours.append(h)
         return max(hours)  # catch the late-evening window, typically peak
 
-    def _cached_intel(self, business: dict[str, Any], key: str, compute) -> dict[str, Any]:
+    def _cached_intel(self, business: dict[str, Any], key: str, compute) -> Any:
         """Cache slow LLM-built intelligence (audience map, trends) per business
         for 24h so the daily job doesn't re-pay for it every run (#5)."""
         import json as _json
@@ -327,7 +341,7 @@ class DailyPipeline:
         if path.exists():
             try:
                 blob = _json.loads(path.read_text(encoding="utf-8"))
-                if (datetime.utcnow().timestamp() - blob.get("ts", 0)) < 24 * 3600:
+                if (time.time() - blob.get("ts", 0)) < 24 * 3600:
                     logger.info("Intel cache hit: %s/%s", business.get("name"), key)
                     return blob["data"]
             except Exception:
@@ -353,7 +367,7 @@ class DailyPipeline:
             return {}
         try:
             path.write_text(
-                _json.dumps({"ts": datetime.utcnow().timestamp(), "data": data}, default=str),
+                _json.dumps({"ts": time.time(), "data": data}, default=str),
                 encoding="utf-8",
             )
         except Exception as exc:
@@ -369,7 +383,7 @@ class DailyPipeline:
 
         from src.storage.models import FeedbackType, Prompt
 
-        cutoff = datetime.utcnow() - timedelta(days=30)
+        cutoff = utc_now_naive() - timedelta(days=30)
         prompts = (
             db.query(Prompt)
             .filter(Prompt.business_id == biz.id, Prompt.sent_at >= cutoff)
@@ -387,24 +401,24 @@ class DailyPipeline:
             outcome = "good" if p.feedback == FeedbackType.GOOD else (
                 "bad" if p.feedback in (FeedbackType.BAD, FeedbackType.REGENERATE) else "unknown"
             )
-            t = p.caption or p.prompt_text or ""
-            history.append({"prompt_text": t, "outcome": outcome})
-            seen.add(t[:120])
+            posted_text = p.caption or p.prompt_text or ""
+            history.append({"prompt_text": posted_text, "outcome": outcome})
+            seen.add(posted_text[:120])
 
         # Enrich with AUTO-learned outcomes (real engagement scraped from the
         # business's own posts) — the richer, always-present signal. The log is
         # self-contained (it stores the posted caption), so it still contributes
         # even if the original Prompt row has since been deleted.
         for rec in self._read_engagement_log():
-            outcome = rec.get("outcome")
-            if not outcome:
+            logged_outcome = rec.get("outcome")
+            if not logged_outcome:
                 continue
             t = rec.get("caption") or text_by_id.get(rec.get("prompt_id")) or ""
             if not t:
                 continue
             if t[:120] in seen:
                 continue
-            history.append({"prompt_text": t, "outcome": outcome})
+            history.append({"prompt_text": t, "outcome": logged_outcome})
             seen.add(t[:120])
 
         return history[:15]
@@ -430,7 +444,7 @@ class DailyPipeline:
 
         from src.storage.models import Prompt
 
-        cutoff = datetime.utcnow() - timedelta(days=14)
+        cutoff = utc_now_naive() - timedelta(days=14)
         rows = (
             db.query(Prompt.prompt_text)
             .filter(Prompt.business_id == biz.id, Prompt.sent_at >= cutoff)
@@ -489,7 +503,7 @@ class DailyPipeline:
         return results
 
     def _get_or_create_business(self, db: Any, config: dict[str, Any]) -> Business:
-        biz = db.query(Business).filter(Business.name == config["name"]).first()
+        biz: Business | None = db.query(Business).filter(Business.name == config["name"]).first()
         if biz is None:
             biz = Business(
                 name=config["name"],
@@ -508,6 +522,17 @@ class DailyPipeline:
 
     def _load_profile(self, db: Any, biz: Business) -> dict[str, Any] | None:
         return biz.profile_json
+
+    @staticmethod
+    def _profile_has_content(profile: dict[str, Any] | None) -> bool:
+        """True when the profile carries real scraped content, not just the
+        {"name", "source"} stub written after a failed scrape."""
+        if not profile:
+            return False
+        return any(
+            profile.get(k)
+            for k in ("title", "meta_description", "headings", "text_blocks", "full_text_sample")
+        )
 
     def _scrape_profile(self, business: dict[str, Any]) -> dict[str, Any]:
         profile = {"name": business["name"], "source": "website"}
@@ -528,6 +553,7 @@ class DailyPipeline:
 
 def main() -> None:
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # request URLs can carry tokens
     pipeline = DailyPipeline()
     results = pipeline.run_all()
     for r in results:
@@ -536,6 +562,9 @@ def main() -> None:
     # Fail the workflow step when every business errored — green CI must mean
     # the pipeline actually produced something.
     if results and all("error" in r for r in results):
+        raise SystemExit(1)
+    if results and not any(r.get("email_sent") for r in results):
+        logger.error("::error::No daily email was delivered for any business (SMTP down or unconfigured?)")
         raise SystemExit(1)
 
 

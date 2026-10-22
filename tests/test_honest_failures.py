@@ -3,11 +3,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.fetch.competitor_finder import CompetitorFinder
 from src.generation.prompt_forge import PromptForge
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar
 from src.intelligence.virality_predictor import ViralityPredictor
-from src.fetch.competitor_finder import CompetitorFinder
 from src.shared.llm_client import AllProvidersFailedError, LLMClient, LLMResult
 
 
@@ -109,6 +109,7 @@ def test_groq_path_executes_without_nameerror(monkeypatch):
 
 def test_instagram_search_query_is_sanitized():
     import asyncio
+
     from src.fetch.social_scraper import SocialScraper
 
     captured = {}
@@ -141,4 +142,4 @@ def test_instagram_search_query_is_sanitized():
     with patch("src.fetch.social_scraper.httpx.AsyncClient", FakeClient):
         asyncio.run(scraper.fetch_instagram_search('Homes.com: Homes for Sale, Real Estate & Rent!'))
 
-    assert captured["payload"]["search"] == "Homes com Homes for Sale Real Estate Rent"
+    assert captured["payload"]["search"] == "Homes com Homes for Sale Real Estate Rent"

@@ -47,6 +47,8 @@ Sunday 8 AM IST (02:30 UTC) ──▶ weekly.yml
   Top creatives + real engagement metrics + why · audience shifts ·
   competitor moves · next week calendar
 
+Every 6h ──▶ engagement.yml  (scrape own posts → auto-learn)
+
 Hourly ──▶ feedback.yml
   Parse feedback issues → Bayesian weight updates → close issues
 ```
@@ -58,7 +60,7 @@ The system learns automatically from real post performance:
 1. **Daily**: the business's own Instagram posts are scraped (Apify free tier)
 2. **Matching**: posts linked via the email's **📎 "I posted this"** button are matched
    by exact post ID (no guessing). Unlinked posts fall back to date window
-   (+5 days) + caption/prompt similarity (≥ 0.35 Jaccard)
+   (+21 days) + caption/prompt similarity (≥ 0.30 Jaccard/containment)
 3. **Scoring**: engagement rate = (likes + 2·comments + 3·shares + 2·saves) / reach
 4. **Benchmark**: a post is "good" if its rate ≥ the business's own median,
    "bad" otherwise
@@ -79,8 +81,9 @@ with `python scripts/run_auto_learn.py`.
 | `APIFY_TOKEN` | Free tier social scraping (console.apify.com) |
 | `HF_TOKEN` | Optional image fallback (Hugging Face FLUX.1-schnell) |
 | `GITHUB_TOKEN` | Feedback issues + degraded-run tracking (built-in) |
+| `FEEDBACK_ALLOWED_USERS` (repo *variable*, optional) | Comma-separated GitHub logins whose feedback issues count; unset = anyone who can open an issue |
 
-LLM chain: Groq → Gemini → Pollinations (keyless last resort, loud warnings).
+LLM chain: Groq → Gemini (if both fail the run is reported as degraded — there is no keyless text fallback).
 Images: Pollinations (keyless) → HF fallback. No local models run on CPU.
 If any stage fails, a `[pipeline] degraded run — <date>` tracking issue is
 created/updated so green CI never hides a dead run.
@@ -108,7 +111,7 @@ images and MP4s land in `logs/assets/`.
 ## Repo layout
 
 ```
-.github/workflows/   daily · weekly · feedback · onboard · leads (shared concurrency group)
+.github/workflows/   daily · weekly · feedback · engagement · onboard · leads (shared concurrency group) · ci · drift_check
 assets/fonts/        Poppins Bold (OFL license) for hook overlays
 src/fetch/           website scraper (incl. mailto extraction), social scraper
                      (Apify → instaloader), competitor finder, lead finder
@@ -120,7 +123,7 @@ src/delivery/        email sender (attachments + dry-run), github feedback links
 src/learning/        bayesian updater, feedback processor (incl. POSTED links), auto-learner
 src/scheduler/       daily_job, weekly_job, lead_job
 src/storage/         SQLite models (agent.db lives in Actions cache, NOT git)
-src/shared/          config, LLM client (Groq/Gemini/Pollinations), utils
+src/shared/          config, LLM client (Groq/Gemini), utils
 templates/           daily_prompt.html, weekly_report.html, welcome.html, leads_digest.html
 data/                businesses.json, lead_config.json, lead_seen.json, lead_rejected.json, weights.json (committed)
 ```
@@ -133,4 +136,55 @@ Use the `onboard.yml` workflow (Actions → Onboard Business → Run workflow) o
 script locally. Demo seed records carry `"demo": true` and are skipped by scheduled runs.
 Feedback buttons in emails open GitHub issues that the hourly feedback job turns into
 Bayesian weight updates; the **📎 I posted this** button additionally links the published
-post URL directly to the asset for exact engagement attribution.
+post URL directly to the asset for exact engagement attribution. Posting alone is
+not counted as a success: the learner scores that post's real engagement later.
+
+## Keeping personal data out of git
+
+Any string value in `data/businesses.json` (and `digest_email` in
+`data/lead_config.json`) can be written as `"env:NAME"`; it is replaced at runtime by
+the environment variable `NAME`. Add the address as a repo secret/variable, expose it in
+the workflow `env:` block, and the committed file contains no personal data:
+
+```json
+{ "name": "Acme", "email": "env:ACME_OWNER_EMAIL" }
+```
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+python -m ruff check .      # lint
+python -m mypy src          # types
+python -m pytest -q         # ~130 tests incl. an end-to-end dry run of the daily pipeline
+```
+
+CI (`ci.yml`) runs the same three commands on every push and pull request. The test
+suite is fully isolated: it uses temp databases/data dirs, forces `DRY_RUN`, and never
+touches `data/` or `agent.db`. Optional: `pre-commit install` (ruff on commit, pytest on push).
+
+## Operations notes
+
+- **State:** JSON in `data/` is committed by the workflows; `agent.db` and `data/cache/`
+  live in the Actions cache (saved even when a run fails). Weights are keyed by business
+  *name*, so a rebuilt `agent.db` can never attach them to the wrong business.
+- **Failures are loud:** pipelines exit non-zero when nothing was produced or no email
+  was delivered, and a `[pipeline] degraded run` issue is opened. `drift_check.yml`
+  opens an issue if the LLM providers stop answering.
+- **Feedback security:** set the repo variable `FEEDBACK_ALLOWED_USERS` (comma-separated
+  GitHub logins) so only trusted people can move the weights through feedback issues.
+- **Budgets:** `LEAD_TIME_BUDGET_SECONDS` caps lead scraping; Apify calls are made once
+  per handle per run. Reels are best-effort: if ffmpeg/Piper fail the post falls back to a
+  still image (the run warns instead of dropping the asset).
+- **Scraping safety:** the website scraper refuses private/loopback/metadata addresses,
+  and scraped text is fenced as untrusted data in every LLM prompt.
+
+## Troubleshooting
+
+| Symptom | Check |
+|--------|-------|
+| `All LLM providers failed` | Run the *Secrets Verify* workflow; check `GROQ_MODEL` / `GEMINI_MODEL` names are valid (unset secrets fall back to defaults) |
+| Emails not arriving | `SMTP_USER`/`SMTP_PASSWORD` (Gmail app password); the daily job now fails if no email is delivered |
+| Reels come out as images | See the run's warnings: usually `piper`/`ffmpeg` missing or the voice model download failed |
+| Feedback buttons do nothing | The clicker needs a GitHub account that can open issues in this repo; the hourly *Process Feedback* job applies them |
+| No new leads | Cooldown caches `data/lead_seen.json` (21 days) / `data/lead_rejected.json` (90 days); raise `target_count` or add niches |

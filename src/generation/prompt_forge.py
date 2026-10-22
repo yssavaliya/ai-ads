@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any
 
-from src.shared.llm_client import LLMClient, extract_json_text
+from src.shared.llm_client import LLMClient, extract_json_text, untrusted
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ for a human creator. Each prompt must be specific enough that a creator can prod
 from it without further research, but flexible enough to adapt to the platform.
 
 Business profile:
-{json.dumps(business_profile, indent=2, default=str)[:6000]}
+{untrusted(json.dumps(business_profile, indent=2, default=str)[:6000])}
 
 Audience map:
 {json.dumps(audience_map, indent=2, default=str)[:6000]}
@@ -127,7 +127,7 @@ Respond ONLY with JSON:
         business_profile: dict[str, Any],
         audience_map: dict[str, Any],
         trend_data: dict[str, Any],
-    ) -> dict[str, Any | None]:
+    ) -> dict[str, Any]:
         """Take the best variant + hints and regenerate a stronger version."""
         hints = "\n".join(f"- {h}" for h in improvement_hints)
         prompt = f"""
@@ -140,7 +140,7 @@ Critique from the predictor (address ALL points):
 {hints}
 
 Business profile:
-{json.dumps(business_profile, indent=2, default=str)[:5000]}
+{untrusted(json.dumps(business_profile, indent=2, default=str)[:5000])}
 
 Audience map:
 {json.dumps(audience_map, indent=2, default=str)[:4000]}

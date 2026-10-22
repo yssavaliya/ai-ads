@@ -55,6 +55,11 @@
                       <li style="font-size:13px;color:#374151;margin-bottom:4px;">{{ r }}</li>
                       {% endfor %}
                     </ul>
+                    {% if lead.prompt_error %}
+                    <div style="font-size:13px;color:#991b1b;background-color:#fee2e2;border-radius:6px;padding:6px 10px;margin-bottom:10px;">
+                      ⚠️ Sample prompts could not be generated for this lead: {{ lead.prompt_error }}
+                    </div>
+                    {% endif %}
                     {% if lead.prompts %}
                     <div style="font-size:12px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#b45309;margin:12px 0 8px;">
                       Sample viral prompts (scored {{ lead.prompts[0].virality_score }}/100)

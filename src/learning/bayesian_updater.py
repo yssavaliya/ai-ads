@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from src.shared.utils import load_json, load_weights, save_json, save_weights
 
@@ -26,20 +26,20 @@ class BayesianUpdater:
 
     def _data(self) -> dict[str, Any]:
         if self.path:
-            return load_json(Path(self.path), {})
-        return load_weights()
+            return cast(dict[str, Any], load_json(Path(self.path), {}))
+        return cast(dict[str, Any], load_weights())
 
-    def _business(self, business_id: int) -> dict[str, Any]:
+    def _business(self, business_id: int | str) -> dict[str, Any]:
         data = self._data()
         key = str(business_id)
         if key not in data:
             data[key] = {"topics": {}, "formats": {}, "audience_segments": {}}
             self._save(data)
-        return data[key]
+        return cast(dict[str, Any], data[key])
 
     def record(
         self,
-        business_id: int,
+        business_id: int | str,
         feedback: str,
         prompt_type: str | None = None,
         format: str | None = None,
@@ -75,10 +75,10 @@ class BayesianUpdater:
         else:
             save_weights(data)
 
-    def get_weights(self, business_id: int) -> dict[str, Any]:
+    def get_weights(self, business_id: int | str) -> dict[str, Any]:
         return self._business(business_id)
 
-    def to_forge_weights(self, business_id: int) -> dict[str, Any]:
+    def to_forge_weights(self, business_id: int | str) -> dict[str, Any]:
         """Flatten into {topic::format::segment: weight} for the forge prompt.
 
         Cold-start: a brand-new business has no trials, so its weights are all

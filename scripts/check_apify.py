@@ -32,7 +32,7 @@ async def main() -> None:
         print("APIFY_TOKEN not set (env or .env)")
         raise SystemExit(1)
 
-    print(f"Token: {token[:8]}... (len={len(token)})")
+    print(f"Token: set (len={len(token)})")
     timeout = SocialScraper.APIFY_TIMEOUT
 
     async with httpx.AsyncClient(timeout=timeout) as client:

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
+import re
 from datetime import datetime
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
@@ -22,6 +22,7 @@ from sqlalchemy import (
 from sqlalchemy import (
     Enum as SQLEnum,
 )
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -31,10 +32,15 @@ from sqlalchemy.orm import (
 )
 
 from src.shared.config import settings
+from src.shared.utils import utc_now_naive
 
 
 class Base(DeclarativeBase):
     pass
+
+
+def slugify(text: str | None) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-") or "business"
 
 
 class PromptType(StrEnum):
@@ -80,10 +86,17 @@ class Business(Base):
     profile_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     audience_personas_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=utc_now_naive, onupdate=utc_now_naive
     )
+
+    @property
+    def weights_key(self) -> str:
+        """Key for data/weights.json. Derived from the name, NOT the row id:
+        agent.db lives in the Actions cache and ids are reassigned if it is
+        evicted, which used to attach learned weights to the wrong business."""
+        return slugify(self.name)
 
     prompts: Mapped[list[Prompt]] = relationship(back_populates="business", cascade="all, delete-orphan")
     competitors: Mapped[list[Competitor]] = relationship(back_populates="business", cascade="all, delete-orphan")
@@ -112,7 +125,7 @@ class Prompt(Base):
     asset_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     asset_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     format: Mapped[str | None] = mapped_column(String(40), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
 
     business: Mapped[Business] = relationship(back_populates="prompts")
     engagements: Mapped[list[Engagement]] = relationship(back_populates="prompt", cascade="all, delete-orphan")
@@ -138,7 +151,7 @@ class Engagement(Base):
     reach: Mapped[int] = mapped_column(Integer, default=0)
     impressions: Mapped[int] = mapped_column(Integer, default=0)
     profile_visits: Mapped[int] = mapped_column(Integer, default=0)
-    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     prompt: Mapped[Prompt] = relationship(back_populates="engagements")
@@ -161,8 +174,8 @@ class Competitor(Base):
     follower_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_fetched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     top_posts_json: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
     business: Mapped[Business] = relationship(back_populates="competitors")
 
@@ -180,7 +193,7 @@ class Trend(Base):
     volume: Mapped[int | None] = mapped_column(Integer, nullable=True)
     growth_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     related_keywords: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
 
     __table_args__ = (
         UniqueConstraint("hashtag", "platform", "fetched_at", name="uq_trend_hashtag_platform_date"),
@@ -236,8 +249,9 @@ def _migrate() -> None:
             try:
                 conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
                 log.info("Migration: added %s.%s", table, column)
-            except Exception:
-                pass  # column already exists
+            except OperationalError as exc:
+                if "duplicate column" not in str(exc).lower():
+                    log.warning("Migration %s.%s failed: %s", table, column, exc)
         conn.commit()
 
 

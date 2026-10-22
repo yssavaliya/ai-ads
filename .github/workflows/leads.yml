@@ -11,7 +11,7 @@ on:
       target_count:
         description: "Number of leads to generate prompts for"
         required: false
-        default: "5"
+        default: ""
 
 permissions:
   contents: write
@@ -51,12 +51,13 @@ jobs:
           python-version: "3.12"
 
       - name: Restore agent.db cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             agent.db
             agent.db-wal
             agent.db-shm
+            data/cache
           key: agent-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             agent-db-${{ runner.os }}-
@@ -84,27 +85,25 @@ jobs:
           }
           echo "piper: found at $(command -v piper)"
 
-      - name: Override niches from dispatch input
-        if: github.event.inputs.niches != ''
+      - name: Apply one-off dispatch overrides (not committed)
+        env:
+          INPUT_NICHES: ${{ github.event.inputs.niches }}
+          INPUT_TARGET_COUNT: ${{ github.event.inputs.target_count }}
         run: |
-          python -c "
-          import json
+          python - <<'PY'
+          import json, os
           cfg = json.load(open('data/lead_config.json'))
-          cfg['niches'] = [n.strip() for n in '${{ github.event.inputs.niches }}'.split(',') if n.strip()]
+          niches = os.environ.get('INPUT_NICHES', '')
+          if niches.strip():
+              cfg['niches'] = [n.strip() for n in niches.split(',') if n.strip()]
+          count = os.environ.get('INPUT_TARGET_COUNT', '').strip()
+          if count.isdigit():
+              cfg['target_count'] = int(count)
           json.dump(cfg, open('data/lead_config.json', 'w'), indent=2)
-          "
-
-      - name: Override target count from dispatch input
-        if: github.event.inputs.target_count != ''
-        run: |
-          python -c "
-          import json
-          cfg = json.load(open('data/lead_config.json'))
-          cfg['target_count'] = int('${{ github.event.inputs.target_count }}')
-          json.dump(cfg, open('data/lead_config.json', 'w'), indent=2)
-          "
+          PY
 
       - name: Run lead pipeline
+        shell: bash  # bash -eo pipefail: keep python's exit code through the pipe
         run: |
           python -m src.scheduler.lead_job 2>&1 | while IFS= read -r line; do
             echo "$line"
@@ -129,14 +128,27 @@ jobs:
           if-no-files-found: ignore
 
       - name: Persist JSON state (agent.db stays in cache, not git)
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/leads.json data/lead_seen.json data/lead_rejected.json data/weights.json data/lead_config.json 2>/dev/null || true
+          git checkout -- data/lead_config.json  # dispatch overrides are one-off
+          git add data/leads.json data/lead_seen.json data/lead_rejected.json data/weights.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
             git commit -m "chore: lead discovery state $(date -u +'%Y-%m-%d')"
-            git pull --rebase -X ours origin main
+            git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME"
             git push
           fi
+
+      - name: Save agent.db cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            agent.db
+            agent.db-wal
+            agent.db-shm
+            data/cache
+          key: agent-db-${{ runner.os }}-${{ github.run_id }}

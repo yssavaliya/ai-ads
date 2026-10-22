@@ -75,11 +75,10 @@ class SocialScraper:
         if not query:
             return []
         try:
-            async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT) as client:
+            async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT, headers=self._auth_headers()) as client:
                 run_resp = await client.post(
                     f"{self.APIFY_BASE}/acts/{self.APIFY_SEARCH_ACTOR}/run-sync-get-dataset-items",
-                    params={"token": self.apify_token},
-                    # 'search' must be a plain string for this actor (400
+                        # 'search' must be a plain string for this actor (400
                     # "Field input.search must be string" when sent as array).
                     json={"searchType": "user", "search": query, "resultsLimit": limit},
                 )
@@ -112,6 +111,10 @@ class SocialScraper:
     # a client timeout below that silently kills every run with a TimeoutError.
     APIFY_TIMEOUT = httpx.Timeout(320, connect=30.0)
 
+    def _auth_headers(self) -> dict[str, str]:
+        """Bearer header keeps the token out of URLs (httpx logs request URLs)."""
+        return {"Authorization": f"Bearer {self.apify_token}"}
+
     def _apify_error_detail(self, resp: httpx.Response) -> str:
         body = ""
         try:
@@ -121,10 +124,9 @@ class SocialScraper:
         return f"status={resp.status_code} body={body!r}"
 
     async def _apify_instagram(self, handle: str, limit: int) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT, headers=self._auth_headers()) as client:
             run_resp = await client.post(
                 f"{self.APIFY_BASE}/acts/{self.APIFY_INSTAGRAM_ACTOR}/run-sync-get-dataset-items",
-                params={"token": self.apify_token},
                 json={
                     "usernames": [handle],
                     "resultsLimit": limit,
@@ -143,10 +145,9 @@ class SocialScraper:
         return self._normalize_instagram(items)
 
     async def _apify_linkedin(self, handle: str, limit: int) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT, headers=self._auth_headers()) as client:
             run_resp = await client.post(
                 f"{self.APIFY_BASE}/acts/{self.APIFY_LINKEDIN_ACTOR}/run-sync-get-dataset-items",
-                params={"token": self.apify_token},
                 json={"handles": [handle], "resultsLimit": limit},
             )
             if run_resp.status_code >= 400:
@@ -219,46 +220,69 @@ class SocialScraper:
 
     @staticmethod
     def _normalize_instagram(items: list[dict[str, Any]]) -> dict[str, Any]:
-        posts = []
+        """The Apify actor returns either profile objects (with `latestPosts`)
+        or flat post items (with `ownerUsername`), depending on its mode. Accept
+        both so follower counts and posts are never silently dropped."""
+        items = [i for i in items if isinstance(i, dict)]
+        profile: dict[str, Any] = next(
+            (i for i in items if i.get("followersCount") is not None or isinstance(i.get("latestPosts"), list)),
+            {},
+        )
+        raw_posts: list[dict[str, Any]] = []
         for item in items:
-            caption = (
-                item.get("caption") or ""
-                or (item.get("alt") or "")
-                or (item.get("description") or "")
-            )
+            latest = item.get("latestPosts")
+            if isinstance(latest, list):
+                raw_posts.extend(p for p in latest if isinstance(p, dict))
+            elif any(k in item for k in ("shortCode", "likesCount", "commentsCount", "caption")):
+                raw_posts.append(item)
+
+        def count(value: Any) -> int:
+            try:
+                return max(int(value or 0), 0)  # Instagram reports hidden likes as -1
+            except (TypeError, ValueError):
+                return 0
+
+        posts = []
+        for item in raw_posts:
+            caption = item.get("caption") or item.get("alt") or item.get("description") or ""
             comments_text: list[str] = []
-            raw_comments = item.get("comments")
+            raw_comments = item.get("latestComments")
+            if not isinstance(raw_comments, list):
+                raw_comments = item.get("comments")
             if isinstance(raw_comments, list):
                 for c in raw_comments[:5]:
                     if isinstance(c, dict):
-                        txt = c.get("text") or c.get("caption") or ""
+                        txt_c = c.get("text") or c.get("caption") or ""
                     elif isinstance(c, str):
-                        txt = c
+                        txt_c = c
                     else:
-                        txt = ""
-                    if txt:
-                        comments_text.append(txt)
-
+                        txt_c = ""
+                    if txt_c:
+                        comments_text.append(txt_c)
+            url = item.get("url") or (
+                f"https://www.instagram.com/p/{item['shortCode']}/" if item.get("shortCode") else ""
+            )
             posts.append(
                 {
                     "post_id": item.get("id") or item.get("shortCode") or "",
                     "caption": caption,
-                    "likes": item.get("likesCount") or 0,
-                    "comments": item.get("commentsCount") or 0,
+                    "likes": count(item.get("likesCount")),
+                    "comments": count(item.get("commentsCount")),
                     "comments_text": comments_text,
-                    "video_views": item.get("videoViewCount") or 0,
-                    "url": item.get("url") or "",
+                    "video_views": count(item.get("videoViewCount") or item.get("videoPlayCount")),
+                    "url": url,
                     "posted_at": item.get("timestamp") or item.get("postedAt") or None,
                     "platform": "instagram",
                 }
             )
+        first = items[0] if items else {}
         return {
-            "handle": items[0].get("username") if items else "",
-            "follower_count": items[0].get("followersCount") if items else None,
-            "following_count": items[0].get("followingCount") if items else None,
-            "posts_count": items[0].get("postsCount") if items else None,
-            "full_name": items[0].get("fullName") if items else None,
-            "biography": items[0].get("biography") if items else None,
+            "handle": profile.get("username") or first.get("ownerUsername") or first.get("username") or "",
+            "follower_count": profile.get("followersCount"),
+            "following_count": profile.get("followingCount"),
+            "posts_count": profile.get("postsCount"),
+            "full_name": profile.get("fullName") or first.get("ownerFullName"),
+            "biography": profile.get("biography"),
             "posts": posts[:20],
             "source": "apify",
         }

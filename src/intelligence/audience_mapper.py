@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any
 
-from src.shared.llm_client import LLMClient, extract_json_text
+from src.shared.llm_client import LLMClient, extract_json_text, untrusted
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +31,13 @@ class AudienceMapper:
 You are an audience intelligence analyst. Build a structured audience map for a business.
 
 Business profile:
-{json.dumps(business_profile, indent=2, default=str)[:8000]}
+{untrusted(json.dumps(business_profile, indent=2, default=str)[:8000])}
 
 Social data (publicly available):
-{social_summary}
+{untrusted(social_summary)}
 
 Competitor activity:
-{competitor_summary}
+{untrusted(competitor_summary)}
 
 Previous audience map (use to detect drift, keep what still holds):
 {previous_json}

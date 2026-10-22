@@ -81,8 +81,8 @@ def test_weight_boost_sign():
 
 
 def test_read_engagement_log_parses(tmp_path, monkeypatch):
-    from src.shared.config import settings
     from src.scheduler.daily_job import DailyPipeline
+    from src.shared.config import settings
 
     log = tmp_path / "engagement_log.jsonl"
     log.write_text(
@@ -97,8 +97,8 @@ def test_read_engagement_log_parses(tmp_path, monkeypatch):
 
 
 def test_read_engagement_log_missing_returns_empty(tmp_path, monkeypatch):
-    from src.shared.config import settings
     from src.scheduler.daily_job import DailyPipeline
+    from src.shared.config import settings
 
     monkeypatch.setattr(settings, "data_dir", str(tmp_path))
     assert DailyPipeline._read_engagement_log() == []

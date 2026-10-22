@@ -4,9 +4,12 @@ import asyncio
 import json
 import logging
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from sqlalchemy import func
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -20,7 +23,7 @@ from src.intelligence.trend_radar import TrendRadar
 from src.learning.auto_learner import AutoLearner
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
-from src.shared.utils import load_json, save_json
+from src.shared.utils import load_businesses, load_json, resolve_env_ref, save_json, utc_now_naive
 from src.storage.models import Base, Business, Prompt, PromptType, SessionLocal
 from src.storage.models import engine as db_engine
 
@@ -45,6 +48,15 @@ class LeadPipeline:
         self.email = EmailSender()
         self.weights = BayesianUpdater()
 
+    def _fetch_social(self, handle: str) -> dict[str, Any]:
+        """One Apify/instaloader fetch per handle per run. The learning pass,
+        candidate scoring and known-lead merge all need the same data."""
+        cache: dict[str, dict[str, Any]] = self.__dict__.setdefault("_social_cache", {})
+        key = handle.lstrip("@").lower()
+        if key not in cache:
+            cache[key] = asyncio.run(SocialScraper().fetch_instagram(handle))
+        return cache[key]
+
     def load_config(self) -> dict[str, Any]:
         default = load_json(Path(settings.data_dir) / "lead_config.json", {})
         locations = default.get("locations") or default.get("location") or ["India"]
@@ -58,7 +70,8 @@ class LeadPipeline:
             "max_followers": int(default.get("max_followers", 500000)),
             "target_count": int(default.get("target_count", 5)),
             "min_opportunity_score": int(default.get("min_opportunity_score", 60)),
-            "digest_email": default.get("digest_email", ""),
+            "enforce_location": bool(default.get("enforce_location", False)),
+            "digest_email": resolve_env_ref(default.get("digest_email", "")),
             "prompt_types": default.get(
                 "prompt_types", ["educational", "storytelling", "social_proof", "promotional"]
             ),
@@ -91,14 +104,20 @@ class LeadPipeline:
             candidates = [c for c in candidates if self._is_local(c, config)]
             logger.info("Location filter dropped %d non-local candidates", before - len(candidates))
 
-        social = SocialScraper()
-        scored_leads = []
-        structurally_ineligible = []
+        deadline = time.monotonic() + settings.lead_time_budget_seconds
+        scored_leads: list[dict[str, Any]] = []
+        structurally_ineligible: list[dict[str, Any]] = []
         for candidate in candidates:
+            if time.monotonic() > deadline:
+                logger.warning(
+                    "::warning::Lead time budget (%ds) exhausted; scoring stopped with %d candidates unscored",
+                    settings.lead_time_budget_seconds, len(candidates) - len(scored_leads),
+                )
+                break
             handle = candidate.get("instagram_handle") or ""
             social_data = {}
             if handle:
-                social_data = asyncio.run(social.fetch_instagram(handle))
+                social_data = dict(self._fetch_social(handle))
                 if social_data.get("follower_count"):
                     candidate["follower_count"] = social_data["follower_count"]
                 elif candidate.get("follower_count"):
@@ -128,6 +147,7 @@ class LeadPipeline:
             }
             scored_leads.append(lead)
 
+        scored_leads = self._filter_min_score(scored_leads, config)
         scored_leads.sort(key=lambda lead: lead["opportunity_score"], reverse=True)
         top_leads = scored_leads[: config["target_count"]]
 
@@ -166,7 +186,7 @@ class LeadPipeline:
             for lead in top_leads:
                 try:
                     biz = self._get_or_create_business(db, lead)
-                    prompts = self._generate_sample_prompts(lead, config, biz.id)
+                    prompts = self._generate_sample_prompts(lead, config, biz.weights_key)
                     self._save_prompts(db, biz.id, prompts)
 
                     if creative is None:
@@ -224,7 +244,7 @@ class LeadPipeline:
             "prompt_failures": prompt_failures,
             "learning": learning,
             "email_sent": email_ok,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": utc_now_naive().isoformat(),
         }
         logger.info("Lead pipeline result: %s", result)
         return result
@@ -262,6 +282,18 @@ class LeadPipeline:
         logger.debug("Location unconfirmed for '%s'; dropping (no local signal)", name)
         return False
 
+    @staticmethod
+    def _filter_min_score(leads: list[dict[str, Any]], config: dict[str, Any]) -> list[dict[str, Any]]:
+        floor = config.get("min_opportunity_score", 0)
+        return [lead for lead in leads if lead.get("opportunity_score", 0) >= floor]
+
+    @staticmethod
+    def _client_names() -> set[str]:
+        """Real onboarded clients (businesses.json) share the `businesses` table
+        with discovered leads. They must never be scraped as, or listed in the
+        digest as, sales leads."""
+        return {(b.get("name") or "").lower() for b in load_businesses()}
+
     def _merge_known_leads(
         self, db: Any, top_leads: list[dict[str, Any]], config: dict[str, Any]
     ) -> list[dict[str, Any]]:
@@ -269,6 +301,7 @@ class LeadPipeline:
         the digest so it keeps delivering content instead of going empty once
         the good leads have been delivered once and parked in the seen-cache."""
         exclude = {lead.get("instagram_handle", "").lower() for lead in top_leads}
+        clients = self._client_names()
         try:
             businesses = (
                 db.query(Business)
@@ -281,15 +314,14 @@ class LeadPipeline:
             logger.warning("Could not load known businesses: %s", exc)
             return top_leads
 
-        social = SocialScraper()
         known: list[dict[str, Any]] = []
         for biz in businesses:
             handle = (biz.instagram_handle or "").lstrip("@")
-            if not handle or handle.lower() in exclude:
+            if not handle or handle.lower() in exclude or (biz.name or "").lower() in clients:
                 continue
             social_data: dict[str, Any] = {}
             try:
-                sd = asyncio.run(social.fetch_instagram(handle))
+                sd = self._fetch_social(handle)
                 if sd.get("follower_count"):
                     social_data = sd
             except Exception as exc:
@@ -305,7 +337,7 @@ class LeadPipeline:
                 min_followers=config["min_followers"],
                 max_followers=config["max_followers"],
             )
-            if not assessment.get("eligible"):
+            if not assessment.get("eligible") or assessment["score"] < config["min_opportunity_score"]:
                 continue
             known.append(
                 {
@@ -325,11 +357,8 @@ class LeadPipeline:
     def _learning_pass(self) -> dict[str, Any]:
         """Re-scrape every known lead's Instagram, match new posts to prompts
         we generated earlier, and feed engagement outcomes into the weights."""
-        import asyncio as _asyncio
-
         Base.metadata.create_all(bind=db_engine)
         db = SessionLocal()
-        scraper = SocialScraper()
         learner = AutoLearner()
         totals = {"leads_checked": 0, "matched": 0, "learned": 0}
         try:
@@ -340,9 +369,12 @@ class LeadPipeline:
                 .filter(Business.instagram_handle != "")
                 .all()
             )
+            clients = self._client_names()
             for biz in businesses:
+                if (biz.name or "").lower() in clients:
+                    continue  # clients are learned from by engagement.yml / daily job
                 try:
-                    social = _asyncio.run(scraper.fetch_instagram(biz.instagram_handle))
+                    social = self._fetch_social(biz.instagram_handle or "")
                     res = learner.run_for_business(biz.id, social, db)
                     totals["leads_checked"] += 1
                     totals["matched"] += int(res.get("matched") or 0)
@@ -367,7 +399,7 @@ class LeadPipeline:
         if handle:
             biz = (
                 db.query(Business)
-                .filter(Business.instagram_handle.ilike(handle))
+                .filter(func.lower(Business.instagram_handle) == handle.lower())
                 .first()
             )
         if biz is None and lead.get("website_url"):
@@ -407,7 +439,7 @@ class LeadPipeline:
     def _save_prompts(self, db: Any, business_id: int, prompts: list[dict[str, Any]]) -> None:
         """Store generated sample prompts so auto-learning can match the
         lead's future posts against them."""
-        now = datetime.utcnow()
+        now = utc_now_naive()
         for p in prompts:
             db.add(
                 Prompt(
@@ -448,7 +480,7 @@ class LeadPipeline:
             return PromptType.EDUCATIONAL
 
     def _generate_sample_prompts(
-        self, lead: dict[str, Any], config: dict[str, Any], business_id: int | None = None
+        self, lead: dict[str, Any], config: dict[str, Any], weights_key: str | None = None
     ) -> list[dict[str, Any]]:
         profile = {
             "name": lead.get("name", ""),
@@ -458,8 +490,8 @@ class LeadPipeline:
             "followers": lead.get("followers", 0),
         }
         audience_map = self.audience.map_audience(profile, {}, None, None)
-        trend_data = self.trends.scan(profile, audience_map, {})
-        weights = self.weights.to_forge_weights(business_id) if business_id else {}
+        trend_data = self.trends.scan(profile, audience_map, [])
+        weights = self.weights.to_forge_weights(weights_key) if weights_key else {}
         prompts = self.gate.run(
             profile,
             audience_map,
@@ -471,7 +503,7 @@ class LeadPipeline:
 
     def _save_leads(self, digest: list[dict[str, Any]]) -> None:
         path = Path(settings.data_dir) / "leads.json"
-        save_json(path, {"generated_at": datetime.utcnow().isoformat(), "leads": digest})
+        save_json(path, {"generated_at": utc_now_naive().isoformat(), "leads": digest})
         logger.info("Saved %d leads to %s", len(digest), path)
 
     def _send_digest(self, digest: list[dict[str, Any]], config: dict[str, Any]) -> bool:
@@ -484,6 +516,7 @@ class LeadPipeline:
 
 def main() -> None:
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # request URLs can carry tokens
     result = LeadPipeline().run()
     print(json.dumps(result, indent=2))
 
@@ -492,7 +525,7 @@ def main() -> None:
     if result.get("top_leads", 0) > 0 and result.get("prompts_generated", 0) == 0:
         logger.error(
             "::error::%d leads found but 0 prompts generated — LLM chain is down. "
-            "Set GROQ_API_KEY (free at console.groq.com) as a repo secret.",
+            "Check GROQ_API_KEY / GEMINI_API_KEY and the *_MODEL names.",
             result["top_leads"],
         )
         raise SystemExit(1)

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import ipaddress
 import logging
+import re
+import socket
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -20,6 +23,12 @@ class WebsiteScraper:
     )
     TIMEOUT = 30
     MAX_PAGES = 12
+    MAX_BYTES = 2_000_000  # per page; never slurp a huge download into memory
+    SKIP_EXTENSIONS = (
+        ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".zip", ".mp4",
+        ".mp3", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".ico", ".css", ".js",
+    )
+    SOCIAL_HOSTS = ("instagram.com", "linkedin.com")
 
     def scrape(self, url: str) -> dict[str, Any]:
         base = self._normalize_url(url)
@@ -34,11 +43,8 @@ class WebsiteScraper:
         soup = BeautifulSoup(homepage_html, "lxml")
 
         title = self._clean(soup.title.get_text() if soup.title else "")
-        meta_description = self._clean(
-            soup.find("meta", attrs={"name": "description"}).get("content", "")
-            if soup.find("meta", attrs={"name": "description"})
-            else ""
-        )
+        meta_tag = soup.find("meta", attrs={"name": "description"})
+        meta_description = self._clean(str(meta_tag.get("content", "")) if meta_tag else "")
 
         headings = [
             self._clean(h.get_text())
@@ -50,6 +56,7 @@ class WebsiteScraper:
         text_blocks = [t for t in text_blocks if len(t) > 20]
 
         links = self._extract_links(pages)
+        social_links = self._extract_social_links(pages)
         contact_emails = self._extract_contact_emails(pages)
 
         all_text = " ".join(
@@ -63,6 +70,7 @@ class WebsiteScraper:
             "headings": headings,
             "text_blocks": text_blocks[:40],
             "links": links[:50],
+            "social_links": social_links,
             "contact_emails": contact_emails,
             "page_count": len(pages),
             "pages": [{"url": p["url"], "title": p["title"]} for p in pages[:10]],
@@ -73,7 +81,8 @@ class WebsiteScraper:
     def _crawl(self, base: str) -> list[dict[str, Any]]:
         visited: set[str] = set()
         results: list[dict[str, Any]] = []
-        queue = [base]
+        queue = [urldefrag(base)[0]]
+        queued: set[str] = set(queue)
 
         while queue and len(results) < self.MAX_PAGES:
             page_url = queue.pop(0)
@@ -93,21 +102,64 @@ class WebsiteScraper:
             results.append({"url": page_url, "html": html, "title": title, "html_text": text})
 
             for a in soup.find_all("a", href=True):
-                href = a["href"].strip()
-                full = urljoin(page_url, href)
-                if self._same_domain(base, full) and full not in visited:
+                href = str(a["href"]).strip()
+                full = urldefrag(urljoin(page_url, href))[0]
+                if (
+                    full.startswith(("http://", "https://"))
+                    and not urlparse(full).path.lower().endswith(self.SKIP_EXTENSIONS)
+                    and self._same_domain(base, full)
+                    and full not in visited
+                    and full not in queued
+                ):
+                    queued.add(full)
                     queue.append(full)
         return results
 
+    MAX_REDIRECTS = 5
+
+    @staticmethod
+    def _assert_public_url(url: str) -> None:
+        """SSRF guard: URLs come from web search results and user input, so
+        refuse anything that resolves to a loopback/private/link-local address
+        (e.g. cloud metadata at 169.254.169.254)."""
+        host = urlparse(url).hostname
+        if not host:
+            raise ValueError(f"URL has no host: {url!r}")
+        try:
+            infos = socket.getaddrinfo(host, None)
+        except socket.gaierror as exc:
+            raise ValueError(f"cannot resolve {host}") from exc
+        for info in infos:
+            ip = ipaddress.ip_address(str(info[4][0]).split("%")[0])
+            if not ip.is_global:
+                raise ValueError(f"refusing non-public address {ip} for {host}")
+
     def _fetch(self, url: str) -> str:
+        # Redirects are followed by hand so every hop is checked, not just the first.
         with httpx.Client(
             headers={"User-Agent": self.USER_AGENT},
             timeout=self.TIMEOUT,
-            follow_redirects=True,
+            follow_redirects=False,
         ) as client:
-            resp = client.get(url)
-            resp.raise_for_status()
-            return resp.text
+            current = url
+            for _ in range(self.MAX_REDIRECTS + 1):
+                self._assert_public_url(current)
+                with client.stream("GET", current) as resp:
+                    if resp.is_redirect and resp.headers.get("location"):
+                        current = urljoin(current, resp.headers["location"])
+                        continue
+                    resp.raise_for_status()
+                    ctype = resp.headers.get("content-type", "").lower()
+                    if ctype and "html" not in ctype and "xml" not in ctype and "text" not in ctype:
+                        raise ValueError(f"non-HTML content-type {ctype!r}")
+                    body = b""
+                    for chunk in resp.iter_bytes():
+                        body += chunk
+                        if len(body) >= self.MAX_BYTES:
+                            break
+                    encoding = resp.encoding or "utf-8"
+                return body.decode(encoding, errors="replace")
+        raise ValueError(f"too many redirects fetching {url}")
 
     def _normalize_url(self, url: str) -> str | None:
         if not url:
@@ -120,8 +172,27 @@ class WebsiteScraper:
             return None
         return url
 
+    @staticmethod
+    def _host(url: str) -> str:
+        host = str(urlparse(url).netloc).lower().split("@")[-1].split(":")[0]
+        return host[4:] if host.startswith("www.") else host
+
     def _same_domain(self, base: str, candidate: str) -> bool:
-        return urlparse(base).netloc == urlparse(candidate).netloc
+        """example.com and www.example.com are the same site."""
+        return self._host(base) == self._host(candidate)
+
+    def _extract_social_links(self, pages: list[dict[str, Any]]) -> list[str]:
+        """Outbound Instagram/LinkedIn links found on the crawled pages (the
+        same-domain-only link list can never contain these)."""
+        found: list[str] = []
+        for page in pages:
+            soup = BeautifulSoup(page["html"], "lxml")
+            for a in soup.find_all("a", href=True):
+                full = urljoin(page["url"], str(a["href"]).strip())
+                host = self._host(full)
+                if any(host == h or host.endswith("." + h) for h in self.SOCIAL_HOSTS) and full not in found:
+                    found.append(full)
+        return found[:20]
 
     def _extract_links(self, pages: list[dict[str, Any]]) -> list[str]:
         links: list[str] = []
@@ -136,7 +207,6 @@ class WebsiteScraper:
     @staticmethod
     def _extract_contact_emails(pages: list[dict[str, Any]]) -> list[str]:
         """Pull mailto: addresses (contact pages first)."""
-        import re
 
         found: list[str] = []
         ordered = sorted(

@@ -17,3 +17,5 @@ test-results/
 logs/assets/*
 logs/preview/*
 !logs/prompts/.gitkeep
+data/cache/
+.claude/

@@ -13,7 +13,7 @@ import httpx
 
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
-from src.shared.utils import load_weights, save_weights
+from src.shared.utils import load_weights, save_weights, utc_now_naive
 from src.storage.models import Business, FeedbackType, Prompt, PromptType, SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,7 @@ def parse_feedback_issues() -> list[dict[str, Any]]:
                 "prompt_id": int(match.group(1)),
                 "feedback": match.group(2).lower(),
                 "body": issue.get("body") or "",
+                "user": ((issue.get("user") or {}).get("login") or ""),
             }
         )
     logger.info("Parsed %d feedback issues", len(parsed))
@@ -85,115 +86,137 @@ def close_issue(issue_number: int) -> None:
         logger.error("Failed to close issue #%s: %s", issue_number, exc)
 
 
+def _weights_key(db: Any, business_id: int) -> str:
+    biz = db.get(Business, business_id)
+    return biz.weights_key if biz is not None else str(business_id)
+
+
+def _allowed_users() -> set[str]:
+    raw = settings.feedback_allowed_users or ""
+    return {u.strip().lower() for u in raw.split(",") if u.strip()}
+
+
 def process_feedback() -> int:
     """Process open feedback issues: update DB, Bayesian weights, close issues.
     POSTED issues write a direct Engagement row tied to the exact Prompt —
-    no fuzzy matching needed for explicitly linked posts."""
+    no fuzzy matching needed for explicitly linked posts. Posting alone is NOT
+    a hit: the auto-learner scores the linked post's real engagement later."""
+    from src.storage.models import Engagement, Platform
+
     db = SessionLocal()
-    updater = BayesianUpdater()
-    issues = parse_feedback_issues()
-    processed = 0
+    try:
+        updater = BayesianUpdater()
+        issues = parse_feedback_issues()
+        allowed = _allowed_users()
+        seen: set[tuple[int, str]] = set()
+        processed = 0
 
-    for issue in issues:
-        prompt_id = issue["prompt_id"]
-        feedback = issue["feedback"]
-        prompt = db.get(Prompt, prompt_id)
-        if prompt is None:
-            logger.warning("Feedback issue #%s references unknown prompt %s; closing anyway", issue["issue_number"], prompt_id)
-            close_issue(issue["issue_number"])
-            continue
+        for issue in issues:
+            prompt_id = issue["prompt_id"]
+            feedback = issue["feedback"]
 
-        if feedback == "posted":
-            url_match = IG_POST_RE.search(issue["body"])
-            if url_match:
-                post_url = url_match.group(0)
-                post_id = post_url.rstrip("/").split("/")[-1]
-            else:
-                code_match = SHORTCODE_RE.search(issue["body"])
-                if not code_match:
-                    logger.warning(
-                        "::warning::POSTED issue #%s has no Instagram URL/shortcode; leaving open for edit",
-                        issue["issue_number"],
-                    )
-                    continue
-                post_id = code_match.group(1)
-                post_url = f"https://instagram.com/p/{post_id}"
-            post_id = post_id.rstrip("/").split("/")[-1]
-            from datetime import datetime
-
-            from src.storage.models import Engagement, Platform
-
-            existing = (
-                db.query(Engagement)
-                .filter(Engagement.prompt_id == prompt_id, Engagement.post_id == post_id)
-                .first()
-            )
-            if existing is None:
-                db.add(
-                    Engagement(
-                        prompt_id=prompt_id,
-                        platform=Platform.INSTAGRAM,
-                        post_id=post_id[:100],
-                        post_url=post_url[:500],
-                        fetched_at=datetime.utcnow(),
-                    )
+            if allowed and (issue.get("user") or "").lower() not in allowed:
+                logger.warning(
+                    "::warning::Ignoring feedback issue #%s from non-allowed user %r",
+                    issue["issue_number"], issue.get("user"),
                 )
-            prompt.feedback = FeedbackType.GOOD  # human-confirmed posted
-            prompt.feedback_at = datetime.utcnow()
+                close_issue(issue["issue_number"])
+                continue
+
+            # Repeated clicks on the same button must not inflate the weights.
+            key = (prompt_id, feedback)
+            if key in seen:
+                close_issue(issue["issue_number"])
+                continue
+            seen.add(key)
+
+            prompt = db.get(Prompt, prompt_id)
+            if prompt is None:
+                logger.warning("Feedback issue #%s references unknown prompt %s; closing anyway", issue["issue_number"], prompt_id)
+                close_issue(issue["issue_number"])
+                continue
+
+            if feedback == "posted":
+                url_match = IG_POST_RE.search(issue["body"])
+                if url_match:
+                    post_url = url_match.group(0)
+                    post_id = post_url.rstrip("/").split("/")[-1]
+                else:
+                    code_match = SHORTCODE_RE.search(issue["body"])
+                    if not code_match:
+                        logger.warning(
+                            "::warning::POSTED issue #%s has no Instagram URL/shortcode; leaving open for edit",
+                            issue["issue_number"],
+                        )
+                        continue
+                    post_id = code_match.group(1)
+                    post_url = f"https://instagram.com/p/{post_id}"
+                post_id = post_id.rstrip("/").split("/")[-1]
+
+                existing = (
+                    db.query(Engagement)
+                    .filter(Engagement.prompt_id == prompt_id, Engagement.post_id == post_id)
+                    .first()
+                )
+                if existing is None:
+                    db.add(
+                        Engagement(
+                            prompt_id=prompt_id,
+                            platform=Platform.INSTAGRAM,
+                            post_id=post_id[:100],
+                            post_url=post_url[:500],
+                            fetched_at=utc_now_naive(),
+                        )
+                    )
+                db.commit()
+                logger.info("Linked post %s to prompt %s", post_url, prompt_id)
+                close_issue(issue["issue_number"])
+                processed += 1
+                continue
+
+            # A regenerate request is a real negative signal AND must actually
+            # produce a fresh replacement prompt (otherwise the button is a no-op).
+            if feedback == "regenerate":
+                prompt.feedback = FeedbackType.REGENERATE
+                prompt.feedback_at = utc_now_naive()
+                db.add(prompt)
+                updater.record(
+                    _weights_key(db, prompt.business_id),
+                    "bad",
+                    prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
+                    format=prompt.format or None,
+                    audience_segment=prompt.audience_segment or None,
+                )
+                db.commit()
+                try:
+                    regenerate_prompt(prompt, db)
+                except Exception as exc:  # noqa: BLE001
+                    logger.error("Regenerate failed for prompt %s: %s", prompt.id, exc)
+                close_issue(issue["issue_number"])
+                processed += 1
+                continue
+
+            fb = {"good": FeedbackType.GOOD, "bad": FeedbackType.BAD}.get(feedback)
+            if fb is None or prompt.feedback == fb:
+                close_issue(issue["issue_number"])
+                continue
+
+            prompt.feedback = fb
+            prompt.feedback_at = utc_now_naive()
             db.add(prompt)
+
             updater.record(
-                prompt.business_id,
-                "good",
+                _weights_key(db, prompt.business_id),
+                "good" if feedback == "good" else "bad",
                 prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
+                format=prompt.format or None,
                 audience_segment=prompt.audience_segment or None,
             )
             db.commit()
-            logger.info("Linked post %s to prompt %s", post_url, prompt_id)
             close_issue(issue["issue_number"])
             processed += 1
-            continue
-
-        # A regenerate request is a real negative signal AND must actually
-        # produce a fresh replacement prompt (otherwise the button is a no-op).
-        if feedback == "regenerate":
-            prompt.feedback = FeedbackType.REGENERATE
-            prompt.feedback_at = datetime.utcnow()
-            db.add(prompt)
-            updater.record(
-                prompt.business_id,
-                "bad",
-                prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
-                audience_segment=prompt.audience_segment or None,
-            )
-            db.commit()
-            try:
-                regenerate_prompt(prompt, db)
-            except Exception as exc:  # noqa: BLE001
-                logger.error("Regenerate failed for prompt %s: %s", prompt.id, exc)
-            close_issue(issue["issue_number"])
-            processed += 1
-            continue
-
-        fb = {"good": FeedbackType.GOOD, "bad": FeedbackType.BAD}.get(feedback)
-        if fb is None:
-            close_issue(issue["issue_number"])
-            continue
-
-        prompt.feedback = fb
-        prompt.feedback_at = datetime.utcnow()
-        db.add(prompt)
-
-        updater.record(
-            prompt.business_id,
-            "good" if feedback == "good" else "bad",
-            prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
-            audience_segment=prompt.audience_segment or None,
-        )
-        db.commit()
-        close_issue(issue["issue_number"])
-        processed += 1
-
-    db.close()
+    finally:
+        db.close()
     logger.info("Processed %d feedback issues", processed)
     return processed
 
@@ -218,7 +241,7 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
 
     profile = biz.profile_json or {}
     audience_map = biz.audience_personas_json or {}
-    weights = BayesianUpdater().to_forge_weights(biz.id)
+    weights = BayesianUpdater().to_forge_weights(biz.weights_key)
     ptype = prompt.prompt_type.value if prompt.prompt_type else "educational"
 
     forge = PromptForge()
@@ -274,7 +297,7 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
         asset_path=v.get("asset_path"),
         asset_type=v.get("asset_type"),
         format=v.get("format"),
-        sent_at=datetime.utcnow(),
+        sent_at=utc_now_naive(),
     )
     db.add(new_prompt)
     db.flush()

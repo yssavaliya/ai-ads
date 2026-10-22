@@ -10,7 +10,7 @@ from sqlalchemy import func
 
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
-from src.shared.utils import load_businesses
+from src.shared.utils import load_businesses, utc_now_naive
 from src.storage.models import Business, Engagement, Platform, Prompt, SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,25 @@ NO_HISTORY_BENCHMARK = 0.01    # fallback "good post" bar when a business has no
                                  # positive-engagement posts yet to compute a real median from
 MIN_POSTS_FOR_BENCHMARK = 3    # need this many non-zero posts before trusting the
                                  # own-median benchmark; below it we use an absolute bar
+
+
+_SHORTCODE_URL_RE = re.compile(r"/(?:p|reel|reels|tv)/([A-Za-z0-9_-]+)")
+
+
+def shortcode_from_url(url: str | None) -> str:
+    match = _SHORTCODE_URL_RE.search(url or "")
+    return match.group(1) if match else ""
+
+
+def post_keys(post: dict[str, Any]) -> set[str]:
+    """All identifiers a scraped post can be linked by: Apify/internal id, the
+    full URL, and the URL shortcode (what the "I posted this" button stores)."""
+    keys = {
+        str(post.get("post_id") or ""),
+        str(post.get("url") or ""),
+        shortcode_from_url(post.get("url")),
+    }
+    return {k for k in keys if k}
 
 
 def tokenize(text: str) -> set[str]:
@@ -107,6 +126,8 @@ class AutoLearner:
             logger.info("Business %s: no posts available for auto-learning", business_id)
             return {"matched": 0, "learned": 0}
 
+        biz_row = db.get(Business, business_id) if db is not None else None
+        weights_key = biz_row.weights_key if biz_row is not None else str(business_id)
         benchmark, bench_n = self._benchmark_median(posts, followers)
         sent_prompts = self._recent_prompts(db, business_id)
         for p in sent_prompts:
@@ -131,7 +152,7 @@ class AutoLearner:
             # the trial count (engagement.yml runs hourly).
             if recorded:
                 self.updater.record(
-                    business_id,
+                    weights_key,
                     outcome,
                     prompt_type=prompt_type,
                     format=fmt or post.get("format"),
@@ -149,7 +170,7 @@ class AutoLearner:
         return {"matched": len(matched), "learned": learned, "benchmark": round(benchmark, 4), "details": details}
 
     def _recent_prompts(self, db: Any, business_id: int) -> list[dict[str, Any]]:
-        cutoff = datetime.utcnow() - timedelta(days=MATCH_LOOKBACK_DAYS)
+        cutoff = utc_now_naive() - timedelta(days=MATCH_LOOKBACK_DAYS)
         rows = (
             db.query(Prompt)
             .filter(
@@ -224,41 +245,52 @@ class AutoLearner:
     ) -> list[tuple[int, str | None, str, dict[str, Any], str | None, str | None]]:
         """Match published posts to sent prompts.
 
-        Priority 1 — explicit links: posts whose post_id matches an Engagement
-        row created via the 📎 'I posted this' button bypass similarity entirely.
+        Priority 1 — explicit links: posts matching an Engagement row created
+        via the 📎 'I posted this' button are attributed to THAT prompt and
+        bypass similarity entirely.
         Priority 2 — similarity: caption/prompt Jaccard >= MIN_SIMILARITY within
-        the post window; each post used once.
+        the post window; each post and each prompt is used once.
         Returns (prompt_id, prompt_type, prompt_text, post, audience_segment, format)."""
         from src.storage.models import Engagement
 
-        matched: list[tuple[int, str | None, str, dict[str, Any], str | None]] = []
-        used_post_ids: set[str] = set()
+        matched: list[tuple[int, str | None, str, dict[str, Any], str | None, str | None]] = []
+        used_post_keys: set[str] = set()
+        used_prompt_ids: set[int] = set()
+        by_id = {p["id"]: p for p in prompts}
 
-        prompt_ids = [p["id"] for p in prompts]
-        linked_post_ids: set[str] = set()
-        if prompt_ids and self._db is not None:
+        # key (post id / url / shortcode) -> prompt id it was explicitly linked to
+        linked: dict[str, int] = {}
+        if by_id and self._db is not None:
             rows = (
                 self._db.query(Engagement)
-                .filter(Engagement.prompt_id.in_(prompt_ids))
+                .filter(Engagement.prompt_id.in_(list(by_id)))
                 .filter(Engagement.post_id.isnot(None))
                 .all()
             )
-            linked_post_ids = {r.post_id for r in rows if r.post_id}
+            for r in rows:
+                for key in (r.post_id, r.post_url, shortcode_from_url(r.post_url)):
+                    if key:
+                        linked[str(key)] = r.prompt_id
 
         # Pass 1: exact-ID matches (human-confirmed links).
-        for prompt in prompts:
-            for post in posts:
-                post_id = str(post.get("post_id") or post.get("url") or "")
-                if not post_id or post_id in used_post_ids or post_id not in linked_post_ids:
-                    continue
-                used_post_ids.add(post_id)
-                matched.append(
-                    (prompt["id"], prompt.get("prompt_type"), prompt["prompt_text"], post, prompt.get("audience_segment"))
-                )
+        for post in posts:
+            keys = post_keys(post)
+            if not keys or keys & used_post_keys:
+                continue
+            prompt_id = next((linked[k] for k in keys if k in linked), None)
+            if prompt_id is None or prompt_id in used_prompt_ids:
+                continue
+            prompt = by_id[prompt_id]
+            used_post_keys |= keys
+            used_prompt_ids.add(prompt_id)
+            matched.append(
+                (prompt_id, prompt.get("prompt_type"), prompt["prompt_text"], post,
+                 prompt.get("audience_segment"), prompt.get("format"))
+            )
 
         # Pass 2: fuzzy similarity matches.
         for prompt in sorted(prompts, key=lambda p: p["sent_at"] or datetime.min):
-            if not prompt.get("sent_at"):
+            if prompt["id"] in used_prompt_ids or not prompt.get("sent_at"):
                 continue
             window_end = prompt["sent_at"] + timedelta(days=POST_MATCH_WINDOW_DAYS)
 
@@ -270,8 +302,7 @@ class AutoLearner:
 
             best: tuple[float, dict[str, Any]] | None = None
             for post in posts:
-                post_id = str(post.get("post_id") or post.get("url") or "")
-                if post_id in used_post_ids:
+                if post_keys(post) & used_post_keys:
                     continue
                 posted_at = self._parse_date(post.get("posted_at"))
                 if posted_at is None:
@@ -288,11 +319,11 @@ class AutoLearner:
 
             if best:
                 post = best[1]
-                post_id = str(post.get("post_id") or post.get("url") or "")
-                if post_id:
-                    used_post_ids.add(post_id)
+                used_post_keys |= post_keys(post)
+                used_prompt_ids.add(prompt["id"])
                 matched.append(
-                    (prompt["id"], prompt.get("prompt_type"), prompt["prompt_text"], post, prompt.get("audience_segment"), prompt.get("format"))
+                    (prompt["id"], prompt.get("prompt_type"), prompt["prompt_text"], post,
+                     prompt.get("audience_segment"), prompt.get("format"))
                 )
 
         return matched
@@ -317,14 +348,18 @@ class AutoLearner:
 
         from src.storage.models import FeedbackType
 
+        # A prompt that already carries feedback has been learned from (by a
+        # click or an earlier scrape). A POSTED link alone only creates an
+        # Engagement row — it does not set feedback — so it is still "new".
+        already_learned = prompt.feedback is not None
         prompt.feedback = FeedbackType.GOOD if outcome == "good" else FeedbackType.BAD
-        prompt.feedback_at = datetime.utcnow()
+        prompt.feedback_at = utc_now_naive()
         db.add(prompt)
 
         platform = Platform.LINKEDIN if post.get("platform") == "linkedin" else Platform.INSTAGRAM
         post_id = str(post.get("post_id") or "")[:100]
         post_url = str(post.get("url") or "")[:500]
-        short = post_url.rstrip("/").split("/")[-1] if post_url else ""
+        short = shortcode_from_url(post_url)
 
         # A post may have been explicitly linked via the "I posted this" button
         # (process_feedback stores post_id == URL shortcode), but the same post
@@ -336,10 +371,10 @@ class AutoLearner:
             if cand.post_id == post_id:
                 existing = cand
                 break
-            if short and cand.post_url and cand.post_url.rstrip("/").split("/")[-1] == short:
+            if short and cand.post_url and shortcode_from_url(cand.post_url) == short:
                 existing = cand
                 break
-        is_new = existing is None
+        is_new = not already_learned
         if existing:
             # Refresh stored engagement (likes/comments grow over time) but do
             # not treat it as a new learning event.
@@ -357,7 +392,7 @@ class AutoLearner:
             saves=int(post.get("saves") or 0),
             reach=int(post.get("reach") or 0),
             impressions=int(post.get("impressions") or 0),
-            fetched_at=datetime.utcnow(),
+            fetched_at=utc_now_naive(),
         )
         db.add(engagement)
         db.commit()
@@ -382,7 +417,7 @@ class AutoLearner:
                 fh.write(
                     json.dumps(
                         {
-                            "ts": datetime.utcnow().isoformat(),
+                            "ts": utc_now_naive().isoformat(),
                             "prompt_id": prompt_id,
                             "post_id": str(post.get("post_id") or "")[:100],
                             "caption": (caption or "")[:500],

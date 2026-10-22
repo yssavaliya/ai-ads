@@ -48,6 +48,9 @@ def test_explicit_link_bypasses_similarity(tmp_path):
     import os
 
     os.environ["DATABASE_PATH"] = str(tmp_path / "t.db")
+    from sqlalchemy import create_engine as _ce
+    from sqlalchemy.orm import sessionmaker as _sm
+
     from src.storage.models import (
         Base,
         Engagement,
@@ -55,11 +58,10 @@ def test_explicit_link_bypasses_similarity(tmp_path):
         Prompt,
         PromptType,
         SessionLocal,
+    )
+    from src.storage.models import (
         engine as db_engine,
     )
-
-    from sqlalchemy import create_engine as _ce
-    from sqlalchemy.orm import sessionmaker as _sm
 
     # Own, isolated engine: the module-level `engine` singleton is bound to the
     # default DB (created before the `caption` column existed), so create_all
@@ -126,6 +128,9 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
     from src.shared.config import settings
 
     monkeypatch.setattr(settings, "data_dir", tmp_path)
+    from sqlalchemy import create_engine as _ce
+    from sqlalchemy.orm import sessionmaker as _sm
+
     from src.learning.auto_learner import AutoLearner
     from src.learning.bayesian_updater import BayesianUpdater
     from src.storage.models import (
@@ -134,11 +139,10 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
         Prompt,
         PromptType,
         SessionLocal,
+    )
+    from src.storage.models import (
         engine as db_engine,
     )
-
-    from sqlalchemy import create_engine as _ce
-    from sqlalchemy.orm import sessionmaker as _sm
 
     # Own, isolated engine: the module-level `engine` singleton is bound to the
     # default DB (created before the `caption` column existed), so create_all
@@ -181,7 +185,7 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
         learner.run_for_business(biz.id, social, db)
         learner.run_for_business(biz.id, social, db)  # re-scrape same post
 
-        edu = BayesianUpdater().get_weights(biz.id)["topics"]["educational"]
+        edu = BayesianUpdater().get_weights(biz.weights_key)["topics"]["educational"]
         assert edu["trials"] == 1, edu
         assert edu["hits"] == 1, edu
 
@@ -191,7 +195,7 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
 
         log = _Path(tmp_path) / "engagement_log.jsonl"
         assert log.exists(), "engagement_log.jsonl was not written"
-        inflate_lines = [l for l in log.read_text().splitlines() if "INFLATE1" in l]
+        inflate_lines = [ln for ln in log.read_text().splitlines() if "INFLATE1" in ln]
         assert len(inflate_lines) == 1, inflate_lines
     finally:
         db.close()
@@ -199,10 +203,11 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
 
 def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
     """Regression: when a human confirms 'I posted this' (process_feedback
-    stores post_id == URL shortcode and records a GOOD weight), the same post
-    re-scraped from Instagram later carries Apify's internal id (different from
-    the shortcode). The learner must still recognise it as the SAME post via the
-    URL shortcode, so it (a) does NOT record the weight a second time and
+    stores an Engagement row with post_id == URL shortcode but records NO
+    weight — posting alone is not a hit), the same post re-scraped from
+    Instagram carries Apify's internal id (different from the shortcode). The
+    learner must recognise it as the SAME post via the URL shortcode, so it
+    (a) records the weight exactly once, from real engagement, and
     (b) does NOT create a duplicate Engagement row."""
     import os
     from datetime import datetime, timedelta
@@ -211,6 +216,9 @@ def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
     from src.shared.config import settings
 
     monkeypatch.setattr(settings, "data_dir", tmp_path)
+    from sqlalchemy import create_engine as _ce
+    from sqlalchemy.orm import sessionmaker as _sm
+
     from src.learning.auto_learner import AutoLearner
     from src.learning.bayesian_updater import BayesianUpdater
     from src.storage.models import (
@@ -221,11 +229,10 @@ def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
         Prompt,
         PromptType,
         SessionLocal,
+    )
+    from src.storage.models import (
         engine as db_engine,
     )
-
-    from sqlalchemy import create_engine as _ce
-    from sqlalchemy.orm import sessionmaker as _sm
 
     # Own, isolated engine: the module-level `engine` singleton is bound to the
     # default DB (created before the `caption` column existed), so create_all
@@ -260,7 +267,6 @@ def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
             )
         )
         db.commit()
-        BayesianUpdater().record(biz.id, "good", prompt_type="educational")
 
         # Later scrape: same post, but post_id is Apify's internal id while the
         # URL still points at the same shortcode.
@@ -283,8 +289,8 @@ def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
         }
         AutoLearner().run_for_business(biz.id, social, db)
 
-        edu = BayesianUpdater().get_weights(biz.id)["topics"]["educational"]
-        assert edu["trials"] == 1, edu  # only the human GOOD, not a second count
+        edu = BayesianUpdater().get_weights(biz.weights_key)["topics"]["educational"]
+        assert edu["trials"] == 1, edu  # learned exactly once, from real engagement
         assert edu["hits"] == 1, edu
 
         rows = db.query(Engagement).filter(Engagement.prompt_id == prompt.id).all()
@@ -307,6 +313,9 @@ def test_learner_matches_by_posted_caption_not_brief(tmp_path, monkeypatch):
     from src.shared.config import settings
 
     monkeypatch.setattr(settings, "data_dir", tmp_path)
+    from sqlalchemy import create_engine as _ce
+    from sqlalchemy.orm import sessionmaker as _sm
+
     from src.learning.auto_learner import AutoLearner
     from src.learning.bayesian_updater import BayesianUpdater
     from src.storage.models import (
@@ -315,11 +324,10 @@ def test_learner_matches_by_posted_caption_not_brief(tmp_path, monkeypatch):
         Prompt,
         PromptType,
         SessionLocal,
+    )
+    from src.storage.models import (
         engine as db_engine,
     )
-
-    from sqlalchemy import create_engine as _ce
-    from sqlalchemy.orm import sessionmaker as _sm
 
     # Own, isolated engine: the module-level `engine` singleton is bound to the
     # default DB (created before the `caption` column existed), so create_all
@@ -362,7 +370,7 @@ def test_learner_matches_by_posted_caption_not_brief(tmp_path, monkeypatch):
         }
         AutoLearner().run_for_business(biz.id, social, db)
 
-        edu = BayesianUpdater().get_weights(biz.id)["topics"]["educational"]
+        edu = BayesianUpdater().get_weights(biz.weights_key)["topics"]["educational"]
         assert edu["trials"] == 1, edu  # matched via the posted caption
         assert edu["hits"] == 1, edu
     finally:
