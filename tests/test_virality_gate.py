@@ -149,3 +149,35 @@ def test_virality_gate_falls_back_below_threshold(monkeypatch):
     # Should still return best-available (fallback), never empty
     assert len(results) >= 1
     assert all("virality_score" in r for r in results)
+
+
+def test_gate_retries_once_after_a_failed_generation_then_gives_up():
+    """A single truncated/overloaded LLM answer must not end the day's run; two in a row do."""
+    class FlakyForge:
+        calls = 0
+
+        def generate_variants(self, **kw):
+            FlakyForge.calls += 1
+            if FlakyForge.calls == 1:
+                raise ValueError("Unterminated string")
+            return [{"prompt_type": "educational", "prompt_text": "ok text", "format": "reel"}]
+
+        def refine_with_hints(self, best, *a):
+            return best
+
+    class Pred:
+        def score(self, *a, **k):
+            return {"virality_score": 90, "virality_label": "HIGH", "virality_probability": 0.9, "key_factors": [], "risks": [], "reasoning": ""}
+
+    out = ViralityGate(threshold=75, max_attempts=5, forge=FlakyForge(), predictor=Pred()).run({}, {}, {}, ["educational"])
+    assert out and FlakyForge.calls == 2
+
+    class DeadForge:
+        calls = 0
+
+        def generate_variants(self, **kw):
+            DeadForge.calls += 1
+            raise ValueError("down")
+
+    assert ViralityGate(threshold=75, max_attempts=5, forge=DeadForge(), predictor=Pred()).run({}, {}, {}, ["educational"]) == []
+    assert DeadForge.calls == 2  # two strikes, not five wasted attempts

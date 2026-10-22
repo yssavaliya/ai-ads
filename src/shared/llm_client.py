@@ -96,6 +96,7 @@ class LLMClient:
 
     def __init__(self, timeout_seconds: int | None = None) -> None:
         self.timeout_seconds = timeout_seconds or 60
+        self._skip: frozenset[str] = frozenset()
 
     # ------------------------------------------------------------------ run
     def run(
@@ -113,10 +114,14 @@ class LLMClient:
             prompt = UNTRUSTED_NOTE + prompt
         skip = set(exclude or ())
         names = [n for n in llm_providers.provider_order() if n not in skip]
+        # "provider/model" entries skip just that model (its siblings may still answer)
+        self._skip = frozenset(x for x in skip if "/" in x)
 
         waited = False
         while True:
             for name in names:
+                if llm_providers.get_provider(name) is None:
+                    continue  # not configured: nothing to try, nothing to log
                 result = self._dispatch(name, prompt, label, temperature, max_retries)
                 if result is not None:
                     return result
@@ -136,6 +141,7 @@ class LLMClient:
                 waited = True
                 continue
             break
+        self._skip = frozenset()
 
         raise AllProvidersFailedError(
             f"All LLM providers failed for {label}. Chain: {llm_providers.describe_setup()}. "
@@ -172,13 +178,15 @@ class LLMClient:
                 return data
             except ValueError as exc:  # JSONDecodeError is a ValueError
                 provider = getattr(result, "provider", "")
+                model = getattr(result, "model", "")
                 if not provider:
                     raise
                 logger.warning(
-                    "::warning::[%s] %s/%s returned unusable JSON (%s); trying next provider",
-                    label or "llm", provider, getattr(result, "model", ""), exc,
+                    "::warning::[%s] %s/%s returned unusable JSON (%s); trying the next model/provider",
+                    label or "llm", provider, model, exc,
                 )
-                exclude.add(provider)
+                # only this model is struck off: a sibling model of the same provider may do better
+                exclude.add(f"{provider}/{model}" if model else provider)
                 last_error = exc
 
     # ------------------------------------------------------------- providers
@@ -209,7 +217,7 @@ class LLMClient:
             return None
 
         for model in provider.models:
-            if not HEALTH.available(name, model):
+            if not HEALTH.available(name, model) or f"{name}/{model}" in self._skip:
                 continue
             try:
                 client = OpenAI(
@@ -221,9 +229,16 @@ class LLMClient:
                 )
                 start = time.monotonic()
                 response = self._chat(client, model, prompt, temperature, max_retries)
-                content = (response.choices[0].message.content or "").strip()
+                if isinstance(response, str):
+                    # the SDK hands back the raw body when the endpoint did not answer in the API's format
+                    raise ValueError(f"non-JSON response from {provider.base_url}: {response[:200]!r}")
+                choice = response.choices[0]
+                content = (choice.message.content or "").strip()
                 if not content:
                     raise ValueError("empty response")
+                if getattr(choice, "finish_reason", None) == "length":
+                    logger.warning("::warning::[%s] %s/%s hit max_tokens (%d): the answer may be cut off",
+                                   label or "llm", name, model, settings.llm_max_tokens)
                 elapsed = time.monotonic() - start
                 logger.info(
                     "::notice::[%s] %s answered via %s in %.1fs (%d chars)",
@@ -252,6 +267,7 @@ class LLMClient:
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=temperature,
+                    max_tokens=settings.llm_max_tokens,
                 )
             except Exception as exc:  # noqa: BLE001 - provider SDK raises many types
                 last_exc = exc

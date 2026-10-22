@@ -66,7 +66,8 @@ def _catalog() -> dict[str, Callable[[], Provider | None]]:
         if not (s.github_token and s.github_models_enabled):
             return None
         return Provider("github", "https://models.github.ai/inference", s.github_token,
-                        tuple(csv(s.github_models_model)))
+                        tuple(csv(s.github_models_model)),
+                        {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"})
 
     def cerebras() -> Provider | None:
         if not s.cerebras_api_key:
@@ -140,6 +141,10 @@ def classify(exc: BaseException) -> Failure:
 
     if status in (401, 403):
         return Failure("auth", math.inf, "provider")
+    if status == 402 or "no remaining credits" in msg or "insufficient_quota" in msg or "payment required" in msg:
+        return Failure("quota", 3600.0, "provider")  # prepaid credits gone: don't retry within the hour
+    if msg.startswith("non-json response"):
+        return Failure("bad_response", 600.0, "provider")  # endpoint answered with something that is not an API reply
     if status == 404 or "model_not_found" in msg or "does not exist" in msg or "not found" in msg:
         return Failure("model", math.inf, "model")
     if status == 429 or any(k in msg for k in ("rate limit", "rate_limit", "quota", "resource_exhausted", "too many requests")):
@@ -155,7 +160,10 @@ def classify(exc: BaseException) -> Failure:
         return Failure("rate_limit", min(cooldown, 3600.0), "model")
     if status == 400:
         return Failure("bad_request", 0.0, "none")
-    return Failure("transient", 30.0, "provider")
+    if status is not None and status >= 500:
+        # "model overloaded" is per model: sibling models of the same provider may be fine
+        return Failure("transient", 30.0, "model")
+    return Failure("transient", 30.0, "provider")  # connection errors / timeouts: the provider itself is unreachable
 
 
 class Health:

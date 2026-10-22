@@ -45,6 +45,7 @@ class ViralityGate:
         best_overall: dict[str, Any] | None = None
         best_score = -1
         hints: list[str] = []
+        generation_failures = 0
 
         for attempt in range(1, self.max_attempts + 1):
             try:
@@ -60,8 +61,11 @@ class ViralityGate:
             except Exception as exc:
                 # Forge is honest (raises on bad LLM output); we don't fake
                 # variants, but one failed attempt must not abort the whole run.
+                generation_failures += 1
                 logger.error("::warning::Variant generation failed on attempt %d: %s", attempt, exc)
-                break
+                if generation_failures >= 2:
+                    break  # two strikes: the providers are really struggling
+                continue  # one transient failure (truncated JSON, overloaded model) gets a retry
             if not variants:
                 logger.warning("No variants generated on attempt %d", attempt)
                 break

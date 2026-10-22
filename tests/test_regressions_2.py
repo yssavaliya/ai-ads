@@ -98,6 +98,7 @@ def test_untrusted_content_is_fenced_and_flagged(monkeypatch):
         seen["p"] = prompt
         return lc.LLMResult("ok", "", 0, 0.0)
 
+    monkeypatch.setattr(settings, "groq_api_key", "k")  # unconfigured providers are skipped before dispatch
     monkeypatch.setattr(client, "_try_groq", fake_groq)
     client.run(f"analyse {wrapped}", label="t")
     assert seen["p"].startswith(lc.UNTRUSTED_NOTE)

@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(default=None, description="Gemini API key")
     gemini_model: str = Field(default="gemini-3.6-flash", description="Gemini model")
 
+    # Hard cap on generated tokens per call. Without it long JSON answers (the prompt
+    # forge returns ~8k chars) were cut off mid-string by provider defaults.
+    llm_max_tokens: int = Field(default=8192, description="max_tokens sent with every LLM call")
+
     # Extra models tried (same key) when the primary model is rate limited / retired.
     # Groq and Gemini enforce limits per model, so a sibling model has its own quota.
     groq_fallback_models: str = Field(default="llama-3.3-70b-versatile,llama-3.1-8b-instant")
