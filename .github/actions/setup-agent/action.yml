@@ -63,12 +63,18 @@ runs:
         python -m pip install -e .
         if [ "$WITH_PIPER" = "true" ]; then python -m pip install piper-tts; fi
 
-    - name: Install ffmpeg when the runner image lacks it (Reel assembly)
+    - name: Provide ffmpeg (static build from pip; no apt mirrors that can stall the job)
       if: inputs.piper == 'true'
       shell: bash
+      timeout-minutes: 5
+      continue-on-error: true  # Reels fall back to still images; never block the pipeline on this
       run: |
         if ! command -v ffmpeg >/dev/null; then
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg || echo "::warning::could not install ffmpeg"
+          python -m pip install --quiet imageio-ffmpeg
+          exe="$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
+          mkdir -p "$HOME/.local/ffbin"
+          ln -sf "$exe" "$HOME/.local/ffbin/ffmpeg"
+          echo "$HOME/.local/ffbin" >> "$GITHUB_PATH"
         fi
 
     - name: Check render dependencies (warn only — Reels fall back to images)

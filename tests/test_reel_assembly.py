@@ -169,3 +169,13 @@ def test_real_render_prompt_produces_a_reel_not_an_image(tmp_path, monkeypatch):
     assert result["asset_type"] == "reel" and result["asset_path"].endswith(".mp4")
     assert result["thumbnail"] and Image.open(result["thumbnail"]).size[0] > 0
     assert any("Voiceover unavailable" in w for w in result["warnings"])  # degraded, but still a Reel
+
+
+def test_wav_duration_needs_no_ffprobe(tmp_path, monkeypatch):
+    wav = tmp_path / "a.wav"
+    _silent_wav(wav, 2.5)
+    monkeypatch.setattr(cf.subprocess, "run", lambda *a, **k: pytest.fail("must not shell out"))
+    assert cf.CreativeForge._wav_duration(str(wav)) == pytest.approx(2.5, abs=0.01)
+    (tmp_path / "bad.wav").write_bytes(b"not a wav")
+    assert cf.CreativeForge._wav_duration(str(tmp_path / "bad.wav")) == 3.0  # safe default
+    assert cf.CreativeForge._wav_duration(str(tmp_path / "missing.wav")) == 3.0
