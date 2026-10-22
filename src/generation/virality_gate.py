@@ -9,6 +9,8 @@ from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
 
+NEUTRAL_WEIGHT = 0.5  # beta-Bernoulli prior mean: an untested combo
+
 
 class ViralityGate:
     """Iterative generation loop: generate variants → score → if best is below
@@ -110,7 +112,9 @@ class ViralityGate:
                     if ptype not in selected or selected[ptype].get("_combined", 0) < combined:
                         selected[ptype] = v
 
-            if len(selected) >= 3:
+            # A business with fewer than 3 prompt types can never fill 3 slots;
+            # without capping, it would burn every attempt (and LLM quota).
+            if len(selected) >= min(3, len(set(prompt_types)) or 3):
                 logger.info(
                     "Virality gate passed at attempt %d: %d types above threshold %d",
                     attempt, len(selected), self.threshold,
@@ -126,21 +130,29 @@ class ViralityGate:
             refined = self.forge.refine_with_hints(
                 best_variant, hints, business_profile, audience_map, trend_data
             )
-            if refined:
-                prediction = self.predictor.score(
-                    refined["prompt_text"],
-                    business_profile,
-                    audience_map,
-                    trend_data,
-                    refined.get("prompt_type", "educational"),
-                )
-                refined["virality_score"] = prediction["virality_score"]
-                refined["virality_label"] = prediction["virality_label"]
-                refined["virality_probability"] = prediction["virality_probability"]
-                refined["key_factors"] = prediction["key_factors"]
-                refined["risks"] = prediction["risks"]
-                refined["reasoning"] = prediction["reasoning"]
-                refined["improvement_hints"] = prediction.get("improvement_hints", [])
+            refined_prediction: dict[str, Any] | None = None
+            if refined and refined is not best_variant:
+                try:
+                    refined_prediction = self.predictor.score(
+                        refined["prompt_text"],
+                        business_profile,
+                        audience_map,
+                        trend_data,
+                        refined.get("prompt_type", "educational"),
+                        history=history,
+                    )
+                except Exception as exc:
+                    # Scoring the refinement is optional: never lose the
+                    # variants already scored in this run because of it.
+                    logger.error("::warning::Scoring refined variant failed: %s", exc)
+            if refined_prediction is not None:
+                refined["virality_score"] = refined_prediction["virality_score"]
+                refined["virality_label"] = refined_prediction["virality_label"]
+                refined["virality_probability"] = refined_prediction["virality_probability"]
+                refined["key_factors"] = refined_prediction["key_factors"]
+                refined["risks"] = refined_prediction["risks"]
+                refined["reasoning"] = refined_prediction["reasoning"]
+                refined["improvement_hints"] = refined_prediction.get("improvement_hints", [])
                 refined["generation_attempt"] = attempt
                 refined_combined = refined["virality_score"] + self._weight_boost(weights, refined)
                 refined["_combined"] = refined_combined
@@ -183,9 +195,11 @@ class ViralityGate:
     def _weight_boost(
         weights: dict[str, Any] | None, v: dict[str, Any]
     ) -> float:
-        """Small nudge so proven combos (weight > 1) win ties over unproven or
-        penalized ones (weight < 1). Keeps the virality score as the primary
-        signal but makes the self-learning loop actually steer generation."""
+        """Small nudge so proven combos win ties over unproven or penalized
+        ones. Bayesian weights are (hits+1)/(trials+2), so they live in (0, 1)
+        and the neutral point is the 0.5 prior mean, not 1.0. Keeps the
+        virality score as the primary signal but makes the self-learning loop
+        actually steer generation."""
         if not weights:
             return 0.0
         total, n = 0.0, 0
@@ -199,8 +213,8 @@ class ViralityGate:
                 if val is not None:
                     total += val
                     n += 1
-        avg = (total / n) if n else 1.0
-        return 6.0 * (avg - 1.0)
+        avg = (total / n) if n else NEUTRAL_WEIGHT
+        return 12.0 * (avg - NEUTRAL_WEIGHT)
 
     @staticmethod
     def _collect_hints(scored: list[dict[str, Any]]) -> list[str]:

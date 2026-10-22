@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 
 from src.fetch.social_scraper import SocialScraper
 from src.shared.config import settings
+from src.shared.utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +147,7 @@ class LeadFinder:
         from src.shared.utils import load_json
 
         data = load_json(Path(settings.data_dir) / "lead_seen.json", {})
-        cutoff = (datetime.utcnow() - timedelta(days=self.SEEN_COOLDOWN_DAYS)).isoformat()
+        cutoff = (utc_now_naive() - timedelta(days=self.SEEN_COOLDOWN_DAYS)).isoformat()
         recent = set()
         for key, ts in data.items():
             if isinstance(ts, str) and ts >= cutoff:
@@ -162,7 +163,7 @@ class LeadFinder:
 
         path = Path(_s.data_dir) / "lead_seen.json"
         data = load_json(path, {})
-        now = datetime.utcnow().isoformat()
+        now = utc_now_naive().isoformat()
         for c in candidates:
             for key in (
                 self._domain(c.get("website_url") or ""),
@@ -193,7 +194,7 @@ class LeadFinder:
         from src.shared.utils import load_json
 
         data = load_json(Path(settings.data_dir) / "lead_rejected.json", {})
-        cutoff = (datetime.utcnow() - timedelta(days=self.REJECTED_COOLDOWN_DAYS)).isoformat()
+        cutoff = (utc_now_naive() - timedelta(days=self.REJECTED_COOLDOWN_DAYS)).isoformat()
         recent = set()
         for key, ts in data.items():
             if isinstance(ts, str) and ts >= cutoff:
@@ -209,7 +210,7 @@ class LeadFinder:
 
         path = Path(_s.data_dir) / "lead_rejected.json"
         data = load_json(path, {})
-        now = datetime.utcnow().isoformat()
+        now = utc_now_naive().isoformat()
         for c in candidates:
             for key in (
                 self._domain(c.get("website_url") or ""),
@@ -230,7 +231,9 @@ class LeadFinder:
 
                 scraper = WebsiteScraper()
                 profile = scraper.scrape(candidate.get("website_url") or "")
-                handles = self._extract_social_handles(profile.get("pages", []), candidate.get("website_url"))
+                handles = self._extract_social_handles(
+                    profile.get("pages", []), candidate.get("website_url") or "", profile.get("social_links", [])
+                )
                 candidate["instagram_handle"] = handles.get("instagram", candidate.get("instagram_handle", ""))
                 candidate["linkedin_handle"] = handles.get("linkedin", candidate.get("linkedin_handle", ""))
                 candidate["website_title"] = profile.get("title", "")
@@ -278,7 +281,7 @@ class LeadFinder:
                 link = result.select_one("a.result__a")
                 if not link or not link.get("href"):
                     continue
-                url = self._clean_search_url(link["href"])
+                url = self._clean_search_url(str(link["href"]))
                 title = link.get_text(strip=True)
                 if url:
                     results.append((url, title))
@@ -302,7 +305,7 @@ class LeadFinder:
             soup = BeautifulSoup(resp.text, "lxml")
             results = []
             for link in soup.select("li.b_algo h2 a"):
-                href = link.get("href") or ""
+                href = str(link.get("href") or "")
                 url = self._decode_bing_url(href)
                 title = link.get_text(strip=True)
                 if url:
@@ -444,14 +447,22 @@ class LeadFinder:
         return domain.replace(".com", "").replace(".in", "").replace(".", " ").title()[:80]
 
     @staticmethod
-    def _extract_social_handles(pages: list[dict[str, Any]], fallback_url: str) -> dict[str, str]:
+    def _extract_social_handles(
+        pages: list[dict[str, Any]],
+        fallback_url: str,
+        social_links: list[str] | None = None,
+    ) -> dict[str, str]:
+        """`social_links` are the outbound links scraped from the site itself
+        (the crawled page URLs alone can never contain an instagram.com URL)."""
         handles: dict[str, str] = {}
-        page_urls = [p.get("url", "") for p in pages] + [fallback_url]
+        page_urls = list(social_links or []) + [p.get("url", "") for p in pages] + [fallback_url]
         for page_url in page_urls:
             for platform, pattern in SOCIAL_LINK_PATTERNS.items():
                 match = pattern.search(page_url or "")
                 if match:
-                    handle = match.group(1).rstrip("/")
+                    handle = match.group(1).rstrip("/").rstrip(".")
+                    if platform == "instagram" and handle.lower() in INSTAGRAM_RESERVED_PATHS:
+                        continue
                     if handle and not handles.get(platform):
                         handles[platform] = handle
         return handles

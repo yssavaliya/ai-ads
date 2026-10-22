@@ -87,7 +87,7 @@ class GithubFeedback:
             resp.raise_for_status()
             number = resp.json().get("number")
             logger.info("Created feedback issue #%s for prompt %s (%s)", number, prompt_id, feedback)
-            return number
+            return int(number) if number is not None else None
         except Exception as exc:
             logger.error("Failed to create feedback issue: %s", exc)
             return None
@@ -148,7 +148,7 @@ class GithubFeedback:
                 )
                 resp.raise_for_status()
                 logger.info("Updated degraded-run issue #%s", match["number"])
-                return match["number"]
+                return int(match["number"])
             resp = httpx.post(
                 f"{self.base}/repos/{self.repo}/issues",
                 headers=headers,
@@ -158,7 +158,7 @@ class GithubFeedback:
             resp.raise_for_status()
             number = resp.json().get("number")
             logger.info("Created degraded-run issue #%s (%d failures)", number, len(failures))
-            return number
+            return int(number) if number is not None else None
         except Exception as exc:
             logger.error("Failed to report degraded run: %s", exc)
             return None

@@ -1,9 +1,10 @@
 from unittest.mock import patch
 
-from src.storage.models import Base, Business, Prompt, PromptType, SessionLocal, engine as _models_engine
 from sqlalchemy import create_engine as _ce
 from sqlalchemy.orm import sessionmaker as _sm
 
+from src.storage.models import Base, Business, Prompt, PromptType, SessionLocal
+from src.storage.models import engine as _models_engine
 
 CANNED_VARIANT = {
     "prompt_text": "Regenerated idea: try a 15s Reel showing a before/after AI edit",
@@ -28,10 +29,10 @@ def test_regenerate_prompt_creates_and_emails(tmp_path, monkeypatch):
     """REGENERATE must actually generate a replacement prompt, score it, render
     an asset, persist it, and email it — without crashing on the predictor's
     5-argument score() signature."""
+    import src.delivery.email_sender as es
     import src.generation.creative_forge as cf
     import src.generation.prompt_forge as pf
     import src.intelligence.virality_predictor as _vp
-    import src.delivery.email_sender as es
     import src.learning.process_feedback as pfmod
     import src.shared.utils as utils
 

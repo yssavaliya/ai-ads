@@ -60,12 +60,13 @@ jobs:
           python-version: "3.12"
 
       - name: Restore agent.db cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             agent.db
             agent.db-wal
             agent.db-shm
+            data/cache
           key: agent-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             agent-db-${{ runner.os }}-
@@ -76,16 +77,18 @@ jobs:
           python -m pip install -e .
 
       - name: Onboard business
+        env:
+          IN_NAME: ${{ github.event.inputs.name }}
+          IN_WEBSITE: ${{ github.event.inputs.website_url }}
+          IN_INSTAGRAM: ${{ github.event.inputs.instagram_handle }}
+          IN_LINKEDIN: ${{ github.event.inputs.linkedin_handle }}
+          IN_EMAIL: ${{ github.event.inputs.email }}
+          IN_THRESHOLD: ${{ github.event.inputs.virality_threshold }}
         run: |
-          python scripts/onboard_business.py \
-            --name "${{ github.event.inputs.name }}" \
-            --website "${{ github.event.inputs.website_url }}" \
-            --instagram "${{ github.event.inputs.instagram_handle }}" \
-            --linkedin "${{ github.event.inputs.linkedin_handle }}" \
-            --email "${{ github.event.inputs.email }}" \
-            --threshold "${{ github.event.inputs.virality_threshold }}"
+          python scripts/onboard_business.py             --name "$IN_NAME"             --website "$IN_WEBSITE"             --instagram "$IN_INSTAGRAM"             --linkedin "$IN_LINKEDIN"             --email "$IN_EMAIL"             --threshold "${IN_THRESHOLD:-75}"
 
       - name: Persist JSON state (agent.db stays in cache, not git)
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -93,7 +96,18 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: onboard ${{ github.event.inputs.name }}"
-            git pull --rebase -X ours origin main
+            git commit -m "chore: onboard business"
+            git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME"
             git push
           fi
+
+      - name: Save agent.db cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            agent.db
+            agent.db-wal
+            agent.db-shm
+            data/cache
+          key: agent-db-${{ runner.os }}-${{ github.run_id }}

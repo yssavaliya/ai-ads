@@ -45,8 +45,15 @@ class Settings(BaseSettings):
     smtp_tls: bool = Field(default=True, description="Use TLS")
 
     # GitHub (for feedback issues)
+    # Optional comma-separated GitHub logins allowed to submit feedback issues.
+    # Unset = anyone who can open an issue (fine for private repos).
+    feedback_allowed_users: str | None = Field(default=None, description="Allowed feedback issue authors")
     github_token: str | None = Field(default=None, description="GitHub token for issue creation")
     github_repo: str | None = Field(default=None, description="GitHub repo (owner/repo)")
+
+    # Lead discovery wall-clock budget: stop scraping new candidates after this
+    # many seconds so the job finishes (and persists state) inside its timeout.
+    lead_time_budget_seconds: int = Field(default=2100, description="Max seconds spent scraping lead candidates")
 
     # Scheduling
     daily_cron: str = Field(default="29 18 * * *", description="Daily run cron (UTC) - 11:59 PM IST")
@@ -75,20 +82,15 @@ class Settings(BaseSettings):
     # Dry run: write rendered emails/assets to logs/preview/ instead of sending
     dry_run: bool = Field(default=False, description="Preview mode — no SMTP, files written to logs/preview/")
 
-    @field_validator(
-        "smtp_port",
-        "virality_threshold",
-        "max_regeneration_attempts",
-        mode="before",
-    )
+    @field_validator("*", mode="before")
     @classmethod
-    def coerce_empty_int(cls, value: Any, info: ValidationInfo) -> Any:
-        return _coerce_empty(value, info.field_name, cls.model_fields[info.field_name].default, cls)
-
-    @field_validator("smtp_tls", "dry_run", mode="before")
-    @classmethod
-    def coerce_empty_bool(cls, value: Any, info: ValidationInfo) -> Any:
-        return _coerce_empty(value, info.field_name, cls.model_fields[info.field_name].default, cls)
+    def coerce_empty(cls, value: Any, info: ValidationInfo) -> Any:
+        """Unset GitHub secrets arrive as '' — treat them as "use the default"
+        for every field (ints, bools AND strings such as GROQ_MODEL/SMTP_HOST)."""
+        if info.field_name is None:
+            return value
+        field = cls.model_fields[info.field_name]
+        return _coerce_empty(value, info.field_name, field.get_default(call_default_factory=True), cls)
 
 
 settings = Settings()

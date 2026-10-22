@@ -34,12 +34,13 @@ jobs:
           python-version: "3.12"
 
       - name: Restore agent.db cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             agent.db
             agent.db-wal
             agent.db-shm
+            data/cache
           key: agent-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             agent-db-${{ runner.os }}-
@@ -53,6 +54,7 @@ jobs:
         run: python -m src.learning.auto_learner
 
       - name: Persist Bayesian weights
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -61,6 +63,17 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: engagement sync state $(date -u +'%Y-%m-%d %H:%M')"
-            git pull --rebase -X ours origin main
+            git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME"
             git push
           fi
+
+      - name: Save agent.db cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            agent.db
+            agent.db-wal
+            agent.db-shm
+            data/cache
+          key: agent-db-${{ runner.os }}-${{ github.run_id }}

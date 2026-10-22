@@ -19,6 +19,8 @@ FEED_W = 1080
 FEED_H = 1350
 REEL_W = 1080
 REEL_H = 1920
+FPS = 25
+MAX_ZOOM_GAIN = 0.08  # Ken Burns: end at 108% of the frame
 
 FONT_PATH = Path("assets/fonts/Poppins-Bold.ttf")
 VOICE_MODEL_URL = (
@@ -26,6 +28,11 @@ VOICE_MODEL_URL = (
     "en/en_US/lessac/medium/en_US-lessac-medium"
 )
 VOICE_CACHE_DIR = Path.home() / ".cache" / "piper-voices"
+
+HF_IMAGE_URLS = (
+    "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
+    "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",  # legacy
+)
 
 IMAGE_STYLE_SUFFIX = (
     ", professional advertising photography, high quality, vibrant, "
@@ -71,7 +78,7 @@ class CreativeForge:
                 result = self._render_reel(prompt, business_profile, base_name)
                 result["warnings"] += warnings
                 return result
-            except CreativeForgeError as exc:
+            except Exception as exc:  # noqa: BLE001 - any reel failure must fall back to an image
                 warnings.append(f"Reel render failed ({exc}); falling back to single image")
                 logger.warning("::warning::%s", warnings[-1])
 
@@ -135,28 +142,28 @@ class CreativeForge:
     def _hf_image(self, image_prompt: str, width: int, height: int) -> bytes | None:
         if not settings.hf_token:
             return None
-        try:
-            with httpx.Client(timeout=180) as client:
-                resp = client.post(
-                    "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
-                    headers={
-                        "Authorization": f"Bearer {settings.hf_token}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "inputs": image_prompt,
-                        "parameters": {"width": width, "height": height},
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.content
-            if not (data[:4] == b"\x89PNG" or data[:2] == b"\xff\xd8"):
-                logger.error("HF inference returned non-image payload (%d bytes)", len(data))
-                return None
-            return data
-        except Exception as exc:
-            logger.error("HF image inference failed: %s", exc)
-            return None
+        for url in HF_IMAGE_URLS:
+            try:
+                with httpx.Client(timeout=180) as client:
+                    resp = client.post(
+                        url,
+                        headers={
+                            "Authorization": f"Bearer {settings.hf_token}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "inputs": image_prompt,
+                            "parameters": {"width": width, "height": height},
+                        },
+                    )
+                    resp.raise_for_status()
+                    data = resp.content
+                if data[:4] == b"\x89PNG" or data[:2] == b"\xff\xd8":
+                    return data
+                logger.error("HF inference (%s) returned non-image payload (%d bytes)", url, len(data))
+            except Exception as exc:
+                logger.error("HF image inference failed at %s: %s", url, exc)
+        return None
 
     # ------------------------------------------------------------------
     # Text overlay
@@ -199,7 +206,7 @@ class CreativeForge:
             y += line_height
 
         combined = Image.alpha_composite(img, overlay).convert("RGB")
-        out = out_path or image_path.replace(".png", "-texted.png")
+        out = out_path or str(Path(image_path).with_name(Path(image_path).stem + "-texted.png"))
         combined.save(out, "PNG")
         logger.info("Overlaid hook text on %s -> %s", image_path, out)
         return out
@@ -260,7 +267,7 @@ class CreativeForge:
         durations: list[float] = []
         try:
             audio_path, durations = self._tts_beats(beats, base_name)
-        except CreativeForgeError as exc:
+        except Exception as exc:  # noqa: BLE001 - voiceover is optional; never kill the reel
             warnings.append(f"Voiceover unavailable this run: {exc}")
             logger.warning("::warning::%s", warnings[-1])
 
@@ -283,6 +290,8 @@ class CreativeForge:
         """Piper TTS per beat. Returns (concatenated wav, per-beat durations).
         Raises CreativeForgeError when Piper/voice model unavailable."""
         piper = shutil.which("piper") or shutil.which("piper.exe")
+        if not piper:
+            raise CreativeForgeError("piper binary not found on PATH")
         model = self._ensure_voice_model()
         work = self.output_dir / f"{self._slug(base_name)}-audio"
         work.mkdir(parents=True, exist_ok=True)
@@ -337,6 +346,23 @@ class CreativeForge:
         except ValueError:
             return 3.0
 
+    @staticmethod
+    def _segment_filter(dur: float) -> str:
+        """ffmpeg -vf chain for one beat: Ken Burns zoom-in + fade in/out.
+
+        zoompan turns ONE input frame into `d` output frames, so the still is
+        fed in without -loop. The zoom expression is min(zoom+step, cap)."""
+        frames = max(int(dur * FPS), 1)
+        step = MAX_ZOOM_GAIN / frames
+        cap = 1.0 + MAX_ZOOM_GAIN
+        fade_out_at = max(dur - 0.35, 0)
+        return (
+            f"scale={REEL_W}:{REEL_H},"
+            f"zoompan=z='min(zoom+{step:.6f},{cap:.2f})':d={frames}"
+            f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={REEL_W}x{REEL_H}:fps={FPS},"
+            f"fade=t=in:st=0:d=0.35,fade=t=out:st={fade_out_at:.2f}:d=0.35,format=yuv420p"
+        )
+
     def _assemble_video(
         self, stills: list[str], durations: list[float], audio: str | None, out_path: str
     ) -> None:
@@ -346,14 +372,11 @@ class CreativeForge:
         try:
             for i, (still, dur) in enumerate(zip(stills, durations)):
                 seg = out_path.replace(".mp4", f"-seg{i}.mp4")
-                zoom = 1.0 + 0.08 * (dur / max(sum(durations), 1)) * len(stills)
                 cmd = [
-                    "ffmpeg", "-y", "-loop", "1", "-i", still, "-t", f"{dur:.2f}",
-                    "-vf",
-                    f"scale={REEL_W}:{REEL_H},zoompan=z='min(zoom+{zoom / max(dur, 0.5) / 25:.5f}',"
-                    f"d={int(dur * 25)}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={REEL_W}x{REEL_H},"
-                    "fade=t=in:st=0:d=0.35,fade=t=out:st=%.2f:d=0.35,format=yuv420p" % max(dur - 0.35, 0),
-                    "-r", "25", "-c:v", "libx264", "-preset", "veryfast", seg,
+                    "ffmpeg", "-y", "-i", still,
+                    "-vf", self._segment_filter(dur),
+                    "-t", f"{dur:.2f}", "-r", str(FPS),
+                    "-c:v", "libx264", "-preset", "veryfast", seg,
                 ]
                 subprocess.run(cmd, capture_output=True, timeout=300, check=True)  # noqa: S603
                 seg_files.append(seg)

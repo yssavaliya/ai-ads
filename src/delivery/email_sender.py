@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage
 from email.utils import formatdate
 from pathlib import Path
@@ -12,6 +13,9 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
+
+# 25MB Gmail cap / (4/3 base64 overhead), minus room for inline images + body.
+MAX_RAW_ATTACHMENT_BYTES = 17_000_000
 
 
 class EmailSender:
@@ -61,6 +65,8 @@ class EmailSender:
         msg["Date"] = formatdate(localtime=True)
         msg.set_content(plain or "Open this email in an HTML-capable client.")
         msg.add_alternative(html, subtype="html")
+        parts: Any = msg.get_payload()
+        html_part: Any = parts[1]  # the text/html alternative that inline images attach to
 
         try:
             from imghdr import what  # noqa: PLC0415 - stdlib image type sniffing
@@ -71,7 +77,7 @@ class EmailSender:
                     logger.warning("::warning::Inline image missing, skipping cid=%s: %s", cid, path)
                     continue
                 subtype = what(img_path) or "png"
-                msg.get_payload()[1].add_related(
+                html_part.add_related(
                     img_path.read_bytes(),
                     maintype="image",
                     subtype=subtype,
@@ -83,7 +89,7 @@ class EmailSender:
                 img_path = Path(path)
                 if not img_path.exists():
                     continue
-                msg.get_payload()[1].add_related(
+                html_part.add_related(
                     img_path.read_bytes(), maintype="image", subtype="png", cid=f"<{cid}>"
                 )
         except Exception as exc:
@@ -108,8 +114,8 @@ class EmailSender:
         try:
             with smtplib.SMTP(self.host, self.port, timeout=60) as server:
                 if settings.smtp_tls:
-                    server.starttls()
-                server.login(self.user, self.password)
+                    server.starttls(context=ssl.create_default_context())
+                server.login(self.user or "", self.password or "")
                 server.send_message(msg)
             logger.info("Email sent to %s: %s", to, subject)
             return True
@@ -172,7 +178,6 @@ class EmailSender:
 
     def send_lead_digest(self, to: str, leads: list[dict[str, Any]]) -> bool:
         template = self._env.get_template("leads_digest.html")
-        html = template.render(leads=leads, date_str=self._today_str())
         subject = f"🔍 {len(leads)} new business leads with sample viral prompts"
 
         inline: dict[str, str] = {}
@@ -255,10 +260,11 @@ class EmailSender:
 
     @staticmethod
     def _size_safe_attachments(
-        paths: list[str], limit_bytes: int = 22_000_000
+        paths: list[str], limit_bytes: int = MAX_RAW_ATTACHMENT_BYTES
     ) -> tuple[list[str], set[str]]:
-        """Keep attachments under `limit_bytes` (Gmail ~25MB cap, with margin).
-        Drops the largest files first (Reels). Returns (kept, dropped_paths) so
+        """Keep attachments under `limit_bytes` of RAW data. Gmail caps the
+        encoded message near 25MB and base64 inflates by 4/3, so the raw budget
+        must be ~17MB, not 22MB. Drops the largest files first (Reels). Returns (kept, dropped_paths) so
         callers can annotate only the Reels that were actually dropped."""
         kept: list[str] = []
         total = 0

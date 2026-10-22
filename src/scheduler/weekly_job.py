@@ -15,7 +15,7 @@ from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
 from src.shared.llm_client import LLMClient, extract_json_text
-from src.shared.utils import load_businesses
+from src.shared.utils import load_businesses, utc_now_naive
 from src.storage.models import Business, Engagement, Prompt, SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class WeeklyPipeline:
                 logger.warning("Business %s not in DB; skipping weekly", name)
                 return {"business": name, "error": "not in db"}
 
-            week_start = datetime.utcnow() - timedelta(days=7)
+            week_start = utc_now_naive() - timedelta(days=7)
             prompts = (
                 db.query(Prompt)
                 .filter(Prompt.business_id == biz.id, Prompt.sent_at >= week_start)
@@ -55,7 +55,7 @@ class WeeklyPipeline:
                 .all()
             )
 
-            report = self._build_report(biz, prompts, business, engagement_rows)
+            report = self._build_report(biz, prompts, business, [(p, e) for p, e in engagement_rows])
             email_ok = self.email.send_weekly_report(business, report)
             logger.info("Weekly report for %s sent=%s", name, email_ok)
             return {"business": name, "email_sent": email_ok, "prompts_analyzed": len(prompts)}
@@ -103,7 +103,7 @@ class WeeklyPipeline:
             }
             for p, e in (engagement_rows or [])
         ]
-        weights = self.weights.get_weights(biz.id)
+        weights = self.weights.get_weights(biz.weights_key)
 
         prompt = f"""
 You are a content intelligence analyst. Produce a weekly deep-dive report for a business.

@@ -43,12 +43,13 @@ jobs:
           python-version: "3.12"
 
       - name: Restore agent.db cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             agent.db
             agent.db-wal
             agent.db-shm
+            data/cache
           key: agent-db-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             agent-db-${{ runner.os }}-
@@ -77,6 +78,7 @@ jobs:
           echo "piper: found at $(command -v piper)"
 
       - name: Run daily pipeline
+        shell: bash  # bash -eo pipefail: keep python's exit code through the pipe
         run: |
           python -m src.scheduler.daily_job 2>&1 | while IFS= read -r line; do
             echo "$line"
@@ -101,6 +103,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Persist JSON state (agent.db stays in cache, not git)
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -109,6 +112,17 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: daily run state $(date -u +'%Y-%m-%d')"
-            git pull --rebase -X ours origin main
+            git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME"
             git push
           fi
+
+      - name: Save agent.db cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            agent.db
+            agent.db-wal
+            agent.db-shm
+            data/cache
+          key: agent-db-${{ runner.os }}-${{ github.run_id }}
