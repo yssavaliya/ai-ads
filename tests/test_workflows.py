@@ -213,3 +213,11 @@ def test_site_checkout_is_ignored_but_site_templates_are_not():
 def test_ci_actionlint_knows_the_models_permission():
     text = (GH / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "v1.7.12" in text  # older releases reject `permissions: models`
+
+
+def test_setup_action_installs_ffmpeg_when_missing():
+    """The ubuntu runner image shipped without ffmpeg, so every Reel silently became an image."""
+    steps = _load(GH / "actions" / "setup-agent" / "action.yml")["runs"]["steps"]
+    install = next(s for s in steps if "ffmpeg" in s.get("name", "") and "Install" in s["name"])
+    assert install["if"] == "inputs.piper == 'true'" and "apt-get install" in install["run"]
+    assert "command -v ffmpeg" in install["run"]  # only when it is actually missing
