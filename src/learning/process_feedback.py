@@ -224,7 +224,7 @@ def process_feedback() -> int:
 def regenerate_prompt(prompt: Any, db: Any) -> bool:
     """Generate a fresh variant for a prompt the user wanted redone, render its
     asset, persist it, and email it. Returns True if a replacement was sent."""
-    from src.delivery.email_sender import EmailSender
+    from src.delivery.channels import get_delivery
     from src.generation.creative_forge import CreativeForge
     from src.generation.prompt_forge import PromptForge
     from src.generation.virality_gate import ViralityGate
@@ -305,7 +305,7 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
     db.commit()
 
     try:
-        EmailSender().send_daily_prompts(
+        get_delivery().send_daily_prompts(
             business,
             [{**v, "prompt_id": new_prompt.id, "feedback_links": links}],
         )

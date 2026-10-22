@@ -13,7 +13,7 @@ from sqlalchemy import func
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.delivery.email_sender import EmailSender
+from src.delivery.channels import get_delivery
 from src.fetch.lead_finder import LeadFinder
 from src.fetch.social_scraper import SocialScraper
 from src.generation.virality_gate import ViralityGate
@@ -45,7 +45,7 @@ class LeadPipeline:
         self.gate = ViralityGate()
         self.audience = AudienceMapper()
         self.trends = TrendRadar()
-        self.email = EmailSender()
+        self.delivery = get_delivery()
         self.weights = BayesianUpdater()
 
     def _fetch_social(self, handle: str) -> dict[str, Any]:
@@ -234,7 +234,7 @@ class LeadPipeline:
             db.close()
 
         self._save_leads(digest)
-        email_ok = self._send_digest(digest, config)
+        delivered = self._send_digest(digest, config)
 
         result = {
             "candidates_found": len(candidates),
@@ -243,7 +243,7 @@ class LeadPipeline:
             "prompts_generated": sum(len(lead.get("prompts") or []) for lead in digest),
             "prompt_failures": prompt_failures,
             "learning": learning,
-            "email_sent": email_ok,
+            "delivered": delivered,
             "generated_at": utc_now_naive().isoformat(),
         }
         logger.info("Lead pipeline result: %s", result)
@@ -507,11 +507,9 @@ class LeadPipeline:
         logger.info("Saved %d leads to %s", len(digest), path)
 
     def _send_digest(self, digest: list[dict[str, Any]], config: dict[str, Any]) -> bool:
+        # `to` only matters for the e-mail channel; the site channel ignores it.
         to = config.get("digest_email") or (settings.smtp_user or "")
-        if not to:
-            logger.warning("No digest_email configured; skipping lead digest email")
-            return False
-        return self.email.send_lead_digest(to, digest)
+        return self.delivery.send_lead_digest(to, digest)
 
 
 def main() -> None:

@@ -65,8 +65,7 @@ Respond ONLY with JSON:
   "drift_detected": "list of changes vs previous map, or 'none'"
 }}
 """
-        result = self.llm.run(prompt, label="audience-mapper", temperature=0.4)
-        data = json.loads(extract_json_text(result.stdout))
+        data = self.llm.run_json(prompt, label="audience-mapper", temperature=0.4, expect=(dict,))
         if not isinstance(data, dict):
             raise ValueError("audience map must be a JSON object")
         data["source"] = "llm"

@@ -93,8 +93,7 @@ Respond ONLY with JSON:
   }}
 ]
 """
-        result = self.llm.run(prompt, label="prompt-forge", temperature=0.8)
-        data = json.loads(extract_json_text(result.stdout))
+        data = self.llm.run_json(prompt, label="prompt-forge", temperature=0.8)
         if isinstance(data, dict):
             data = data.get("prompts", [])
         if not isinstance(data, list):
@@ -163,8 +162,7 @@ Respond ONLY with the improved prompt as JSON with the same fields:
 }}
 """
         try:
-            result = self.llm.run(prompt, label="prompt-forge-refine", temperature=0.6)
-            data = json.loads(extract_json_text(result.stdout))
+            data = self.llm.run_json(prompt, label="prompt-forge-refine", temperature=0.6, expect=(dict,))
             if not isinstance(data, dict) or not data.get("prompt_text"):
                 raise ValueError("refined prompt invalid")
             return {

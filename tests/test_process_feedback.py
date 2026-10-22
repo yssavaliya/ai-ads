@@ -35,7 +35,9 @@ def test_regenerate_prompt_creates_and_emails(tmp_path, monkeypatch):
     import src.intelligence.virality_predictor as _vp
     import src.learning.process_feedback as pfmod
     import src.shared.utils as utils
+    from src.shared.config import settings
 
+    monkeypatch.setattr(settings, "delivery_mode", "email")  # this test captures the e-mail channel
     monkeypatch.setattr(utils, "load_businesses", lambda: [
         {"name": "RegenBiz", "email": "r@g.com", "instagram_handle": "regenbiz"}
     ])

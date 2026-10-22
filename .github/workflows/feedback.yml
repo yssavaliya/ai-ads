@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  models: read
   issues: write
 
 concurrency:
@@ -32,6 +33,14 @@ jobs:
       GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DELIVERY_MODE: ${{ vars.DELIVERY_MODE }}
+      SITE_SECRET: ${{ secrets.SITE_SECRET }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPO: ${{ github.repository }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
@@ -50,6 +59,7 @@ jobs:
 
       - uses: ./.github/actions/setup-agent
         with:
+          site: "true"
           piper: "true"   # REGENERATE can render a voiced Reel
 
       - name: Process feedback issues
@@ -60,3 +70,6 @@ jobs:
         with:
           files: data/weights.json data/engagement_log.jsonl
           message: "chore: feedback run state"
+
+      - uses: ./.github/actions/publish-site
+        if: always()

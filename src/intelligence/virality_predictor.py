@@ -32,8 +32,7 @@ class ViralityPredictor:
         prompt = self._build_prompt(
             prompt_text, business_profile, audience_map, trend_data, prompt_type, history
         )
-        result = self.llm.run(prompt, label="virality-predictor", temperature=0.2)
-        payload = json.loads(extract_json_text(result.stdout))
+        payload = self.llm.run_json(prompt, label="virality-predictor", temperature=0.2, expect=(dict,))
         return self._validate(payload)
 
     @staticmethod

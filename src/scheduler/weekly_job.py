@@ -9,7 +9,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.delivery.email_sender import EmailSender
+from src.delivery.channels import get_delivery
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class WeeklyPipeline:
     def __init__(self) -> None:
-        self.email = EmailSender()
+        self.delivery = get_delivery()
         self.audience = AudienceMapper()
         self.trends = TrendRadar()
         self.llm = LLMClient()
@@ -56,9 +56,9 @@ class WeeklyPipeline:
             )
 
             report = self._build_report(biz, prompts, business, [(p, e) for p, e in engagement_rows])
-            email_ok = self.email.send_weekly_report(business, report)
-            logger.info("Weekly report for %s sent=%s", name, email_ok)
-            return {"business": name, "email_sent": email_ok, "prompts_analyzed": len(prompts)}
+            delivered = self.delivery.send_weekly_report(business, report)
+            logger.info("Weekly report for %s delivered=%s", name, delivered)
+            return {"business": name, "delivered": delivered, "prompts_analyzed": len(prompts)}
         finally:
             db.close()
 
@@ -136,8 +136,7 @@ Respond ONLY with JSON:
 }}
 """
         try:
-            result = self.llm.run(prompt, label="weekly-report", temperature=0.4)
-            report = json.loads(extract_json_text(result.stdout))
+            report = self.llm.run_json(prompt, label="weekly-report", temperature=0.4, expect=(dict,))
             if not isinstance(report, dict):
                 raise ValueError("weekly report must be JSON object")
             return report

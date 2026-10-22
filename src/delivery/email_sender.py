@@ -52,6 +52,9 @@ class EmailSender:
         attachments: list[str] | None = None,
     ) -> bool:
         """inline_images: {cid: file_path}; attachments: [file_path]."""
+        if not to:
+            logger.warning("No recipient configured; skipping email: %s", subject)
+            return False
         if self.dry_run:
             return self._write_preview(to, subject, html, inline_images or {}, attachments or [])
         if not self.enabled:

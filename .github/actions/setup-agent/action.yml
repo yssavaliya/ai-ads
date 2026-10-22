@@ -7,6 +7,9 @@ inputs:
   piper:
     description: Install Piper TTS and restore its voice cache (Reel voiceover)
     default: "false"
+  site:
+    description: Restore the published website (gh-pages) into ./site so pipelines can add to it
+    default: "false"
 
 runs:
   using: composite
@@ -35,6 +38,21 @@ runs:
       with:
         path: ~/.cache/piper-voices
         key: piper-voices-v1
+
+    - name: Restore published site (gh-pages)
+      if: inputs.site == 'true'
+      shell: bash
+      run: |
+        rm -rf site
+        repo_url="https://x-access-token:${GITHUB_TOKEN:-none}@github.com/${GITHUB_REPOSITORY}.git"
+        if git ls-remote --exit-code --heads "$repo_url" gh-pages >/dev/null 2>&1; then
+          git clone --quiet --depth 1 --branch gh-pages "$repo_url" site
+          rm -rf site/.git
+          echo "Restored site: $(find site -type f | wc -l) files"
+        else
+          mkdir -p site
+          echo "No gh-pages branch yet — starting a fresh site"
+        fi
 
     - name: Install dependencies
       shell: bash

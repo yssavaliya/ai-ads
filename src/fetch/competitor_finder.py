@@ -42,8 +42,7 @@ For each competitor provide:
 Respond ONLY with a JSON array:
 [{{"name": "...", "platform": "instagram", "handle": "...", "reason": "..."}}]
 """
-        result = self.llm.run(prompt, label="competitor-discovery")
-        data = json.loads(extract_json_text(result.stdout))
+        data = self.llm.run_json(prompt, label="competitor-discovery")
         if isinstance(data, dict):
             data = data.get("competitors", [])
         competitors = [c for c in data if isinstance(c, dict) and c.get("handle")]

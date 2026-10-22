@@ -60,9 +60,9 @@ def onboard(
     _store_profile(business, profile)
     if send_email:
         try:
-            from src.delivery.email_sender import EmailSender
+            from src.delivery.channels import get_delivery
 
-            EmailSender().send_onboarding(business, profile)
+            get_delivery().send_onboarding(business, profile)
         except Exception as exc:  # noqa: BLE001 - a mail hiccup must not undo onboarding
             logger.warning("Welcome email failed for %s: %s", name, exc)
 

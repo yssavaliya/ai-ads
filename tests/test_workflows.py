@@ -155,3 +155,58 @@ def test_ci_runs_tests_and_lints_the_workflows():
 
 def test_secrets_check_is_manual_only():
     assert set(_on(_load(GH / "workflows" / "secrets_check.yml"))) == {"workflow_dispatch"}
+
+
+SITE_PIPELINES = ["daily", "weekly", "leads", "onboard", "feedback"]
+
+
+@pytest.mark.parametrize("name", SITE_PIPELINES)
+def test_pipelines_restore_and_publish_the_site(name):
+    steps = _steps(name)
+    setup = next(s for s in steps if s.get("uses") == "./.github/actions/setup-agent")
+    assert setup["with"]["site"] == "true", f"{name}: must start from the published site"
+    publish = [s for s in steps if s.get("uses") == "./.github/actions/publish-site"]
+    assert len(publish) == 1 and publish[0].get("if") == "always()", name
+    order = [s.get("uses") for s in steps]
+    assert order.index("./.github/actions/publish-site") > order.index("./.github/actions/persist-state"), name
+
+
+@pytest.mark.parametrize("name", SITE_PIPELINES + ["drift_check"])
+def test_llm_workflows_can_use_github_models_and_every_free_provider(name):
+    wf = _load(GH / "workflows" / f"{name}.yml")
+    assert wf["permissions"]["models"] == "read"
+    env = next(iter(wf["jobs"].values()))["env"]
+    for var in ("GROQ_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY", "CEREBRAS_API_KEY", "MISTRAL_API_KEY", "GITHUB_TOKEN"):
+        assert var in env, f"{name}: {var} missing"
+
+
+@pytest.mark.parametrize("name", ["daily", "leads", "feedback"])
+def test_image_workflows_pass_every_image_provider_secret(name):
+    env = next(iter(_load(GH / "workflows" / f"{name}.yml")["jobs"].values()))["env"]
+    for var in ("HF_TOKEN", "TOGETHER_API_KEY", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "GEMINI_API_KEY"):
+        assert var in env, f"{name}: {var} missing"
+
+
+def test_publish_action_is_a_noop_unless_dirty_and_pushes_a_single_orphan_commit():
+    action = _load(GH / "actions" / "publish-site" / "action.yml")
+    run = action["runs"]["steps"][0]["run"]
+    assert "site/.dirty" in run and "exit 0" in run.split("site/.dirty")[1].split("fi")[0]
+    assert "git init -q -b gh-pages" in run and "git push -f origin gh-pages" in run  # no history bloat
+    assert "rm -f site/.dirty" in run  # the marker itself is never published
+
+
+def test_setup_action_restores_gh_pages_only_when_asked():
+    steps = _load(GH / "actions" / "setup-agent" / "action.yml")["runs"]["steps"]
+    restore = next(s for s in steps if "gh-pages" in s.get("name", ""))
+    assert restore["if"] == "inputs.site == 'true'"
+    assert "--branch gh-pages" in restore["run"] and "rm -rf site/.git" in restore["run"]
+    assert "mkdir -p site" in restore["run"]  # first run: no branch yet
+
+
+def test_site_dir_is_never_committed_to_main():
+    assert "site/" in (GH.parent / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+def test_ci_actionlint_knows_the_models_permission():
+    text = (GH / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "v1.7.12" in text  # older releases reject `permissions: models`

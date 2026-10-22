@@ -19,3 +19,4 @@ logs/preview/*
 !logs/prompts/.gitkeep
 data/cache/
 .claude/
+site/
