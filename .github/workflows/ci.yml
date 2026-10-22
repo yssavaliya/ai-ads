@@ -38,3 +38,17 @@ jobs:
 
       - name: Tests
         run: python -m pytest -q
+
+  workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax of helper scripts
+        run: bash -n .github/scripts/run_pipeline.sh
+
+      - name: actionlint (workflows + composite actions)
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color -shellcheck=

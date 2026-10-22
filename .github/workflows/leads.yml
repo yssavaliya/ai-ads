@@ -2,16 +2,15 @@ name: Discover Business Leads
 
 on:
   schedule:
-    - cron: "30 3 * * 1"
+    - cron: "30 3 * * 1"   # Monday 09:00 IST
   workflow_dispatch:
     inputs:
       niches:
-        description: "Comma-separated niches (overrides config)"
+        description: "Comma-separated niches (one-off override, not committed)"
         required: false
       target_count:
-        description: "Number of leads to generate prompts for"
+        description: "Number of leads to generate prompts for (one-off override, not committed)"
         required: false
-        default: ""
 
 permissions:
   contents: write
@@ -41,51 +40,17 @@ jobs:
       SMTP_FROM: ${{ secrets.SMTP_FROM }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPO: ${{ github.repository }}
+      FEEDBACK_ALLOWED_USERS: ${{ vars.FEEDBACK_ALLOWED_USERS }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-agent
         with:
-          python-version: "3.12"
+          piper: "true"
 
-      - name: Restore agent.db cache
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            agent.db
-            agent.db-wal
-            agent.db-shm
-            data/cache
-          key: agent-db-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            agent-db-${{ runner.os }}-
-
-      - name: Restore piper voice cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/piper-voices
-          key: piper-voices-v1
-
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
-          python -m pip install piper-tts pillow
-
-      - name: Verify creative-rendering dependencies
-        run: |
-          set -e
-          echo "ffmpeg: $(ffmpeg -version | head -1)"
-          echo "ffprobe: $(ffprobe -version | head -1)"
-          command -v piper >/dev/null || {
-            echo "::error::piper binary not found on PATH after 'pip install piper-tts' — Reel voiceover would fail silently later"
-            exit 1
-          }
-          echo "piper: found at $(command -v piper)"
-
-      - name: Apply one-off dispatch overrides (not committed)
+      - name: Apply one-off dispatch overrides (never committed)
         env:
           INPUT_NICHES: ${{ github.event.inputs.niches }}
           INPUT_TARGET_COUNT: ${{ github.event.inputs.target_count }}
@@ -103,18 +68,7 @@ jobs:
           PY
 
       - name: Run lead pipeline
-        shell: bash  # bash -eo pipefail: keep python's exit code through the pipe
-        run: |
-          python -m src.scheduler.lead_job 2>&1 | while IFS= read -r line; do
-            echo "$line"
-            if [[ "$line" == *"::error::"* ]]; then
-              echo "::error::${line#*::error::}"
-            elif [[ "$line" == *"::warning::"* ]]; then
-              echo "::warning::${line#*::warning::}"
-            else
-              echo "::notice::$line"
-            fi
-          done
+        run: bash .github/scripts/run_pipeline.sh src.scheduler.lead_job
 
       - name: Upload prompt logs and rendered assets
         if: always()
@@ -127,28 +81,9 @@ jobs:
             logs/preview/
           if-no-files-found: ignore
 
-      - name: Persist JSON state (agent.db stays in cache, not git)
+      - uses: ./.github/actions/persist-state
         if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -- data/lead_config.json  # dispatch overrides are one-off
-          git add data/leads.json data/lead_seen.json data/lead_rejected.json data/weights.json 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: lead discovery state $(date -u +'%Y-%m-%d')"
-            git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME"
-            git push
-          fi
-
-      - name: Save agent.db cache
-        if: always()
-        uses: actions/cache/save@v4
         with:
-          path: |
-            agent.db
-            agent.db-wal
-            agent.db-shm
-            data/cache
-          key: agent-db-${{ runner.os }}-${{ github.run_id }}
+          files: data/leads.json data/lead_seen.json data/lead_rejected.json data/weights.json data/engagement_log.jsonl
+          discard: data/lead_config.json
+          message: "chore: lead discovery state"

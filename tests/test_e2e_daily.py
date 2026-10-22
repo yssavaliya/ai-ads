@@ -145,3 +145,27 @@ def test_business_email_can_come_from_an_env_reference(monkeypatch):
     monkeypatch.delenv("CLIENT_EMAIL")
     assert load_businesses()[0]["email"] == ""  # unset -> empty, with a logged warning
 
+
+
+def test_zero_prompts_is_reported_degraded_and_fails_the_job(pipeline_env, monkeypatch):
+    """The real 10-21 run produced 0 prompts (empty model names) and still went green."""
+    import src.delivery.github_feedback as gf
+    from src.shared.llm_client import AllProvidersFailedError
+
+    dj, _ = pipeline_env
+
+    def boom(self, prompt, label=None, temperature=0.7, max_retries=3):
+        raise AllProvidersFailedError(f"down: {label}")
+
+    monkeypatch.setattr(LLMClient, "run", boom)
+    reports: list = []
+    monkeypatch.setattr(gf.GithubFeedback, "report_degraded_run", lambda self, failures: reports.append(failures))
+    (settings.data_dir / "businesses.json").write_text(json.dumps([BUSINESS]))
+
+    results = dj.DailyPipeline().run_all()
+    assert results[0]["prompts"] == 0
+    assert reports and reports[0][0]["stage"] == "generation"
+
+    with pytest.raises(SystemExit) as exc:
+        dj.main()
+    assert exc.value.code == 1

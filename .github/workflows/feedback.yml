@@ -4,7 +4,10 @@ on:
   schedule:
     - cron: "0 * * * *"
   issues:
-    types: [opened, labeled]
+    # `edited` matters: a "📎 I posted this" issue is left open until the user
+    # pastes the post URL into it, and that edit should be picked up immediately.
+    types: [opened, edited]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,6 +19,10 @@ concurrency:
 
 jobs:
   feedback:
+    # Ignore unrelated issues (e.g. the degraded-run / drift tracking issues).
+    if: >-
+      github.event_name != 'issues' ||
+      startsWith(github.event.issue.title, '[content-intel-feedback]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -41,62 +48,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-agent
         with:
-          python-version: "3.12"
-
-      - name: Restore agent.db cache
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            agent.db
-            agent.db-wal
-            agent.db-shm
-            data/cache
-          key: agent-db-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            agent-db-${{ runner.os }}-
-
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
-          python -m pip install piper-tts pillow
-
-      - name: Verify creative-rendering dependencies
-        run: |
-          set -e
-          echo "ffmpeg: $(ffmpeg -version | head -1)"
-          command -v piper >/dev/null || {
-            echo "::error::piper binary not found on PATH — REGENERATE reel voiceover would fail"
-            exit 1
-          }
-          echo "piper: found at $(command -v piper)"
+          piper: "true"   # REGENERATE can render a voiced Reel
 
       - name: Process feedback issues
-        run: python -m src.learning.process_feedback
+        run: bash .github/scripts/run_pipeline.sh src.learning.process_feedback
 
-      - name: Persist JSON state (agent.db stays in cache, not git)
+      - uses: ./.github/actions/persist-state
         if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/weights.json data/engagement_log.jsonl 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: feedback run state $(date -u +'%Y-%m-%d %H:%M')"
-            git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME"
-            git push
-          fi
-
-      - name: Save agent.db cache
-        if: always()
-        uses: actions/cache/save@v4
         with:
-          path: |
-            agent.db
-            agent.db-wal
-            agent.db-shm
-            data/cache
-          key: agent-db-${{ runner.os }}-${{ github.run_id }}
+          files: data/weights.json data/engagement_log.jsonl
+          message: "chore: feedback run state"

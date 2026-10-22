@@ -19,8 +19,6 @@ jobs:
     env:
       LOG_LEVEL: INFO
       DATABASE_PATH: agent.db
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPO: ${{ github.repository }}
@@ -29,51 +27,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Restore agent.db cache
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            agent.db
-            agent.db-wal
-            agent.db-shm
-            data/cache
-          key: agent-db-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            agent-db-${{ runner.os }}-
-
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
+      - uses: ./.github/actions/setup-agent
 
       - name: Scrape IG engagement and learn
-        run: python -m src.learning.auto_learner
+        run: bash .github/scripts/run_pipeline.sh src.learning.auto_learner
 
-      - name: Persist Bayesian weights
+      - uses: ./.github/actions/persist-state
         if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/weights.json data/engagement_log.jsonl 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: engagement sync state $(date -u +'%Y-%m-%d %H:%M')"
-            git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME"
-            git push
-          fi
-
-      - name: Save agent.db cache
-        if: always()
-        uses: actions/cache/save@v4
         with:
-          path: |
-            agent.db
-            agent.db-wal
-            agent.db-shm
-            data/cache
-          key: agent-db-${{ runner.os }}-${{ github.run_id }}
+          files: data/weights.json data/engagement_log.jsonl
+          message: "chore: engagement sync state"

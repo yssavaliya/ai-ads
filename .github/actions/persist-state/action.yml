@@ -1,0 +1,66 @@
+name: Persist state
+description: >
+  Commit the JSON state files a pipeline changed (retrying on push races) and save
+  agent.db to the Actions cache. Safe to run with `if: always()`: a failed run still
+  keeps the DB rows for prompts that were already emailed.
+
+inputs:
+  files:
+    description: Space-separated state files to commit when they exist and changed
+    required: true
+  message:
+    description: Commit message prefix
+    required: true
+  discard:
+    description: Space-separated tracked files to reset (one-off overrides that must not be committed)
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Commit state
+      shell: bash
+      env:
+        FILES: ${{ inputs.files }}
+        DISCARD: ${{ inputs.discard }}
+        MESSAGE: ${{ inputs.message }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        for f in $DISCARD; do git checkout -- "$f" 2>/dev/null || true; done
+
+        # Stage each file on its own: `git add a b` aborts entirely if ONE path is
+        # missing, which silently dropped every state file before.
+        for f in $FILES; do
+          if [ -e "$f" ]; then git add -- "$f"; fi
+        done
+
+        if git diff --cached --quiet; then
+          echo "No state changes to commit"
+          exit 0
+        fi
+
+        git commit -m "$MESSAGE $(date -u +'%Y-%m-%d %H:%M')"
+        for attempt in 1 2 3; do
+          if git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME"; then
+            echo "State pushed (attempt $attempt)"
+            exit 0
+          fi
+          echo "::warning::push attempt $attempt failed; retrying"
+          git rebase --abort 2>/dev/null || true
+          sleep $((attempt * 5))
+        done
+        echo "::error::could not push state after 3 attempts"
+        exit 1
+
+    - name: Save agent.db + intel cache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          agent.db
+          agent.db-wal
+          agent.db-shm
+          data/cache
+        key: agent-db-${{ runner.os }}-${{ github.run_id }}
