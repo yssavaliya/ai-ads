@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.delivery.email_sender import EmailSender
+from src.delivery.channels import get_delivery
 from src.delivery.github_feedback import GithubFeedback
 from src.fetch.competitor_finder import CompetitorFinder
 from src.fetch.website_scraper import WebsiteScraper
@@ -35,7 +35,7 @@ class DailyPipeline:
         self.audience = AudienceMapper()
         self.trends = TrendRadar()
         self.gate = ViralityGate()
-        self.email = EmailSender()
+        self.delivery = get_delivery()
         self.feedback = GithubFeedback()
         self.weights = BayesianUpdater()
 
@@ -195,14 +195,14 @@ class DailyPipeline:
             db.commit()
 
             try:
-                email_ok = self.email.send_daily_prompts(business, saved)
+                delivered = self.delivery.send_daily_prompts(business, saved)
             except Exception as exc:
-                # A transient SMTP error must not discard a successfully
+                # A transient delivery error (SMTP, disk) must not discard a successfully
                 # generated batch — log it; prompts are already persisted and
                 # the user can be re-notified by re-running the workflow.
-                logger.error("::error::Daily email for %s failed to send: %s", name, exc)
-                email_ok = False
-            if email_ok and saved:
+                logger.error("::error::Delivery for %s failed: %s", name, exc)
+                delivered = False
+            if delivered and saved:
                 # Only delivered prompts count as "sent": they feed dedup,
                 # history and auto-learning matching.
                 now = utc_now_naive()
@@ -211,8 +211,8 @@ class DailyPipeline:
                     if obj is not None:
                         obj.sent_at = now
                 db.commit()
-            logger.info("Daily email for %s sent=%s (%d prompts)", name, email_ok, len(saved))
-            return {"business": name, "prompts": len(saved), "email_sent": email_ok}
+            logger.info("Delivery for %s via %s: delivered=%s (%d prompts)", name, "+".join(self.delivery.names), delivered, len(saved))
+            return {"business": name, "prompts": len(saved), "delivered": delivered}
         finally:
             db.close()
 
@@ -573,8 +573,8 @@ def main() -> None:
     if results and not any(r.get("prompts") for r in results):
         logger.error("::error::The daily run generated no prompts for any business")
         raise SystemExit(1)
-    if results and not any(r.get("email_sent") for r in results):
-        logger.error("::error::No daily email was delivered for any business (SMTP down or unconfigured?)")
+    if results and not any(r.get("delivered") for r in results):
+        logger.error("::error::Nothing was delivered for any business (site publish failed, or SMTP down/unconfigured in email mode)")
         raise SystemExit(1)
 
 

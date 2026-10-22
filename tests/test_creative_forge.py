@@ -46,7 +46,8 @@ def test_generate_image_writes_png(forge):
         assert fh.read(4) == b"\x89PNG"
 
 
-def test_generate_image_raises_when_all_providers_fail(forge):
+def test_generate_image_raises_when_all_providers_fail(forge, monkeypatch):
+    monkeypatch.setattr("src.shared.config.settings.image_card_fallback", False)
     with (
         patch("httpx.Client", side_effect=Exception("down")),
         patch.object(forge, "_hf_image", return_value=None),

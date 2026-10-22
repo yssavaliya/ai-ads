@@ -105,10 +105,11 @@ def test_untrusted_content_is_fenced_and_flagged(monkeypatch):
 
 def test_scraped_profile_is_fenced_in_real_prompts():
     from src.intelligence.audience_mapper import AudienceMapper
+    from src.shared.llm_client import LLMClient
 
     captured: dict[str, str] = {}
 
-    class FakeLLM:
+    class FakeLLM(LLMClient):
         def run(self, prompt, **kw):
             captured["p"] = prompt
             return MagicMock(stdout='{"personas": []}')
@@ -175,6 +176,7 @@ def test_onboarding_sends_welcome_email_and_stores_profile(tmp_path, monkeypatch
     spec.loader.exec_module(onboard_mod)
 
     monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "delivery_mode", "email")  # captures the e-mail channel
     Session = _session(tmp_path)
     monkeypatch.setattr("src.storage.models.SessionLocal", Session)
     monkeypatch.setattr(

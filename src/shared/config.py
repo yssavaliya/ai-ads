@@ -33,6 +33,39 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(default=None, description="Gemini API key")
     gemini_model: str = Field(default="gemini-3.6-flash", description="Gemini model")
 
+    # Extra models tried (same key) when the primary model is rate limited / retired.
+    # Groq and Gemini enforce limits per model, so a sibling model has its own quota.
+    groq_fallback_models: str = Field(default="llama-3.3-70b-versatile,llama-3.1-8b-instant")
+    gemini_fallback_models: str = Field(default="gemini-2.5-flash,gemini-2.0-flash")
+
+    # More free providers, tried in LLM_PROVIDER_ORDER when the ones above fail.
+    llm_provider_order: str = Field(
+        default="groq,gemini,github,cerebras,openrouter,mistral,huggingface,pollinations"
+    )
+    github_models_enabled: bool = Field(default=True, description="GitHub Models via GITHUB_TOKEN (Actions: models: read)")
+    github_models_model: str = Field(default="openai/gpt-4o-mini")
+    cerebras_api_key: str | None = Field(default=None, description="Cerebras free tier key")
+    cerebras_model: str = Field(default="llama-3.3-70b")
+    openrouter_api_key: str | None = Field(default=None, description="OpenRouter key (free ':free' models)")
+    openrouter_models: str = Field(
+        default="meta-llama/llama-3.3-70b-instruct:free,deepseek/deepseek-chat-v3-0324:free,google/gemma-3-27b-it:free"
+    )
+    mistral_api_key: str | None = Field(default=None, description="Mistral free 'experiment' tier key")
+    mistral_model: str = Field(default="mistral-small-latest")
+    hf_llm_model: str = Field(default="meta-llama/Llama-3.3-70B-Instruct", description="Used with HF_TOKEN")
+    llm_keyless_fallback: bool = Field(default=True, description="Allow the keyless Pollinations text endpoint as a last resort")
+    pollinations_model: str = Field(default="openai")
+
+    # Image providers (free tiers), tried in IMAGE_PROVIDER_ORDER; a local branded card
+    # is rendered when all of them fail so a post never ships without a visual.
+    image_provider_order: str = Field(default="pollinations,gemini,huggingface,together,cloudflare")
+    image_card_fallback: bool = Field(default=True, description="Render a local branded card when every image provider fails")
+    gemini_image_model: str = Field(default="gemini-2.5-flash-image")
+    together_api_key: str | None = Field(default=None, description="Together AI key (free FLUX.1-schnell)")
+    together_image_model: str = Field(default="black-forest-labs/FLUX.1-schnell-Free")
+    cloudflare_account_id: str | None = Field(default=None, description="Cloudflare Workers AI account id")
+    cloudflare_api_token: str | None = Field(default=None, description="Cloudflare Workers AI token")
+
     # Apify (social scraping)
     apify_token: str | None = Field(default=None, description="Apify API token")
 
@@ -54,6 +87,14 @@ class Settings(BaseSettings):
     # Lead discovery wall-clock budget: stop scraping new candidates after this
     # many seconds so the job finishes (and persists state) inside its timeout.
     lead_time_budget_seconds: int = Field(default=2100, description="Max seconds spent scraping lead candidates")
+
+    # Delivery: how finished content reaches people. "site" (default) publishes a static
+    # website; "email" is the legacy SMTP e-mail; "both" does both.
+    delivery_mode: str = Field(default="site", description="site | email | both")
+    site_dir: Path = Field(default=Path("site"), description="Checkout of the published gh-pages branch")
+    site_retention_days: int = Field(default=45, description="Days of prompts kept on the site")
+    site_secret: str | None = Field(default=None, description="If set, page URLs carry a keyed hash and the index lists nothing")
+    site_base_url: str | None = Field(default=None, description="Public URL override (default: <owner>.github.io/<repo>)")
 
     # Scheduling
     daily_cron: str = Field(default="29 18 * * *", description="Daily run cron (UTC) - 11:59 PM IST")

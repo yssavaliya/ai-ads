@@ -4,6 +4,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.generation.virality_gate import ViralityGate
+from src.shared.llm_client import LLMClient
 
 
 class FakeResult:
@@ -13,7 +14,7 @@ class FakeResult:
         self.stdout = json.dumps(payload)
 
 
-class FakeLLM:
+class FakeLLM(LLMClient):  # inherits run_json(), which calls the faked run()
     """Simulates the LLM: generates variants and scores that improve each attempt."""
 
     def __init__(self):

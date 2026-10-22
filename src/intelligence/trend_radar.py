@@ -60,8 +60,7 @@ Respond ONLY with JSON:
   "recommended_formats": ["reel", "carousel", "story", "single image", "text post"]
 }}
 """
-        result = self.llm.run(prompt, label="trend-radar", temperature=0.5)
-        data = json.loads(extract_json_text(result.stdout))
+        data = self.llm.run_json(prompt, label="trend-radar", temperature=0.5, expect=(dict,))
         if not isinstance(data, dict):
             raise ValueError("trend scan must be a JSON object")
         return data

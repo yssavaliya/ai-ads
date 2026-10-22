@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 import httpx
 
+from src.generation import image_providers
 from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
@@ -28,11 +29,6 @@ VOICE_MODEL_URL = (
     "en/en_US/lessac/medium/en_US-lessac-medium"
 )
 VOICE_CACHE_DIR = Path.home() / ".cache" / "piper-voices"
-
-HF_IMAGE_URLS = (
-    "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
-    "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",  # legacy
-)
 
 IMAGE_STYLE_SUFFIX = (
     ", professional advertising photography, high quality, vibrant, "
@@ -56,6 +52,12 @@ class CreativeForge:
     def __init__(self) -> None:
         self.output_dir = Path(settings.logs_dir) / "assets"
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self._card_color: tuple[int, int, int] = (31, 111, 104)
+        self._pending_warnings: list[str] = []
+
+    def _take_warnings(self) -> list[str]:
+        taken, self._pending_warnings = self._pending_warnings, []
+        return taken
 
     # ------------------------------------------------------------------
     # Public API
@@ -70,6 +72,8 @@ class CreativeForge:
         {asset_path, asset_type, warnings: [..]} — raises CreativeForgeError
         only when NOTHING could be produced."""
         warnings: list[str] = []
+        self._take_warnings()  # discard leftovers from a previous render
+        self._card_color = self._brand_color(business_profile)
         is_reel = str(prompt.get("format", "")).lower() == "reel" and prompt.get("reel_beats")
         base_name = self._slug(f"{business_profile.get('name', 'biz')}-{prompt.get('title', 'post')}")[:60]
 
@@ -91,25 +95,44 @@ class CreativeForge:
             brand_color=self._brand_color(business_profile),
             out_path=str(self.output_dir / f"{base_name}-{index}-final.png"),
         )
-        return {"asset_path": str(final_path), "asset_type": "image", "warnings": warnings}
+        return {"asset_path": str(final_path), "asset_type": "image", "warnings": warnings + self._take_warnings()}
 
     # ------------------------------------------------------------------
     # Image generation
     # ------------------------------------------------------------------
     def generate_image(self, image_prompt: str, width: int, height: int, name: str) -> str:
-        png = self._pollinations_image(image_prompt, width, height)
-        if png is None and settings.hf_token:
-            logger.warning("Pollinations image failed; trying Hugging Face FLUX.1-schnell fallback")
-            png = self._hf_image(image_prompt, width, height)
-        if png is None:
-            raise CreativeForgeError(
-                "All image providers failed (Pollinations + HF fallback)"
-            )
-        ext = ".jpg" if png[:2] == b"\xff\xd8" else ".png"
+        """Ask the free image providers in order; if every one is down or rate limited
+        render a local branded card so the post still has a visual (and say so)."""
+        generated = image_providers.generate(image_prompt, width, height)
+        if generated is not None:
+            data, provider = generated
+        elif settings.image_card_fallback:
+            data, provider = image_providers.branded_card(width, height, self._card_color, seed=name), "local-card"
+            message = "All AI image providers failed or are rate limited — used a branded card background instead"
+            self._pending_warnings.append(message)
+            logger.warning("::warning::%s (%s)", message, name)
+        else:
+            raise CreativeForgeError("All image providers failed (" + ", ".join(image_providers.provider_order()) + ")")
+        ext = ".jpg" if data[:2] == b"\xff\xd8" else ".png"
         out_path = self.output_dir / f"{self._slug(name)}-{width}x{height}{ext}"
-        out_path.write_bytes(png)
-        logger.info("Rendered image %s (%d bytes)", out_path, len(png))
+        out_path.write_bytes(data)
+        logger.info("Rendered image %s via %s (%d bytes)", out_path, provider, len(data))
         return str(out_path)
+
+    # Thin shims kept for callers/tests that target a specific provider.
+    def _pollinations_image(self, image_prompt: str, width: int, height: int) -> bytes | None:
+        try:
+            return image_providers.pollinations(image_prompt, width, height)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Pollinations image failed: %s", exc)
+            return None
+
+    def _hf_image(self, image_prompt: str, width: int, height: int) -> bytes | None:
+        try:
+            return image_providers.huggingface(image_prompt, width, height)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("HF image inference failed: %s", exc)
+            return None
 
     @staticmethod
     def _image_prompt(prompt: dict[str, Any], business_profile: dict[str, Any]) -> str:
@@ -121,49 +144,6 @@ class CreativeForge:
             or " ".join(business_profile.get("headings", [])[:5]),
         ]
         return ". ".join(p for p in parts if p)[:800] + IMAGE_STYLE_SUFFIX
-
-    def _pollinations_image(self, image_prompt: str, width: int, height: int) -> bytes | None:
-        try:
-            with httpx.Client(timeout=180, follow_redirects=True) as client:
-                resp = client.get(
-                    f"https://image.pollinations.ai/prompt/{quote(image_prompt, safe='')}",
-                    params={"width": width, "height": height, "nologo": "true", "model": "flux"},
-                )
-                resp.raise_for_status()
-                data = resp.content
-            if len(data) < 1000 or not (data[:4] == b"\x89PNG" or data[:2] == b"\xff\xd8"):
-                logger.error("Pollinations returned non-image payload (%d bytes)", len(data))
-                return None
-            return data
-        except Exception as exc:
-            logger.error("Pollinations image failed: %s", exc)
-            return None
-
-    def _hf_image(self, image_prompt: str, width: int, height: int) -> bytes | None:
-        if not settings.hf_token:
-            return None
-        for url in HF_IMAGE_URLS:
-            try:
-                with httpx.Client(timeout=180) as client:
-                    resp = client.post(
-                        url,
-                        headers={
-                            "Authorization": f"Bearer {settings.hf_token}",
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "inputs": image_prompt,
-                            "parameters": {"width": width, "height": height},
-                        },
-                    )
-                    resp.raise_for_status()
-                    data = resp.content
-                if data[:4] == b"\x89PNG" or data[:2] == b"\xff\xd8":
-                    return data
-                logger.error("HF inference (%s) returned non-image payload (%d bytes)", url, len(data))
-            except Exception as exc:
-                logger.error("HF image inference failed at %s: %s", url, exc)
-        return None
 
     # ------------------------------------------------------------------
     # Text overlay
@@ -283,7 +263,7 @@ class CreativeForge:
             "asset_path": str(out_path),
             "asset_type": "reel",
             "thumbnail": thumbnail,
-            "warnings": warnings,
+            "warnings": warnings + self._take_warnings(),
         }
 
     def _tts_beats(self, beats: list[str], base_name: str) -> tuple[str, list[float]]:

@@ -6,7 +6,9 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from src.shared import llm_providers
 from src.shared.config import settings
+from src.shared.llm_providers import HEALTH, classify
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +19,8 @@ class LLMResult:
     stderr: str
     exit_code: int
     elapsed_seconds: float
+    provider: str = ""
+    model: str = ""
 
 
 # Backwards-compatible alias (older code/tests referred to OpenCodeResult).
@@ -81,91 +85,166 @@ def extract_json_text(text: str) -> str:
 
 
 class LLMClient:
-    """LLM interface — free tiers only: Groq API → Gemini API.
-    No local models are ever run on CPU."""
+    """Free-tier LLM chain. Providers (Groq -> Gemini -> GitHub Models -> Cerebras ->
+    OpenRouter -> Mistral -> Hugging Face -> keyless Pollinations by default) and
+    each provider's fallback models are tried in order. Rate-limited, out-of-quota,
+    unauthorised or retired providers/models are skipped for a while instead of
+    being retried, and invalid JSON from one provider falls through to the next
+    (see run_json). No local models are ever run on CPU."""
+
+    MAX_COOLDOWN_WAIT = 90.0  # if everything is rate limited, wait at most this long once
 
     def __init__(self, timeout_seconds: int | None = None) -> None:
         self.timeout_seconds = timeout_seconds or 60
 
+    # ------------------------------------------------------------------ run
     def run(
         self,
         prompt: str,
         label: str | None = None,
         temperature: float = 0.7,
         max_retries: int = 3,
+        exclude: set[str] | None = None,
     ) -> LLMResult:
-        """Run a prompt through the provider chain. Returns first success;
-        raises AllProvidersFailedError when every provider fails."""
+        """Return the first successful answer in the provider chain; raise
+        AllProvidersFailedError when every provider failed for this call.
+        `exclude` skips providers by name (used when one returned unusable output)."""
         if "<untrusted_data>" in prompt:
             prompt = UNTRUSTED_NOTE + prompt
-        result = self._try_groq(prompt, label, temperature, max_retries)
-        if result is not None:
-            return result
+        skip = set(exclude or ())
+        names = [n for n in llm_providers.provider_order() if n not in skip]
 
-        logger.info("[%s] Groq unavailable; trying Gemini", label or "llm")
-        result = self._try_gemini(prompt, label, temperature, max_retries)
-        if result is not None:
-            return result
+        waited = False
+        while True:
+            for name in names:
+                result = self._dispatch(name, prompt, label, temperature, max_retries)
+                if result is not None:
+                    return result
+                logger.info("[%s] %s unavailable; trying next provider", label or "llm", name)
+
+            # Everything failed. If it is only rate limits that expire soon, wait once.
+            candidates = [
+                (p.name, m)
+                for n in names
+                if (p := llm_providers.get_provider(n)) is not None
+                for m in p.models
+            ]
+            wait = HEALTH.seconds_until_ready(candidates) if candidates else float("inf")
+            if not waited and 0 < wait <= self.MAX_COOLDOWN_WAIT:
+                logger.warning("[%s] all providers rate limited; waiting %.0fs", label or "llm", wait)
+                time.sleep(wait + 0.5)
+                waited = True
+                continue
+            break
 
         raise AllProvidersFailedError(
-            f"All LLM providers failed for {label}. Check GROQ_API_KEY / GEMINI_API_KEY "
-            "and the GROQ_MODEL / GEMINI_MODEL names (see the ERROR lines above)."
+            f"All LLM providers failed for {label}. Chain: {llm_providers.describe_setup()}. "
+            "Add another free key (GROQ_API_KEY, GEMINI_API_KEY, CEREBRAS_API_KEY, "
+            "OPENROUTER_API_KEY, MISTRAL_API_KEY, HF_TOKEN) or check the ERROR lines above."
         )
 
-    def _try_groq(self, prompt: str, label: str | None, temperature: float, max_retries: int = 3) -> LLMResult | None:
-        if not settings.groq_api_key:
-            logger.warning("GROQ_API_KEY unset; skipping Groq")
-            return None
-        # Current free-tier models: https://console.groq.com/docs/models
-        try:
-            from openai import OpenAI
+    def run_json(
+        self,
+        prompt: str,
+        label: str | None = None,
+        temperature: float = 0.7,
+        expect: tuple[type, ...] = (dict, list),
+    ) -> Any:
+        """Like run(), but the answer must parse as JSON of type `expect`. When a
+        provider answers with something unusable the next provider is asked, so a
+        weak free model cannot sink the run."""
+        exclude: set[str] = set()
+        last_error: Exception | None = None
+        while True:
+            try:
+                if exclude:
+                    result = self.run(prompt, label=label, temperature=temperature, exclude=exclude)
+                else:  # first call keeps the plain signature (test doubles / subclasses rely on it)
+                    result = self.run(prompt, label=label, temperature=temperature)
+            except AllProvidersFailedError:
+                if last_error is not None:
+                    raise last_error from None
+                raise
+            try:
+                data = json.loads(extract_json_text(result.stdout))
+                if not isinstance(data, expect):
+                    raise ValueError(f"expected JSON {'/'.join(t.__name__ for t in expect)}, got {type(data).__name__}")
+                return data
+            except ValueError as exc:  # JSONDecodeError is a ValueError
+                provider = getattr(result, "provider", "")
+                if not provider:
+                    raise
+                logger.warning(
+                    "::warning::[%s] %s/%s returned unusable JSON (%s); trying next provider",
+                    label or "llm", provider, getattr(result, "model", ""), exc,
+                )
+                exclude.add(provider)
+                last_error = exc
 
-            client = OpenAI(
-                api_key=settings.groq_api_key,
-                base_url="https://api.groq.com/openai/v1",
-                timeout=self.timeout_seconds,
-                max_retries=0,  # _chat owns the retry policy; SDK retries would multiply it
-            )
-            start = time.monotonic()
-            response = self._chat(client, settings.groq_model, prompt, temperature, max_retries)
-            content = (response.choices[0].message.content or "").strip()
-            logger.info(
-                "::notice::[%s] Groq answered via %s in %.1fs (%d chars)",
-                label or "llm", settings.groq_model, time.monotonic() - start, len(content),
-            )
-            return LLMResult(stdout=strip_markdown_fences(content), stderr="", exit_code=0, elapsed_seconds=time.monotonic() - start)
-        except Exception as exc:
-            logger.error("Groq failed for %s: %s", label or "llm", exc)
-            return None
+    # ------------------------------------------------------------- providers
+    def _dispatch(self, name: str, prompt: str, label: str | None, temperature: float, max_retries: int) -> LLMResult | None:
+        specific = getattr(self, f"_try_{name}", None)
+        if specific is not None:
+            return specific(prompt, label, temperature, max_retries)  # type: ignore[no-any-return]
+        return self._try_provider(name, prompt, label, temperature, max_retries)
+
+    def _try_groq(self, prompt: str, label: str | None, temperature: float, max_retries: int = 3) -> LLMResult | None:
+        return self._try_provider("groq", prompt, label, temperature, max_retries)
 
     def _try_gemini(self, prompt: str, label: str | None, temperature: float, max_retries: int = 3) -> LLMResult | None:
-        if not settings.gemini_api_key:
-            logger.warning("GEMINI_API_KEY unset; skipping Gemini")
+        return self._try_provider("gemini", prompt, label, temperature, max_retries)
+
+    def _try_provider(
+        self, name: str, prompt: str, label: str | None, temperature: float, max_retries: int = 3
+    ) -> LLMResult | None:
+        """Try one provider's models in order. None = nothing usable from it."""
+        provider = llm_providers.get_provider(name)
+        if provider is None:
+            logger.debug("LLM provider %s not configured; skipping", name)
             return None
-        # Current free-tier models: https://ai.google.dev/gemini-api/docs/models
         try:
             from openai import OpenAI
-
-            client = OpenAI(
-                api_key=settings.gemini_api_key,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-                timeout=self.timeout_seconds,
-                max_retries=0,
-            )
-            start = time.monotonic()
-            response = self._chat(client, settings.gemini_model, prompt, temperature, max_retries)
-            content = (response.choices[0].message.content or "").strip()
-            logger.info(
-                "::notice::[%s] Gemini answered via %s in %.1fs (%d chars)",
-                label or "llm", settings.gemini_model, time.monotonic() - start, len(content),
-            )
-            return LLMResult(stdout=strip_markdown_fences(content), stderr="", exit_code=0, elapsed_seconds=time.monotonic() - start)
-        except Exception as exc:
-            logger.error("Gemini failed for %s: %s", label or "llm", exc)
+        except ImportError:  # pragma: no cover
+            logger.error("openai package missing; cannot call %s", name)
             return None
+
+        for model in provider.models:
+            if not HEALTH.available(name, model):
+                continue
+            try:
+                client = OpenAI(
+                    api_key=provider.api_key,
+                    base_url=provider.base_url,
+                    timeout=self.timeout_seconds,
+                    max_retries=0,  # _chat owns the retry policy; SDK retries would multiply it
+                    default_headers=provider.headers or None,
+                )
+                start = time.monotonic()
+                response = self._chat(client, model, prompt, temperature, max_retries)
+                content = (response.choices[0].message.content or "").strip()
+                if not content:
+                    raise ValueError("empty response")
+                elapsed = time.monotonic() - start
+                logger.info(
+                    "::notice::[%s] %s answered via %s in %.1fs (%d chars)",
+                    label or "llm", name, model, elapsed, len(content),
+                )
+                return LLMResult(
+                    stdout=strip_markdown_fences(content), stderr="", exit_code=0,
+                    elapsed_seconds=elapsed, provider=name, model=model,
+                )
+            except Exception as exc:  # noqa: BLE001 - SDKs raise many types
+                failure = classify(exc)
+                HEALTH.mark(name, model, failure)
+                logger.error("%s/%s failed for %s (%s): %s", name, model, label or "llm", failure.kind, exc)
+                if failure.kind == "auth":
+                    break  # same key for every model of this provider
+        return None
 
     @staticmethod
     def _chat(client: Any, model: str, prompt: str, temperature: float, max_retries: int):
+        """One model call. Only transient errors are retried here; rate limits,
+        auth and missing-model errors return immediately so the chain can move on."""
         last_exc: Exception | None = None
         for attempt in range(1, max_retries + 1):
             try:
@@ -176,8 +255,7 @@ class LLMClient:
                 )
             except Exception as exc:  # noqa: BLE001 - provider SDK raises many types
                 last_exc = exc
-                # Bad key / unknown model / malformed request will never succeed on retry.
-                if getattr(exc, "status_code", None) in (400, 401, 403, 404):
+                if classify(exc).kind != "transient":
                     break
                 if attempt < max_retries:
                     time.sleep(2 * attempt)

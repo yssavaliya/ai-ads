@@ -1,0 +1,42 @@
+name: Publish site
+description: >
+  Push the static website (the `site/` folder the pipelines updated) to the
+  `gh-pages` branch as a single orphan commit, so media never piles up in git
+  history. A no-op unless a pipeline marked the site dirty. Needs contents: write.
+
+runs:
+  using: composite
+  steps:
+    - name: Push site to gh-pages
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [ ! -f site/.dirty ]; then
+          echo "Site unchanged — nothing to publish"
+          exit 0
+        fi
+        rm -f site/.dirty
+
+        cd site
+        git init -q -b gh-pages
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add -A
+        git commit -q -m "Publish site $(date -u +'%Y-%m-%d %H:%M UTC')"
+        git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        for attempt in 1 2 3; do
+          if git push -f origin gh-pages; then
+            echo "Site pushed (attempt $attempt)"
+            cd ..
+            {
+              echo "### Content Hub updated"
+              python -c "from src.delivery.site_publisher import SitePublisher; print('\n'.join(SitePublisher().summary()))"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "::warning::site push attempt $attempt failed; retrying"
+          sleep $((attempt * 5))
+        done
+        echo "::error::could not push the site to gh-pages after 3 attempts"
+        exit 1

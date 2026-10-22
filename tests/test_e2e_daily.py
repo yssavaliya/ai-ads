@@ -95,14 +95,14 @@ def test_daily_pipeline_end_to_end(pipeline_env):
     dj, Session = pipeline_env
     result = dj.DailyPipeline().run_for_business(dict(BUSINESS))
 
-    assert result == {"business": "E2E Bakery", "prompts": 3, "email_sent": True}
+    assert result == {"business": "E2E Bakery", "prompts": 3, "delivered": True}
 
     db = Session()
     rows = db.query(Prompt).all()
     assert len(rows) == 3
     assert {r.prompt_type.value for r in rows} == set(TYPES)
     for r in rows:
-        assert r.sent_at is not None  # stamped only because the email went out
+        assert r.sent_at is not None  # stamped only because delivery succeeded
         assert r.virality_score == 90
         assert r.caption and "#bake" in r.caption
         assert r.asset_type == "image" and Path(r.asset_path).exists()
@@ -110,11 +110,33 @@ def test_daily_pipeline_end_to_end(pipeline_env):
     assert biz.profile_json["title"] == "E2E Bakery"  # scraped profile persisted
     assert biz.audience_personas_json["personas"][0]["name"] == "Home bakers"
 
+    # --- the delivered website -------------------------------------------------
+    site = settings.site_dir
+    assert (site / "index.html").exists() and (site / "static" / "site.css").exists()
+    page = (site / "b" / "e2e-bakery" / "index.html").read_text(encoding="utf-8")
+    assert "E2E Bakery" in page and "Caption" in page and "#bake" in page
+    assert page.count('class="card"') == 3
+    manifest = json.loads((site / "data" / "e2e-bakery.json").read_text(encoding="utf-8"))
+    assert len(manifest["entries"]) == 3
+    for entry in manifest["entries"]:
+        assert (site / entry["asset"]["image"]).exists() and (site / entry["asset"]["thumb"]).exists()
+        assert entry["caption"] and entry["recommended_post_time"] and entry["first_comment"]
+    assert (site / ".dirty").exists()  # tells the workflow there is something to push
+    # privacy: the contact e-mail must never reach the public site
+    assert not any("owner@e2e.example" in f.read_text(encoding="utf-8", errors="ignore")
+                   for f in site.rglob("*") if f.is_file() and f.suffix in {".html", ".json"})
+
+
+def test_email_mode_still_works_when_enabled(pipeline_env, monkeypatch):
+    dj, _ = pipeline_env
+    monkeypatch.setattr(settings, "delivery_mode", "email")
+    result = dj.DailyPipeline().run_for_business(dict(BUSINESS))
+    assert result["delivered"] is True
     previews = list((settings.logs_dir / "preview").glob("*.html"))
     assert len(previews) == 1
     html = previews[0].read_text(encoding="utf-8")
     assert "E2E Bakery" in html and "Caption" in html and "data:image/png;base64," in html
-    assert "cid:" not in html  # inline images were resolved for the preview
+    assert not (settings.site_dir / "index.html").exists()  # site channel is off in email mode
 
 
 def test_second_run_does_not_resend_near_duplicates(pipeline_env):
