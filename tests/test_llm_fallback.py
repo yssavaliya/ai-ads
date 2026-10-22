@@ -28,6 +28,7 @@ class FakeNetwork:
     def __init__(self, script):
         self.script = {k: list(v) for k, v in script.items()}
         self.calls: list[tuple[str, str]] = []
+        self.max_tokens: list[int | None] = []
 
     def factory(self, **kwargs):
         net = self
@@ -35,15 +36,21 @@ class FakeNetwork:
 
         class Completions:
             @staticmethod
-            def create(model, messages, temperature):
+            def create(model, messages, temperature, max_tokens=None):
                 net.calls.append((base, model))
+                net.max_tokens.append(max_tokens)
                 for (frag, m), outcomes in net.script.items():
                     if frag in base and m == model:
                         outcome = outcomes.pop(0) if len(outcomes) > 1 else outcomes[0]
                         if isinstance(outcome, Exception):
                             raise outcome
-                        content = outcome
-                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+                        if isinstance(outcome, tuple):  # (content, finish_reason)
+                            content, finish = outcome
+                        else:
+                            content, finish = outcome, "stop"
+                        if content == "<<RAW-STRING-BODY>>":
+                            return "<html>not the API</html>"  # what the SDK returns for a non-JSON reply
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content), finish_reason=finish)])
                 raise ApiError(404, "model_not_found")
 
         return SimpleNamespace(chat=SimpleNamespace(completions=Completions))
@@ -257,7 +264,9 @@ def test_model_lists_merge_without_duplicates_or_blanks():
     (403, "forbidden", "auth", "provider"),
     (404, "no such thing", "model", "model"),
     (429, "slow down", "rate_limit", "model"),
-    (500, "oops", "transient", "provider"),
+    (500, "oops", "transient", "model"),
+    (503, "model is overloaded", "transient", "model"),
+    (402, "You have no remaining credits", "quota", "provider"),
     (400, "context length", "bad_request", "none"),
     (None, "Connection error.", "transient", "provider"),
 ])
@@ -271,3 +280,82 @@ def test_daily_quota_cooldown_is_long_and_retry_after_is_honoured():
     assert lp.classify(ApiError(429, "tokens per day limit")).cooldown == 900.0
     assert lp.classify(ApiError(429, "rate limit", {"retry-after": "12"})).cooldown == 12.0
     assert lp.classify(ApiError(429, "rate limit")).cooldown == 60.0
+
+
+# ------------------------------------------------- failures seen in the real run
+def test_overloaded_model_does_not_take_its_sibling_models_down(chain, monkeypatch):
+    """Real log: gemini-3.6-flash answered 503 "high demand" and the provider-wide
+    cooldown skipped gemini-2.5-flash, which was fine."""
+    monkeypatch.setattr(settings, "gemini_fallback_models", "gem-lite")
+    monkeypatch.setattr(settings, "llm_provider_order", "gemini")
+    chain({
+        ("generativelanguage", "gem-flash"): [ApiError(503, "This model is currently experiencing high demand")],
+        ("generativelanguage", "gem-lite"): ["the lite model is fine"],
+    })
+    result = LLMClient().run("hi", max_retries=1)
+    assert (result.provider, result.model) == ("gemini", "gem-lite")
+
+
+def test_exhausted_prepaid_credits_disable_the_provider_for_the_hour(chain, monkeypatch):
+    """Real log: Hugging Face answered 402 "no remaining credits" on every call."""
+    monkeypatch.setattr(settings, "hf_token", "t")
+    monkeypatch.setattr(settings, "llm_provider_order", "huggingface,groq")
+    net = chain({
+        ("huggingface", settings.hf_llm_model): [ApiError(402, "You have no remaining credits")],
+        ("groq", "groq-big"): ["groq ok"],
+    })
+    client = LLMClient()
+    assert client.run("one").provider == "groq"
+    net.calls.clear()
+    client.run("two")
+    assert not any("huggingface" in c[0] for c in net.calls)
+
+
+def test_non_json_reply_from_an_endpoint_is_diagnosed_and_skipped(chain, monkeypatch):
+    """Real log: GitHub Models gave "'str' object has no attribute 'choices'"."""
+    monkeypatch.setattr(settings, "github_token", "ghs")
+    monkeypatch.setattr(settings, "llm_provider_order", "github,groq")
+    chain({
+        ("models.github.ai", settings.github_models_model): [("<<RAW-STRING-BODY>>", "stop")],
+        ("groq", "groq-big"): ["groq ok"],
+    })
+    assert LLMClient().run("hi").provider == "groq"
+    assert lp.classify(ValueError("non-JSON response from x: '<html>'")).kind == "bad_response"
+
+
+def test_github_models_send_the_headers_the_api_expects():
+    monkeypatch_provider = lp.get_provider  # noqa: F841 - documents intent
+    settings.github_token = "ghs"
+    try:
+        provider = lp.get_provider("github")
+        assert provider.headers["X-GitHub-Api-Version"] == "2022-11-28"
+        assert "json" in provider.headers["Accept"]
+    finally:
+        settings.github_token = None
+
+
+def test_every_call_sets_max_tokens_so_long_json_is_not_cut_off(chain):
+    """Real log: Groq's 8k-char prompt-forge answer ended mid-string ("Unterminated string")."""
+    net = chain({("groq", "groq-big"): ["ok"]})
+    LLMClient().run("hi")
+    assert net.max_tokens == [settings.llm_max_tokens] and settings.llm_max_tokens >= 4096
+
+
+def test_truncated_json_strikes_off_only_that_model_not_the_whole_provider(chain):
+    """Real log: one truncated Groq answer excluded Groq entirely; its sibling model was never asked."""
+    net = chain({
+        ("groq", "groq-big"): [('{"a": "cut off mid str', "length")],
+        ("groq", "groq-small"): ['{"a": "complete"}'],
+        ("generativelanguage", "gem-flash"): ['{"a": "gemini"}'],
+    })
+    assert LLMClient().run_json("give json") == {"a": "complete"}
+    assert [c[1] for c in net.calls] == ["groq-big", "groq-small"]  # gemini was not even needed
+
+
+def test_unconfigured_providers_are_skipped_silently(chain, caplog):
+    chain({("groq", "groq-big"): ["ok"]})
+    import logging
+
+    with caplog.at_level(logging.INFO):
+        LLMClient().run("hi")
+    assert "mistral" not in caplog.text and "openrouter" not in caplog.text
