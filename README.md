@@ -157,9 +157,13 @@ E-mail is replaced by a small static website published to GitHub Pages
   its entries (images are re-encoded to web JPEGs; Reels are copied if < 25 MB), prunes
   entries older than `SITE_RETENTION_DAYS` (45) and force-pushes a single orphan commit.
   The JSON manifests in `site/data/` are the source of truth; the HTML is regenerated.
-- **Enable once:** *Settings → Pages → Build and deployment → Deploy from a branch →
-  `gh-pages` / `/ (root)`*. Nothing else is needed; the first publish creates the branch.
-- **Privacy:** GitHub Pages sites are public. Contact e-mail addresses are never
+- **Hosting (pick one; the `gh-pages` branch is just a folder of static files):**
+  1. **GitHub Pages** — *Settings → Pages → Deploy from a branch → `gh-pages` / `/ (root)`*
+     (needs repo admin; on a **private** repo it also needs a paid GitHub plan).
+  2. **Free for private repos:** connect **Cloudflare Pages** (or Netlify / Vercel) to the
+     repo, production branch `gh-pages`, *no build command*, output directory `/`.
+  The first publish creates the branch; every later publish redeploys automatically.
+- **Privacy:** published sites are public on the internet even when the repo is private. Contact e-mail addresses are never
   published and pages are `noindex`. Set the secret `SITE_SECRET` and every page lives
   at an unguessable keyed URL while the index lists nothing (lead e-mails then show up
   too). The URLs appear in each run's summary. For truly private hosting use a private
