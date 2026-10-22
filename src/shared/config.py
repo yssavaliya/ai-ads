@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     llm_provider_order: str = Field(
         default="groq,gemini,github,cerebras,openrouter,mistral,huggingface,pollinations"
     )
-    github_models_enabled: bool = Field(default=True, description="GitHub Models via GITHUB_TOKEN (Actions: models: read)")
+    github_models_enabled: bool = Field(default=False, description="Opt-in: GitHub Models via GITHUB_TOKEN (Actions: models: read)")
     github_models_model: str = Field(default="openai/gpt-4o-mini")
     cerebras_api_key: str | None = Field(default=None, description="Cerebras free tier key")
     cerebras_model: str = Field(default="llama-3.3-70b")

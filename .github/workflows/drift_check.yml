@@ -38,6 +38,11 @@ jobs:
         shell: bash   # bash -eo pipefail: `| tee` must not hide a failing check
         run: python scripts/check_llm.py | tee "$RUNNER_TEMP/drift.log"
 
+      - name: List the models each provider offers this key (diagnostic, never fails)
+        if: always()
+        continue-on-error: true
+        run: python scripts/list_models.py
+
       - name: Open or update the drift alert issue
         if: steps.check.outcome == 'failure'
         env:
