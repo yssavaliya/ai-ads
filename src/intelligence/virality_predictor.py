@@ -57,7 +57,11 @@ class ViralityPredictor:
         prompt_type: str,
         history: list[dict[str, Any]] | None = None,
     ) -> str:
-        return f"""
+        # NOTE: the parentheses matter. Without them `return` ends after the first f-string and the
+        # lines below are a dead expression statement: the model then never saw the content prompt
+        # or the JSON schema ("Missing Content Prompt") and every score was garbage.
+        return (
+            f"""
 You are a viral content strategist for the Indian social media market (Instagram + LinkedIn).
 Predict the virality potential of a content prompt for this business.
 
@@ -97,6 +101,7 @@ Respond ONLY with JSON:
   "improvement_hints": ["2-4 concrete ways to make THIS prompt more viral"]
 }
 """
+        )
 
     def _validate(self, payload: Any) -> dict[str, Any]:
         if not isinstance(payload, dict):
