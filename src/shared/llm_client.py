@@ -112,7 +112,7 @@ class LLMClient:
             "and the GROQ_MODEL / GEMINI_MODEL names (see the ERROR lines above)."
         )
 
-    def _try_groq(self, prompt: str, label: str | None, temperature: float, max_retries: int) -> LLMResult | None:
+    def _try_groq(self, prompt: str, label: str | None, temperature: float, max_retries: int = 3) -> LLMResult | None:
         if not settings.groq_api_key:
             logger.warning("GROQ_API_KEY unset; skipping Groq")
             return None
@@ -138,7 +138,7 @@ class LLMClient:
             logger.error("Groq failed for %s: %s", label or "llm", exc)
             return None
 
-    def _try_gemini(self, prompt: str, label: str | None, temperature: float, max_retries: int) -> LLMResult | None:
+    def _try_gemini(self, prompt: str, label: str | None, temperature: float, max_retries: int = 3) -> LLMResult | None:
         if not settings.gemini_api_key:
             logger.warning("GEMINI_API_KEY unset; skipping Gemini")
             return None

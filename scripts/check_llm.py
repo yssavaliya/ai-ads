@@ -44,7 +44,7 @@ def main() -> int:
     ]:
         print(f"\n=== {name} ===")
         try:
-            res = method(PROMPT, "check", 0.7)
+            res = method(PROMPT, "check", 0.7, 1)  # one attempt: this is a health probe
         except Exception as exc:  # noqa: BLE001
             print(f"EXCEPTION: {type(exc).__name__}: {str(exc).splitlines()[0]}")
             continue
