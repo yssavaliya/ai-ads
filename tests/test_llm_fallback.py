@@ -10,7 +10,7 @@ import pytest
 
 from src.shared import llm_client as lc
 from src.shared import llm_providers as lp
-from src.shared.config import settings
+from src.shared.config import Settings, settings
 from src.shared.llm_client import AllProvidersFailedError, LLMClient
 
 
@@ -323,15 +323,20 @@ def test_non_json_reply_from_an_endpoint_is_diagnosed_and_skipped(chain, monkeyp
     assert lp.classify(ValueError("non-JSON response from x: '<html>'")).kind == "bad_response"
 
 
-def test_github_models_send_the_headers_the_api_expects():
-    monkeypatch_provider = lp.get_provider  # noqa: F841 - documents intent
-    settings.github_token = "ghs"
-    try:
-        provider = lp.get_provider("github")
-        assert provider.headers["X-GitHub-Api-Version"] == "2022-11-28"
-        assert "json" in provider.headers["Accept"]
-    finally:
-        settings.github_token = None
+def test_github_models_send_the_headers_the_api_expects(monkeypatch):
+    monkeypatch.setattr(settings, "github_token", "ghs")
+    monkeypatch.setattr(settings, "github_models_enabled", True)
+    provider = lp.get_provider("github")
+    assert provider.headers["X-GitHub-Api-Version"] == "2022-11-28"
+    assert "json" in provider.headers["Accept"]
+
+
+def test_github_models_are_opt_in(monkeypatch):
+    """From Actions the endpoint answered a plain 'OK', so it is off unless enabled."""
+    monkeypatch.setattr(settings, "github_token", "ghs")
+    assert Settings().github_models_enabled is False
+    monkeypatch.setattr(settings, "github_models_enabled", False)
+    assert lp.get_provider("github") is None
 
 
 def test_every_call_sets_max_tokens_so_long_json_is_not_cut_off(chain):

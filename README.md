@@ -177,7 +177,7 @@ shortest `Retry-After`.
 
 | | Order (configurable) | Needs |
 |---|---|---|
-| **Text** (`LLM_PROVIDER_ORDER`) | Groq (3 models) → Gemini (3 models) → GitHub Models → Cerebras → OpenRouter (`:free` models) → Mistral → Hugging Face → keyless Pollinations | Each is optional: only providers with a key take part. GitHub Models uses the built-in token (`models: read`). Set `LLM_KEYLESS_FALLBACK=false` to keep prompts off the public keyless endpoint. |
+| **Text** (`LLM_PROVIDER_ORDER`) | Groq → Gemini → GitHub Models (opt-in) → Cerebras → OpenRouter (`:free` models) → Mistral → Hugging Face → keyless Pollinations | Each is optional: only providers with a key take part. GitHub Models (`GITHUB_MODELS_ENABLED=true`, built-in token, `models: read`) is opt-in: it answered with a plain `OK` from Actions when tried. Set `LLM_KEYLESS_FALLBACK=false` to keep prompts off the public keyless endpoint. |
 | **Images** (`IMAGE_PROVIDER_ORDER`) | Pollinations → Gemini image → Hugging Face FLUX → Together FLUX → Cloudflare FLUX → **local branded card** | The card is rendered locally and cannot fail, so a post always ships with a visual (flagged with a warning). `IMAGE_CARD_FALLBACK=false` disables it. |
 | **Voiceover** | Piper → silent Reel → still image | |
 

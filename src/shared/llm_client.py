@@ -57,32 +57,31 @@ def strip_markdown_fences(text: str) -> str:
 
 
 def extract_json_text(text: str) -> str:
+    """Pull the JSON document out of a model answer.
+
+    Models wrap JSON in prose, fences, "thinking" text (that may itself contain braces)
+    or append commentary after it. Try the whole text, then decode from every `{` / `[`
+    with raw_decode (which ignores trailing text and balances nesting correctly) and
+    keep the largest object/array found. Returns the text unchanged if nothing parses
+    so the caller's json.loads raises an honest error."""
     text = strip_markdown_fences(text)
     try:
         json.loads(text)
         return text
     except (json.JSONDecodeError, ValueError):
         pass
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end > start:
-        candidate = text[start : end + 1]
+    decoder = json.JSONDecoder()
+    best = ""
+    for start, ch in enumerate(text):
+        if ch not in "{[":
+            continue
         try:
-            json.loads(candidate)
-            return candidate
+            value, length = decoder.raw_decode(text[start:])
         except (json.JSONDecodeError, ValueError):
-            pass
-    start = text.find("[")
-    end = text.rfind("]")
-    if start != -1 and end > start:
-        candidate = text[start : end + 1]
-        try:
-            json.loads(candidate)
-            return candidate
-        except (json.JSONDecodeError, ValueError):
-            pass
-    return text
-
+            continue
+        if isinstance(value, (dict, list)) and length > len(best):
+            best = text[start : start + length]
+    return best or text
 
 class LLMClient:
     """Free-tier LLM chain. Providers (Groq -> Gemini -> GitHub Models -> Cerebras ->
@@ -181,9 +180,10 @@ class LLMClient:
                 model = getattr(result, "model", "")
                 if not provider:
                     raise
+                preview = result.stdout[:160].replace("\n", "\\n")
                 logger.warning(
-                    "::warning::[%s] %s/%s returned unusable JSON (%s); trying the next model/provider",
-                    label or "llm", provider, model, exc,
+                    "::warning::[%s] %s/%s returned unusable JSON (%s); starts with: %r; trying the next model/provider",
+                    label or "llm", provider, model, exc, preview,
                 )
                 # only this model is struck off: a sibling model of the same provider may do better
                 exclude.add(f"{provider}/{model}" if model else provider)
