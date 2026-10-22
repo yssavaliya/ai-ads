@@ -159,7 +159,11 @@ def test_the_dead_expression_guard_actually_catches_the_original_bug(tmp_path, m
     assert isinstance(func.body[1], ast.Expr) and isinstance(func.body[1].value, ast.UnaryOp)  # the shape we scan for
 
 
-@pytest.mark.parametrize("prompt_text", ["short", "x" * 5000, 'quotes """ inside', "line1\nline2 {braces}"])
+@pytest.mark.parametrize(
+    "prompt_text",
+    ["short", "x" * 5000, 'quotes """ inside', "line1\nline2 {braces}"],
+    ids=["short", "very-long", "triple-quotes", "newline-and-braces"],
+)
 def test_predictor_prompt_survives_awkward_content(prompt_text):
     from src.intelligence.virality_predictor import ViralityPredictor
 
