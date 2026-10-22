@@ -215,9 +215,25 @@ def test_ci_actionlint_knows_the_models_permission():
     assert "v1.7.12" in text  # older releases reject `permissions: models`
 
 
-def test_setup_action_installs_ffmpeg_when_missing():
-    """The ubuntu runner image shipped without ffmpeg, so every Reel silently became an image."""
+def test_setup_action_provides_ffmpeg_without_apt_and_cannot_block_the_job():
+    """`sudo apt-get install ffmpeg` hung CI for 6+ minutes; the same step runs in production
+    pipelines, so it must be bounded, non-fatal and independent of apt mirrors."""
     steps = _load(GH / "actions" / "setup-agent" / "action.yml")["runs"]["steps"]
-    install = next(s for s in steps if "ffmpeg" in s.get("name", "") and "Install" in s["name"])
-    assert install["if"] == "inputs.piper == 'true'" and "apt-get install" in install["run"]
-    assert "command -v ffmpeg" in install["run"]  # only when it is actually missing
+    step = next(s for s in steps if "ffmpeg" in s.get("name", "") and "Check" not in s["name"])
+    assert step["if"] == "inputs.piper == 'true'"
+    assert step["timeout-minutes"] <= 5 and step["continue-on-error"] is True
+    assert "apt-get" not in step["run"] and "imageio-ffmpeg" in step["run"]
+    assert "command -v ffmpeg" in step["run"] and "GITHUB_PATH" in step["run"]
+
+
+def test_no_workflow_or_action_uses_apt_get():
+    for path in [*(GH / "workflows").glob("*.yml"), *(GH / "actions").rglob("action.yml")]:
+        assert "apt-get" not in path.read_text(encoding="utf-8"), f"{path.name}: apt can stall a run"
+
+
+def test_ci_ffmpeg_step_is_bounded_and_non_fatal():
+    ci = _load(GH / "workflows" / "ci.yml")
+    steps = ci["jobs"]["test"]["steps"]
+    ff = next(s for s in steps if "ffmpeg" in s.get("name", ""))
+    assert ff["timeout-minutes"] <= 5 and ff["continue-on-error"] is True
+    assert ci["jobs"]["test"]["timeout-minutes"] <= 15

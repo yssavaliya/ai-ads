@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import wave
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -335,14 +336,11 @@ class CreativeForge:
 
     @staticmethod
     def _wav_duration(path: str) -> float:
-        proc = subprocess.run(  # noqa: S603 - fixed argv
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-             "-of", "default=noprint_wrappers=1:nokey=1", path],
-            capture_output=True, timeout=60,
-        )
+        """Duration of a WAV in seconds using the stdlib (no ffprobe on the runner)."""
         try:
-            return float(proc.stdout.decode().strip())
-        except ValueError:
+            with wave.open(path, "rb") as w:
+                return w.getnframes() / float(w.getframerate())
+        except (wave.Error, OSError, EOFError, ZeroDivisionError):
             return 3.0
 
     @staticmethod
