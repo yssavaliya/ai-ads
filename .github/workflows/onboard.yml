@@ -16,16 +16,22 @@ on:
         description: "LinkedIn handle"
         required: false
       email:
-        description: "Recipient email"
+        description: "Recipient email (or env:NAME to read it from a secret/variable)"
         required: true
       virality_threshold:
         description: "Virality threshold (0-100)"
         required: false
         default: "75"
+      run_daily_now:
+        description: "Trigger the Daily workflow right after onboarding"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
   issues: write
+  actions: write   # lets the final step dispatch daily.yml
 
 concurrency:
   group: ai-ads-repo-state
@@ -55,26 +61,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Restore agent.db cache
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            agent.db
-            agent.db-wal
-            agent.db-shm
-            data/cache
-          key: agent-db-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            agent-db-${{ runner.os }}-
-
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
+      - uses: ./.github/actions/setup-agent
 
       - name: Onboard business
         env:
@@ -85,29 +72,22 @@ jobs:
           IN_EMAIL: ${{ github.event.inputs.email }}
           IN_THRESHOLD: ${{ github.event.inputs.virality_threshold }}
         run: |
-          python scripts/onboard_business.py             --name "$IN_NAME"             --website "$IN_WEBSITE"             --instagram "$IN_INSTAGRAM"             --linkedin "$IN_LINKEDIN"             --email "$IN_EMAIL"             --threshold "${IN_THRESHOLD:-75}"
+          python scripts/onboard_business.py \
+            --name "$IN_NAME" \
+            --website "$IN_WEBSITE" \
+            --instagram "$IN_INSTAGRAM" \
+            --linkedin "$IN_LINKEDIN" \
+            --email "$IN_EMAIL" \
+            --threshold "${IN_THRESHOLD:-75}"
 
-      - name: Persist JSON state (agent.db stays in cache, not git)
+      - uses: ./.github/actions/persist-state
         if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/businesses.json data/weights.json 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: onboard business"
-            git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME"
-            git push
-          fi
-
-      - name: Save agent.db cache
-        if: always()
-        uses: actions/cache/save@v4
         with:
-          path: |
-            agent.db
-            agent.db-wal
-            agent.db-shm
-            data/cache
-          key: agent-db-${{ runner.os }}-${{ github.run_id }}
+          files: data/businesses.json data/weights.json
+          message: "chore: onboard business"
+
+      - name: Trigger the Daily workflow
+        if: success() && github.event.inputs.run_daily_now == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run daily.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"

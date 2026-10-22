@@ -490,7 +490,14 @@ class DailyPipeline:
         failures = []
         for business in businesses:
             try:
-                results.append(self.run_for_business(business))
+                result = self.run_for_business(business)
+                results.append(result)
+                if not result.get("prompts"):
+                    # "Ran green but produced nothing" must be visible.
+                    failures.append({
+                        "business": business.get("name"), "stage": "generation",
+                        "error": "no prompts were generated (LLM chain down or all variants failed)",
+                    })
             except Exception as exc:
                 logger.error(
                     "::error::Daily pipeline failed for %s: %s", business.get("name"), exc
@@ -562,6 +569,9 @@ def main() -> None:
     # Fail the workflow step when every business errored — green CI must mean
     # the pipeline actually produced something.
     if results and all("error" in r for r in results):
+        raise SystemExit(1)
+    if results and not any(r.get("prompts") for r in results):
+        logger.error("::error::The daily run generated no prompts for any business")
         raise SystemExit(1)
     if results and not any(r.get("email_sent") for r in results):
         logger.error("::error::No daily email was delivered for any business (SMTP down or unconfigured?)")

@@ -1,9 +1,9 @@
 name: Drift Check
 
-# Proactively detects model/API drift (e.g. a retired model name or invalid
-# key) by running the same LLM code paths the pipeline uses. On failure it
-# opens a GitHub issue so the breakage is noticed before the next scheduled
-# run silently produces nothing.
+# Proactively detects model/API drift (e.g. a retired model name or an invalid key)
+# by running the same LLM code paths the pipeline uses. On failure it opens (or
+# updates) a GitHub issue AND fails the run, so the breakage is noticed before the
+# next scheduled run silently produces nothing.
 on:
   schedule:
     - cron: "15 3 * * *"
@@ -25,37 +25,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
+      - uses: ./.github/actions/setup-agent
 
       - name: Verify LLM providers
         id: check
         continue-on-error: true
-        run: |
-          python scripts/check_llm.py | tee /tmp/drift.log
+        shell: bash   # bash -eo pipefail: `| tee` must not hide a failing check
+        run: python scripts/check_llm.py | tee "$RUNNER_TEMP/drift.log"
 
-      - name: Open drift alert issue on failure
+      - name: Open or update the drift alert issue
         if: steps.check.outcome == 'failure'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPO: ${{ github.repository }}
         run: |
-          body=$(tail -n 15 /tmp/drift.log | sed 's/"/\\"/g' | tr '\n' ' ')
+          body=$(tail -n 15 "$RUNNER_TEMP/drift.log" | tr '\n' ' ')
           prefix="🚨 Model/API drift detected"
-          existing=$(gh issue list --repo "$GITHUB_REPO" --state open --limit 50 \
-            --json number,title --jq '.[] | select(.title | startswith("'"$prefix"'")) | .number' | head -n1)
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 50 \
+            --json number,title --jq ".[] | select(.title | startswith(\"$prefix\")) | .number" | head -n1)
           if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPO" \
-              --body "Still failing as of $(date -u +'%Y-%m-%dT%H:%M:%SZ'). Last log lines: \`\`\`${body}\`\`\`"
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
+              --body "Still failing as of $(date -u +'%Y-%m-%dT%H:%M:%SZ'). Last log lines: ${body}"
           else
-            gh issue create \
-              --repo "$GITHUB_REPO" \
+            gh issue create --repo "$GITHUB_REPOSITORY" \
               --title "${prefix} $(date -u +'%Y-%m-%d')" \
-              --body "The scheduled drift check failed — LLM providers returned no output. This usually means a retired model name or an invalid/quota-exhausted key. Last log lines: \`\`\`${body}\`\`\` Run the 'Secrets Verify' workflow for a full diagnosis."
+              --body "The scheduled drift check failed — LLM providers returned no output. This usually means a retired model name or an invalid/quota-exhausted key. Last log lines: ${body}. Run the 'Secrets Verify' workflow for a full diagnosis."
           fi
+
+      - name: Fail the run when the providers are down
+        if: steps.check.outcome == 'failure'
+        run: |
+          echo "::error::LLM providers failed the drift check — see the alert issue"
+          exit 1
