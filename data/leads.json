@@ -1,27 +1,4 @@
 {
-  "generated_at": "2026-10-19T09:17:01.388749",
-  "leads": [
-    {
-      "name": "Home Decor 360",
-      "website_url": "https://homedecor360.in/",
-      "instagram_handle": "home_decor360",
-      "linkedin_handle": "",
-      "niche": "home decor",
-      "location": "Ahmedabad",
-      "found_via": "search",
-      "website_title": "Home Decor 360 | Luxury Interior Design — Ahmedabad",
-      "follower_count": 10536,
-      "opportunity_score": 65,
-      "opportunity_reasons": [
-        "10536 followers (sweet spot)",
-        "limited recent activity",
-        "no engagement data yet",
-        "has website (full profile available)",
-        "has social handle"
-      ],
-      "followers": 10536,
-      "prompts": [],
-      "prompt_error": "All LLM providers failed for audience-mapper. Set GROQ_API_KEY (free at console.groq.com) as a repo secret."
-    }
-  ]
+  "generated_at": "2026-10-23T20:45:47.012037",
+  "leads": []
 }
