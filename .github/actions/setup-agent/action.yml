@@ -66,11 +66,12 @@ runs:
     - name: Provide ffmpeg (static build from pip; no apt mirrors that can stall the job)
       if: inputs.piper == 'true'
       shell: bash
-      timeout-minutes: 5
       continue-on-error: true  # Reels fall back to still images; never block the pipeline on this
       run: |
+        # NOTE: composite-action steps do not accept `timeout-minutes` (the runner rejects the whole
+        # action file: "Unexpected value 'timeout-minutes'"), so the bound is applied with timeout(1).
         if ! command -v ffmpeg >/dev/null; then
-          python -m pip install --quiet imageio-ffmpeg
+          timeout 300 python -m pip install --quiet imageio-ffmpeg
           exe="$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
           mkdir -p "$HOME/.local/ffbin"
           ln -sf "$exe" "$HOME/.local/ffbin/ffmpeg"

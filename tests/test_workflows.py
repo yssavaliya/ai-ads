@@ -221,7 +221,8 @@ def test_setup_action_provides_ffmpeg_without_apt_and_cannot_block_the_job():
     steps = _load(GH / "actions" / "setup-agent" / "action.yml")["runs"]["steps"]
     step = next(s for s in steps if "ffmpeg" in s.get("name", "") and "Check" not in s["name"])
     assert step["if"] == "inputs.piper == 'true'"
-    assert step["timeout-minutes"] <= 5 and step["continue-on-error"] is True
+    assert "timeout-minutes" not in step  # invalid on composite steps: the runner rejects the action file
+    assert "timeout 300" in step["run"] and step["continue-on-error"] is True
     assert "apt-get" not in step["run"] and "imageio-ffmpeg" in step["run"]
     assert "command -v ffmpeg" in step["run"] and "GITHUB_PATH" in step["run"]
 
@@ -308,3 +309,16 @@ def test_every_state_writing_workflow_shares_one_concurrency_group():
 def test_ledger_merges_by_union_so_concurrent_appends_never_conflict():
     attrs = (GH.parent / ".gitattributes").read_text(encoding="utf-8")
     assert "data/learning_ledger.jsonl merge=union" in attrs
+
+
+# keys a step of a COMPOSITE action may use; anything else makes the runner reject the whole action file
+# (this shipped once: `timeout-minutes` on a composite step killed every pipeline in 12 s, and neither
+# actionlint nor the YAML parser noticed).
+COMPOSITE_STEP_KEYS = {"id", "if", "name", "run", "shell", "uses", "with", "env", "working-directory", "continue-on-error"}
+
+
+def test_composite_action_steps_use_only_keys_the_runner_accepts():
+    for action in sorted((GH / "actions").glob("*/action.yml")):
+        for step in _load(action)["runs"]["steps"]:
+            extra = set(step) - COMPOSITE_STEP_KEYS
+            assert not extra, f"{action.parent.name}: step {step.get('name') or step.get('uses')!r} has unsupported keys {sorted(extra)}"
