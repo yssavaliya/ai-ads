@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 import threading
 import time
 from collections.abc import Callable
@@ -142,6 +143,10 @@ def classify(exc: BaseException) -> Failure:
 
     if status in (401, 403):
         return Failure("auth", math.inf, "provider")
+    if "free limit" in msg or "free_limit" in msg or ("retry after" in msg and status == 402):
+        match = re.search(r"retry after\s*(\d+(?:\.\d+)?)", msg)
+        wait = float(match.group(1)) if match else 30.0
+        return Failure("rate_limit", min(wait, 60.0), "model")
     if status == 402 or "no remaining credits" in msg or "insufficient_quota" in msg or "payment required" in msg:
         return Failure("quota", 3600.0, "provider")  # prepaid credits gone: don't retry within the hour
     if msg.startswith("non-json response"):

@@ -43,11 +43,31 @@ def _snap(value: int, multiple: int = 8, lo: int = 256, hi: int = 1440) -> int:
 # providers
 # ---------------------------------------------------------------------------
 def pollinations(prompt: str, width: int, height: int) -> bytes | None:
-    """Keyless."""
+    """Keyless: tries flux first, falling back to the fast default model if flux 503s or times out."""
+    url = f"https://image.pollinations.ai/prompt/{quote(prompt, safe='')}"
     with httpx.Client(timeout=180, follow_redirects=True) as client:
+        # Try flux first with a short timeout so transient 503s don't stall the pipeline
+        try:
+            resp = client.get(
+                url,
+                params={"width": width, "height": height, "nologo": "true", "model": "flux"},
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                data = resp.content
+                if len(data) >= 1000 and is_image(data):
+                    return data
+            elif resp.status_code == 429:
+                resp.raise_for_status()
+        except httpx.HTTPStatusError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Pollinations flux model unavailable (%s); trying default model", exc)
+
         resp = client.get(
-            f"https://image.pollinations.ai/prompt/{quote(prompt, safe='')}",
-            params={"width": width, "height": height, "nologo": "true", "model": "flux"},
+            url,
+            params={"width": width, "height": height, "nologo": "true"},
+            timeout=45,
         )
         resp.raise_for_status()
         data = resp.content
