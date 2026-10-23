@@ -71,6 +71,8 @@ def fb_env(tmp_path, monkeypatch):
     import src.learning.process_feedback as pf
 
     monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "feedback_signing_key", "test-signing-key")
+    monkeypatch.setattr(settings, "feedback_allowed_users", "a, owner, Teammate")
     Session = _session(tmp_path)
     monkeypatch.setattr(pf, "SessionLocal", Session)
     closed: list[int] = []
@@ -82,18 +84,25 @@ def _issues(pf, monkeypatch, items):
     monkeypatch.setattr(pf, "parse_feedback_issues", lambda: items)
 
 
+def _issue(number, uid, kind, user="a", body=""):
+    """A feedback issue as the hourly job parses it, carrying a properly signed token."""
+    from src.learning import feedback_tokens
+
+    return {
+        "issue_number": number, "prompt_id": 0, "feedback": kind, "body": body, "user": user,
+        "title": f"[content-intel-feedback] prompt #0 [{kind.upper()}] {feedback_tokens.sign(uid, kind)}",
+    }
+
+
 def test_good_bad_feedback_does_not_crash_with_unbound_datetime(fb_env, monkeypatch):
     """Previously an inner `from datetime import datetime` in the POSTED branch
     made `datetime` a local -> UnboundLocalError on every GOOD/BAD/REGENERATE."""
     pf, Session, closed = fb_env
     db = Session()
     biz, (p1, p2) = _seed(db, n_prompts=2)
-    ids = (p1.id, p2.id)
+    ids, uids = (p1.id, p2.id), (p1.uid, p2.uid)
     db.close()
-    _issues(pf, monkeypatch, [
-        {"issue_number": 1, "prompt_id": ids[0], "feedback": "good", "body": "", "user": "a"},
-        {"issue_number": 2, "prompt_id": ids[1], "feedback": "bad", "body": "", "user": "a"},
-    ])
+    _issues(pf, monkeypatch, [_issue(1, uids[0], "good"), _issue(2, uids[1], "bad")])
     assert pf.process_feedback() == 2
     db = Session()
     assert db.get(Prompt, ids[0]).feedback == FeedbackType.GOOD
@@ -105,10 +114,14 @@ def test_regenerate_feedback_does_not_crash(fb_env, monkeypatch):
     pf, Session, closed = fb_env
     db = Session()
     _, (p,) = _seed(db)
-    pid = p.id
+    pid, uid = p.id, p.uid
     db.close()
     monkeypatch.setattr(pf, "regenerate_prompt", lambda prompt, db: True)
-    _issues(pf, monkeypatch, [{"issue_number": 5, "prompt_id": pid, "feedback": "regenerate", "body": "", "user": ""}])
+    _issues(pf, monkeypatch, [_issue(5, uid, "regenerate", user="")])
+    monkeypatch.setattr(settings, "feedback_allowed_users", "")  # empty author is not allow-listed
+    assert pf.process_feedback() == 0
+    monkeypatch.setattr(settings, "feedback_allowed_users", "a")
+    _issues(pf, monkeypatch, [_issue(5, uid, "regenerate")])
     assert pf.process_feedback() == 1
     assert Session().get(Prompt, pid).feedback == FeedbackType.REGENERATE
 
@@ -118,12 +131,9 @@ def test_posted_link_records_engagement_but_no_weight_and_no_feedback(fb_env, mo
     pf, Session, closed = fb_env
     db = Session()
     biz, (p,) = _seed(db)
-    pid, bid = p.id, biz.weights_key
+    pid, bid, uid = p.id, biz.weights_key, p.uid
     db.close()
-    _issues(pf, monkeypatch, [{
-        "issue_number": 9, "prompt_id": pid, "feedback": "posted", "user": "",
-        "body": "https://www.instagram.com/p/ABC123/",
-    }])
+    _issues(pf, monkeypatch, [_issue(9, uid, "posted", body="https://www.instagram.com/p/ABC123/")])
     assert pf.process_feedback() == 1
     db = Session()
     assert db.get(Prompt, pid).feedback is None  # still matchable by the learner
@@ -138,11 +148,9 @@ def test_repeated_clicks_do_not_inflate_weights(fb_env, monkeypatch):
     pf, Session, closed = fb_env
     db = Session()
     biz, (p,) = _seed(db)
-    pid, bid = p.id, biz.weights_key
+    bid, uid = biz.weights_key, p.uid
     db.close()
-    _issues(pf, monkeypatch, [
-        {"issue_number": n, "prompt_id": pid, "feedback": "good", "body": "", "user": ""} for n in (1, 2, 3)
-    ])
+    _issues(pf, monkeypatch, [_issue(n, uid, "good") for n in (1, 2, 3)])
     assert pf.process_feedback() == 1
     assert closed == [1, 2, 3]  # duplicates closed, counted once
     from src.learning.bayesian_updater import BayesianUpdater
@@ -154,13 +162,9 @@ def test_feedback_allowlist_ignores_other_authors(fb_env, monkeypatch):
     pf, Session, closed = fb_env
     db = Session()
     _, (p,) = _seed(db)
-    pid = p.id
+    pid, uid = p.id, p.uid
     db.close()
-    monkeypatch.setattr(settings, "feedback_allowed_users", "owner, Teammate")
-    _issues(pf, monkeypatch, [
-        {"issue_number": 1, "prompt_id": pid, "feedback": "bad", "body": "", "user": "troll"},
-        {"issue_number": 2, "prompt_id": pid, "feedback": "good", "body": "", "user": "TEAMMATE"},
-    ])
+    _issues(pf, monkeypatch, [_issue(1, uid, "bad", user="troll"), _issue(2, uid, "good", user="TEAMMATE")])
     assert pf.process_feedback() == 1
     assert Session().get(Prompt, pid).feedback == FeedbackType.GOOD
 

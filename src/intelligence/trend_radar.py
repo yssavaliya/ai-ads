@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any
 
-from src.shared.llm_client import LLMClient, extract_json_text, untrusted
+from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_text
 
 logger = logging.getLogger(__name__)
 
@@ -30,16 +30,16 @@ class TrendRadar:
 You are a social media trend analyst for the Indian market (IST timezone). Given:
 
 Business profile:
-{untrusted(json.dumps(business_profile, indent=2, default=str)[:5000])}
+{fence(business_profile, 5000)}
 
 Audience content themes:
-{json.dumps(themes, indent=2, default=str)[:3000]}
+{fence(themes, 3000)}
 
 Audience pain points:
-{json.dumps(pain_points, indent=2, default=str)[:2000]}
+{fence(pain_points, 2000)}
 
 Competitor posts:
-{untrusted(competitor_summary)}
+{fence_text(competitor_summary)}
 
 Identify TODAY'S most relevant trending topics, hashtags, and content gaps.
 Prefer real, current trends relevant to this industry. Do NOT invent fake viral claims.

@@ -14,7 +14,7 @@ from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
-from src.shared.llm_client import LLMClient, extract_json_text
+from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_text
 from src.shared.utils import load_businesses, utc_now_naive
 from src.storage.models import Business, Engagement, Prompt, SessionLocal
 
@@ -56,9 +56,13 @@ class WeeklyPipeline:
             )
 
             report = self._build_report(biz, prompts, business, [(p, e) for p, e in engagement_rows])
+            degraded = bool(report.pop("_degraded", False))
             delivered = self.delivery.send_weekly_report(business, report)
-            logger.info("Weekly report for %s delivered=%s", name, delivered)
-            return {"business": name, "delivered": delivered, "prompts_analyzed": len(prompts)}
+            logger.info("Weekly report for %s delivered=%s degraded=%s", name, bool(delivered), degraded)
+            return {
+                "business": name, "delivered": bool(delivered), "degraded": degraded,
+                "channels": getattr(delivered, "channels", {}), "prompts_analyzed": len(prompts),
+            }
         finally:
             db.close()
 
@@ -109,16 +113,16 @@ class WeeklyPipeline:
 You are a content intelligence analyst. Produce a weekly deep-dive report for a business.
 
 Business:
-{json.dumps(business_config, indent=2, default=str)[:4000]}
+{fence(business_config, 4000)}
 
 Prompts sent this week (with predicted virality + user feedback):
-{json.dumps(prompt_data, indent=2, default=str)[:8000]}
+{fence(prompt_data, 8000)}
 
 REAL engagement measured from the business's own posts (auto-learned):
-{json.dumps(engagement_data, indent=2, default=str)[:6000]}
+{fence(engagement_data, 6000)}
 
 Learned weights (topic/format/segment -> weight):
-{json.dumps(weights, indent=2, default=str)[:4000]}
+{fence(weights, 4000)}
 
 Respond ONLY with JSON:
 {{
@@ -143,6 +147,7 @@ Respond ONLY with JSON:
         except Exception as exc:
             logger.error("Weekly report generation failed: %s", exc)
             return {
+                "_degraded": True,  # placeholder: delivered so the owner sees it, but the run FAILS
                 "top_performing": [],
                 "audience_insights": ["Report generation failed; retry next week."],
                 "competitor_moves": [],
@@ -153,12 +158,36 @@ Respond ONLY with JSON:
             }
 
 
+def weekly_failures(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every way a weekly run can be 'green but wrong': crash, placeholder report, nothing delivered."""
+    failures = []
+    for r in results:
+        if r.get("error"):
+            failures.append({"business": r.get("business"), "stage": "pipeline", "error": r["error"]})
+        elif r.get("degraded"):
+            failures.append({"business": r.get("business"), "stage": "report",
+                             "error": "the LLM chain failed; a placeholder report was produced instead of real analysis"})
+        elif not r.get("delivered"):
+            failures.append({"business": r.get("business"), "stage": "delivery", "error": "no channel delivered the report"})
+    return failures
+
+
 def main() -> None:
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     pipeline = WeeklyPipeline()
     results = pipeline.run_all()
     for r in results:
         logger.info("RESULT: %s", r)
+
+    failures = weekly_failures(results)
+    if failures:
+        for f in failures:
+            logger.error("::error::Weekly %s failed for %s: %s", f["stage"], f["business"], f["error"])
+        from src.delivery.github_feedback import GithubFeedback
+
+        GithubFeedback().report_degraded_run(failures)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

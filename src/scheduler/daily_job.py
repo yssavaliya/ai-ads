@@ -6,18 +6,18 @@ import random
 import sys
 import time
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.delivery.channels import get_delivery
+from src.delivery.channels import DeliveryResult, get_delivery
 from src.delivery.github_feedback import GithubFeedback
 from src.fetch.competitor_finder import CompetitorFinder
 from src.fetch.website_scraper import WebsiteScraper
-from src.generation.virality_gate import ViralityGate
+from src.generation.virality_gate import ViralityGate, apply_threshold_policy
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
@@ -98,6 +98,7 @@ class DailyPipeline:
             )
             weights = self.weights.to_forge_weights(biz.weights_key)
             history = self._load_history(db, biz)
+            threshold = int(business.get("virality_threshold") or biz.virality_threshold or settings.virality_threshold)
             prompts = self.gate.run(
                 profile,
                 audience_map,
@@ -105,6 +106,7 @@ class DailyPipeline:
                 business.get("prompt_types", ["educational", "storytelling", "social_proof"]),
                 weights,
                 history=history,
+                threshold=threshold,
             )
 
             # NOVELTY (#2): don't re-send a prompt we already sent in the last
@@ -137,6 +139,9 @@ class DailyPipeline:
                     "Likely an LLM provider outage; the Drift Check workflow should alert separately.",
                     name,
                 )
+
+            # Policy for prompts that never reached THIS business's bar (flag by default, or drop).
+            prompts = apply_threshold_policy(prompts)
 
             # Attach a ready-to-post brief (caption + best time) to every prompt.
             self._attach_posting_brief(business, prompts, social_data, audience_map)
@@ -184,7 +189,7 @@ class DailyPipeline:
                 )
                 db.add(prompt)
                 db.flush()
-                links = self.feedback.create_feedback_links(prompt.id, name, p.get("title", ""))
+                links = self.feedback.create_feedback_links(prompt.id, name, p.get("title", ""), prompt.uid)
                 saved.append(
                     {
                         **p,
@@ -201,7 +206,7 @@ class DailyPipeline:
                 # generated batch — log it; prompts are already persisted and
                 # the user can be re-notified by re-running the workflow.
                 logger.error("::error::Delivery for %s failed: %s", name, exc)
-                delivered = False
+                delivered = DeliveryResult({name: False}, {name: str(exc)[:200]})
             if delivered and saved:
                 # Only delivered prompts count as "sent": they feed dedup,
                 # history and auto-learning matching.
@@ -212,7 +217,10 @@ class DailyPipeline:
                         obj.sent_at = now
                 db.commit()
             logger.info("Delivery for %s via %s: delivered=%s (%d prompts)", name, "+".join(self.delivery.names), delivered, len(saved))
-            return {"business": name, "prompts": len(saved), "delivered": delivered}
+            return {
+                "business": name, "prompts": len(saved), "delivered": bool(delivered),
+                "channels": getattr(delivered, "channels", {}),
+            }
         finally:
             db.close()
 
@@ -237,7 +245,8 @@ class DailyPipeline:
             return 0.0 if w is None else float(w)  # unexplored (absent) ranked best
 
         chosen = min(candidates, key=_explore_score)
-        extras = self.gate.run(profile, audience_map, trend_data, [chosen], weights)
+        extras = self.gate.run(profile, audience_map, trend_data, [chosen], weights,
+                               threshold=int(business.get("virality_threshold") or settings.virality_threshold))
         for ex in extras:
             if ex.get("prompt_type") == chosen:
                 return ex
@@ -292,9 +301,9 @@ class DailyPipeline:
 
             hours: list[int] = []
             for post in social_data.get("posts", []):
-                dt = AutoLearner._parse_date(post.get("posted_at"))
+                dt = AutoLearner._parse_date(post.get("posted_at"))  # naive UTC
                 if dt is not None:
-                    hours.append(dt.hour)
+                    hours.append(dt.replace(tzinfo=UTC).astimezone(tz).hour)  # the business's local hour
             best = Counter(hours).most_common(1)[0][0] if len(hours) >= 3 else 19
 
         if now.hour >= best:
@@ -509,22 +518,42 @@ class DailyPipeline:
             self.feedback.report_degraded_run(failures)
         return results
 
+    # JSON config -> DB row. data/businesses.json is the source of truth for these fields; the
+    # row used to be written once and never updated, so edited e-mails, handles, timezones and
+    # thresholds silently had no effect (audit H-08).
+    _CONFIG_FIELDS = (
+        "website_url", "instagram_handle", "linkedin_handle", "email", "timezone",
+        "virality_threshold", "prompt_types",
+    )
+
+    def _config_values(self, config: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "website_url": config.get("website_url"),
+            "instagram_handle": config.get("instagram_handle"),
+            "linkedin_handle": config.get("linkedin_handle"),
+            "email": config.get("email") or "",
+            "timezone": config.get("timezone", "Asia/Kolkata"),
+            "virality_threshold": int(config.get("virality_threshold", settings.virality_threshold)),
+            "prompt_types": config.get("prompt_types", ["educational", "storytelling", "social_proof"]),
+        }
+
     def _get_or_create_business(self, db: Any, config: dict[str, Any]) -> Business:
+        values = self._config_values(config)
         biz: Business | None = db.query(Business).filter(Business.name == config["name"]).first()
         if biz is None:
-            biz = Business(
-                name=config["name"],
-                website_url=config.get("website_url"),
-                instagram_handle=config.get("instagram_handle"),
-                linkedin_handle=config.get("linkedin_handle"),
-                email=config["email"],
-                timezone=config.get("timezone", "Asia/Kolkata"),
-                virality_threshold=int(config.get("virality_threshold", 75)),
-                prompt_types=config.get("prompt_types", ["educational", "storytelling", "social_proof"]),
-            )
+            biz = Business(name=config["name"], **values)
             db.add(biz)
             db.commit()
             db.refresh(biz)
+            return biz
+        changed = [f for f in self._CONFIG_FIELDS if getattr(biz, f) != values[f]]
+        if changed:
+            for f in changed:
+                setattr(biz, f, values[f])
+            db.add(biz)
+            db.commit()
+            # log field NAMES only: values include contact details
+            logger.info("Business %s: config changed in businesses.json -> updated %s", config["name"], ", ".join(changed))
         return biz
 
     def _load_profile(self, db: Any, biz: Business) -> dict[str, Any] | None:

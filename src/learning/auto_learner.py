@@ -434,18 +434,28 @@ class AutoLearner:
 
     @staticmethod
     def _parse_date(value: Any) -> datetime | None:
+        """Any scraped timestamp -> NAIVE UTC (the convention of every DB column).
+
+        Timezone-aware values (an ISO string with Z or an offset, an epoch) are CONVERTED to UTC.
+        The old code simply dropped the tzinfo, so 14:00Z and 19:30+05:30 produced different
+        'hours' and every window comparison / best-time inference was off by the UTC offset.
+        Naive strings are taken to be UTC (instaloader's date_utc)."""
         if value is None:
             return None
         if isinstance(value, datetime):
-            return value.replace(tzinfo=None)
-        if isinstance(value, (int, float)) and value > 1e9:
-            return datetime.fromtimestamp(value, tz=UTC).replace(tzinfo=None)
-        if isinstance(value, str):
+            dt = value
+        elif isinstance(value, (int, float)) and not isinstance(value, bool) and value > 1e9:
+            dt = datetime.fromtimestamp(value, tz=UTC)
+        elif isinstance(value, str):
             try:
-                return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+                dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
             except ValueError:
-                pass
-        return None
+                return None
+        else:
+            return None
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(UTC).replace(tzinfo=None)
+        return dt
 
 
 def run_auto_learning() -> dict[str, Any]:

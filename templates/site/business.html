@@ -72,6 +72,7 @@
         <div class="badges">
           <span class="badge type">{{ e.prompt_type|pretty_type }}</span>
           {% if e.score is not none %}<span class="badge score {{ 'hi' if e.score >= 80 else ('mid' if e.score >= 60 else 'lo') }}">{{ e.score }}/100</span>{% endif %}
+          {% if e.below_threshold %}<span class="badge score lo" title="Below the quality bar of {{ e.threshold }}">review</span>{% endif %}
           {% if e.format %}<span class="badge">{{ e.format }}</span>{% endif %}
           {% if e.platform_focus %}<span class="badge">{{ e.platform_focus }}</span>{% endif %}
         </div>

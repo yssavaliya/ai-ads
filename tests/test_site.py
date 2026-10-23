@@ -175,12 +175,15 @@ def test_lead_digest_page_hides_contact_emails_unless_private(pub, tmp_path):
     assert 'href="leads/' in (pub.site_dir / "index.html").read_text(encoding="utf-8")
 
 
-def test_lead_digest_shows_emails_when_the_site_is_secret(pub, tmp_path, monkeypatch):
+def test_lead_digest_never_shows_emails_even_when_the_site_is_secret(pub, tmp_path, monkeypatch):
+    """Audit C-02: SITE_SECRET used to switch lead e-mail publication ON. A secret URL is not
+    access control, so the e-mail is never published at any setting."""
     monkeypatch.setattr(settings, "site_secret", "s3cret")
     pub.send_lead_digest("x", [_lead(tmp_path)])
     key = pub.leads_key()
     assert key.startswith("l-")
-    assert "hello@g.example" in (pub.site_dir / key / "index.html").read_text(encoding="utf-8")
+    assert "hello@g.example" not in (pub.site_dir / key / "index.html").read_text(encoding="utf-8")
+    assert "hello@g.example" not in (pub.site_dir / "data/_leads.json").read_text(encoding="utf-8")
     assert not (pub.site_dir / "leads").exists()
 
 
@@ -203,7 +206,7 @@ def test_secret_urls_are_keyed_stable_and_unlisted(pub, tmp_path, monkeypatch):
     pub.send_daily_prompts(BIZ, [_prompt(tmp_path)])
     assert (pub.site_dir / "b" / key_a / "index.html").exists()
     index = (pub.site_dir / "index.html").read_text(encoding="utf-8")
-    assert "Sweet Crumbs" not in index and "This hub is private" in index  # nothing listed
+    assert "Sweet Crumbs" not in index and "This hub is unlisted" in index  # nothing listed
     assert key_a in "\n".join(pub.summary())  # but the owner is told where to look
 
 
@@ -250,10 +253,30 @@ def test_default_delivery_is_the_site_not_email():
 
 
 @pytest.mark.parametrize("mode,expected", [("site", ["site"]), ("email", ["EmailSender"]), ("both", ["site", "EmailSender"]),
-                                          ("SITE", ["site"]), ("nonsense", ["site"]), ("", ["site"])])
+                                          ("SITE", ["site"]), (" Both ", ["site", "EmailSender"])])
 def test_delivery_modes(mode, expected, monkeypatch):
     monkeypatch.setattr(settings, "delivery_mode", mode)
     assert get_delivery().names == expected
+
+
+@pytest.mark.parametrize("typo", ["sit", "emial", "all", "none", "site,email"])
+def test_unknown_delivery_mode_is_an_error_not_a_silent_fallback(typo):
+    """Audit M-09: a typo used to quietly mean 'site'."""
+    with pytest.raises(ValueError, match="DELIVERY_MODE"):
+        get_delivery(typo)
+
+
+@pytest.mark.parametrize("typo", ["sit", "emial", "all"])
+def test_settings_reject_an_unknown_delivery_mode_at_startup(typo, monkeypatch):
+    from pydantic import ValidationError
+
+    from src.shared.config import Settings
+
+    monkeypatch.setenv("DELIVERY_MODE", typo)
+    with pytest.raises(ValidationError):
+        Settings()
+    monkeypatch.setenv("DELIVERY_MODE", "")  # unset GitHub variable -> default
+    assert Settings().delivery_mode == "site"
 
 
 def test_one_failing_channel_does_not_block_the_other():
@@ -261,12 +284,15 @@ def test_one_failing_channel_does_not_block_the_other():
     ok.name, bad.name = "site", "email"
     ok.send_daily_prompts.return_value = True
     bad.send_daily_prompts.side_effect = RuntimeError("smtp down")
-    assert Delivery([bad, ok]).send_daily_prompts({}, []) is True
-    assert Delivery([bad]).send_daily_prompts({}, []) is False
+    result = Delivery([bad, ok]).send_daily_prompts({}, [])
+    assert bool(result) is True and result.channels == {"email": False, "site": True}
+    assert result.partial and result.failed == ["email"] and "smtp down" in result.errors["email"]  # visible, not collapsed
+    assert bool(Delivery([bad]).send_daily_prompts({}, [])) is False
 
 
 def test_delivery_reports_failure_when_no_channel_succeeds():
     a = MagicMock()
     a.name = "site"
     a.send_weekly_report.return_value = False
-    assert Delivery([a]).send_weekly_report({}, {}) is False
+    result = Delivery([a]).send_weekly_report({}, {})
+    assert bool(result) is False and not result.partial and result.failed == ["site"]

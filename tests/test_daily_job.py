@@ -10,17 +10,19 @@ def test_recommend_post_time_returns_string():
 
 
 def test_recommend_post_time_uses_data_driven_hour():
+    """Posts at 14:00Z are 19:30 in India: the business's evening peak is hour 19 (07:00 PM), NOT
+    hour 14. (Audit H-07: the old code read the UTC hour as if it were local.)"""
     pipe = DailyPipeline()
     from datetime import datetime, timedelta
 
     social = {
         "posts": [
-            {"posted_at": (datetime.utcnow() - timedelta(days=i)).replace(hour=8).isoformat()}
+            {"posted_at": (datetime(2026, 10, 1, 14, 0) + timedelta(days=i)).isoformat() + "Z"}
             for i in range(5)
         ]
     }
     out = pipe._recommend_post_time({"timezone": "Asia/Kolkata"}, social)
-    assert "08:" in out or "8:" in out
+    assert "07:00 PM" in out and "Asia/Kolkata" in out
 
 
 def test_attach_posting_brief_sets_caption_and_time():
@@ -108,7 +110,7 @@ def test_explore_targets_unexplored_format(monkeypatch):
     pipe = DailyPipeline()
     captured = {}
 
-    def fake_run(profile, audience_map, trend_data, prompt_types, weights):
+    def fake_run(profile, audience_map, trend_data, prompt_types, weights, threshold=None):
         captured["types"] = prompt_types
         return [{
             "prompt_type": prompt_types[0], "hook": "h", "prompt_text": "t",

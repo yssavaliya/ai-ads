@@ -9,7 +9,7 @@ import httpx
 
 from src.fetch.social_scraper import SocialScraper
 from src.shared.config import settings
-from src.shared.llm_client import LLMClient, extract_json_text, untrusted
+from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_text
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ You are a competitive intelligence analyst. Given this business profile, identif
 top {self.COMPETITOR_COUNT} direct competitors who are active on Instagram and/or LinkedIn.
 
 Business profile:
-{untrusted(json.dumps(business_profile, indent=2, default=str)[:8000])}
+{fence(business_profile, 8000)}
 
 For each competitor provide:
 - name: competitor brand name
