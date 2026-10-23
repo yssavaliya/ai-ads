@@ -282,14 +282,15 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
     try:
         res = gate.predictor.score(v["prompt_text"], profile, audience_map, {}, ptype, history=[])
     except Exception as exc:
-        # The (real) regenerated text still has value even if scoring is
-        # temporarily unavailable — send it with a neutral provisional score.
-        logger.error("::warning::Regenerate scoring failed (%s); neutral fallback", exc)
+        # The (real) regenerated text still has value even if scoring is temporarily unavailable:
+        # send it UNSCORED (no invented number) with a visible warning.
+        logger.error("::warning::Regenerate scoring failed (%s); sending it unscored", exc)
         res = {
-            "virality_score": 50, "virality_label": "MEDIUM",
-            "virality_probability": 0.5, "key_factors": [], "risks": [],
+            "virality_score": None, "virality_label": "UNSCORED",
+            "virality_probability": None, "key_factors": [], "risks": [],
             "reasoning": "scoring unavailable",
         }
+        v.setdefault("warnings", []).append("Not scored - the virality predictor was unavailable. Review before posting.")
     v["virality_score"] = res.get("virality_score")
     v["virality_label"] = res.get("virality_label")
     v["virality_probability"] = res.get("virality_probability")

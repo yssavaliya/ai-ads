@@ -95,7 +95,7 @@ with `python scripts/run_auto_learn.py`.
 | `FEEDBACK_SIGNING_KEY` | Signs the 👍/👎 links. **Required for feedback to be accepted** (without it links are inert) |
 | `FEEDBACK_ALLOWED_USERS` (repo *variable*) | Comma-separated GitHub logins whose feedback issues count. **Required**: unset = feedback is ignored (fails closed) |
 | `OWNER_EMAIL`, `DIGEST_EMAIL` | Referenced from `data/*.json` as `env:OWNER_EMAIL` / `env:DIGEST_EMAIL`, so no address is committed |
-| `BELOW_THRESHOLD_POLICY` (repo *variable*) | `flag` (default: publish with a "below threshold" badge), `drop` or `best` |
+| `BELOW_THRESHOLD_POLICY` (repo *variable*) | `flag` (default: publish with a "review" badge) or `block` (publish nothing under the bar) |
 | `LLM_KEYLESS_FALLBACK` (repo *variable*) | `false` by default. `true` lets prompts go to the public keyless endpoint as a last resort |
 
 LLM chain: every configured provider in `LLM_PROVIDER_ORDER` (see *Free fallback chain*). If all fail the run is

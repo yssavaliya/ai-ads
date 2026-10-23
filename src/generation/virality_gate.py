@@ -13,6 +13,15 @@ logger = logging.getLogger(__name__)
 NEUTRAL_WEIGHT = 0.5  # beta-Bernoulli prior mean: an untested combo
 
 
+UNSCORED_LABEL = "UNSCORED"
+
+
+def rank(v: dict[str, Any]) -> float:
+    """Sort key for a variant. An unscored one (predictor down) ranks below every real score, even 0."""
+    score = v.get("virality_score")
+    return float(score) if score is not None else -100.0
+
+
 class ViralityGate:
     """Iterative generation loop: generate variants → score → if best is below
     threshold, refine with predictor hints → repeat. Falls back to best available."""
@@ -46,7 +55,7 @@ class ViralityGate:
         thr = self.threshold if threshold is None else int(threshold)  # per-business quality bar
         selected: dict[str, dict[str, Any]] = {}
         best_overall: dict[str, Any] | None = None
-        best_score = -1
+        best_score = float("-inf")  # an unscored variant ranks at -100: it must still be able to win when nothing is scored
         hints: list[str] = []
         generation_failures = 0
 
@@ -91,17 +100,18 @@ class ViralityGate:
                 try:
                     prediction = outcome.unwrap()
                 except Exception as exc:
-                    # Prediction failed for this variant: keep the (real) variant
-                    # text but score it neutral so generation still proceeds.
+                    # Prediction failed for this variant: keep the (real) variant text, but do NOT invent a
+                    # score. A made-up 50/MEDIUM used to be stored, shown, compared with the threshold (it
+                    # passed any bar <= 50) and fed to the weekly report as if it were a measurement.
                     logger.error("::warning::Scoring failed for a variant: %s", exc)
                     prediction = {
-                        "virality_score": 50, "virality_label": "MEDIUM",
-                        "virality_probability": 0.5, "key_factors": [],
+                        "virality_score": None, "virality_label": UNSCORED_LABEL,
+                        "virality_probability": None, "key_factors": [],
                         "risks": [], "reasoning": "prediction unavailable",
                         "improvement_hints": [],
                     }
                     v.setdefault("warnings", []).append(
-                        "Virality score is provisional — the predictor was unavailable."
+                        "Not scored - the virality predictor was unavailable. Review before posting."
                     )
                 v["virality_score"] = prediction["virality_score"]
                 v["virality_label"] = prediction["virality_label"]
@@ -115,12 +125,12 @@ class ViralityGate:
 
             for v in scored:
                 score = v["virality_score"]
-                combined = score + self._weight_boost(weights, v)
+                combined = rank(v) + self._weight_boost(weights, v)
                 v["_combined"] = combined
                 if combined > best_score:
                     best_score = combined
                     best_overall = v
-                if score >= thr:
+                if score is not None and score >= thr:
                     ptype = v.get("prompt_type", "educational")
                     if ptype not in selected or selected[ptype].get("_combined", 0) < combined:
                         selected[ptype] = v
@@ -139,7 +149,7 @@ class ViralityGate:
                 logger.warning("No improvement hints available; stopping refinement")
                 break
 
-            best_variant = max(scored, key=lambda v: v["virality_score"])
+            best_variant = max(scored, key=rank)
             refined = self.forge.refine_with_hints(
                 best_variant, hints, business_profile, audience_map, trend_data
             )
@@ -167,7 +177,7 @@ class ViralityGate:
                 refined["reasoning"] = refined_prediction["reasoning"]
                 refined["improvement_hints"] = refined_prediction.get("improvement_hints", [])
                 refined["generation_attempt"] = attempt
-                refined_combined = refined["virality_score"] + self._weight_boost(weights, refined)
+                refined_combined = rank(refined) + self._weight_boost(weights, refined)
                 refined["_combined"] = refined_combined
                 if refined["virality_score"] >= thr:
                     ptype = refined.get("prompt_type", "educational")
@@ -194,16 +204,18 @@ class ViralityGate:
         seen: dict[str, dict[str, Any]] = {}
         for r in results:
             key = r.get("prompt_text") or str(id(r))
-            if key not in seen or r["virality_score"] > seen[key]["virality_score"]:
+            if key not in seen or rank(r) > rank(seen[key]):
                 seen[key] = r
-        final = sorted(seen.values(), key=lambda v: v["virality_score"], reverse=True)[:3]
+        final = sorted(seen.values(), key=rank, reverse=True)[:3]
         for v in final:
             v["threshold"] = thr
-            v["below_threshold"] = v["virality_score"] < thr
+            # "below the bar" is a statement about a MEASURED score; an unscored prompt is flagged separately
+            v["below_threshold"] = v["virality_score"] is not None and v["virality_score"] < thr
 
+        scores = [v["virality_score"] for v in final if v["virality_score"] is not None]
         logger.info(
-            "Virality gate final: %d prompts, best score=%d (threshold=%d)",
-            len(final), max((v["virality_score"] for v in final), default=0), thr,
+            "Virality gate final: %d prompts (%d unscored), best score=%s (threshold=%d)",
+            len(final), len(final) - len(scores), max(scores) if scores else "n/a", thr,
         )
         return final
 

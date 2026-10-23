@@ -17,7 +17,7 @@ from src.delivery.channels import DeliveryResult, get_delivery
 from src.delivery.github_feedback import GithubFeedback
 from src.fetch.competitor_finder import CompetitorFinder
 from src.fetch.website_scraper import WebsiteScraper
-from src.generation.virality_gate import ViralityGate, apply_threshold_policy
+from src.generation.virality_gate import ViralityGate, apply_threshold_policy, rank
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
@@ -490,7 +490,7 @@ class DailyPipeline:
                 logger.info("Dedup: dropping near-duplicate (sim=%.2f): %s", sim, text[:60])
         # Never return empty — fall back to the single best if everything matched.
         if not kept and prompts:
-            return [max(prompts, key=lambda x: x.get("virality_score", 0))]
+            return [max(prompts, key=rank)]
         return kept
 
     @staticmethod
