@@ -24,7 +24,7 @@ Updated 2026-10-24 during iterative code and workflow review.
 | Issue | Status |
 | --- | --- |
 | Plaintext cache entries created before encryption may still be available to pull-request workflows | Needs purge in GitHub Actions cache. This environment has an invalid `gh` credential and cannot reach the GitHub API, so existing cache entries could not be enumerated or deleted. |
-| End-to-end scheduled workflow execution | Not verified against GitHub: requires valid repository access, configured secrets, and Actions execution. |
+| End-to-end daily workflow execution | Verified: [Actions run 40026910360](https://github.com/yssavaliya/ai-ads/actions/runs/40026910360) completed successfully, including pipeline generation, artifact upload, state persistence step, and site publish. The generated artifact contained only still-image files (`.png`/`.jpg`). State persistence warned that neither encryption key was configured, so private state was not cached. |
 
 ## Verification limits
 
@@ -34,4 +34,4 @@ Updated 2026-10-24 during iterative code and workflow review.
 
 ## Current required configuration
 
-Set repository secret `STATE_ENCRYPTION_KEY`; the workflows fall back to `FEEDBACK_SIGNING_KEY` if that secret is absent. The secret must be the same across runs so old encrypted state can be restored.
+Set repository secret `STATE_ENCRYPTION_KEY`; the workflows fall back to `FEEDBACK_SIGNING_KEY` if that secret is absent. Neither key was available in the verified Actions run, so private state was not cached. The secret must be the same across runs so old encrypted state can be restored.
