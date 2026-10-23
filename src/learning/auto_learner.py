@@ -127,7 +127,9 @@ class AutoLearner:
         followers = social_data.get("follower_count")
         if not posts:
             logger.info("Business %s: no posts available for auto-learning", business_id)
-            return {"matched": 0, "learned": 0}
+            # say WHY: a scrape error (no token, blocked, actor failed) and a genuinely empty profile
+            # look identical as "0 learned" otherwise
+            return {"posts": 0, "matched": 0, "learned": 0, "scrape_error": social_data.get("error")}
 
         biz_row = db.get(Business, business_id) if db is not None else None
         weights_key = biz_row.weights_key if biz_row is not None else str(business_id)
@@ -182,8 +184,11 @@ class AutoLearner:
             business_id, len(matched), learned, deferred, unusable, refreshed, benchmark,
         )
         return {
-            "matched": len(matched), "learned": learned, "deferred": deferred, "unusable": unusable,
-            "refreshed": refreshed, "benchmark": round(benchmark, 4), "details": details,
+            "posts": len(posts), "candidates": len(sent_prompts),
+            "matched": len(matched), "unmatched": len(posts) - len(matched),
+            "learned": learned, "deferred": deferred, "unusable": unusable, "refreshed": refreshed,
+            "hidden_likes": sum(1 for p in posts if p.get("likes_hidden")),
+            "benchmark": round(benchmark, 4), "details": details,
         }
 
     def _recent_prompts(self, db: Any, business_id: int) -> list[dict[str, Any]]:
@@ -512,9 +517,11 @@ def run_auto_learning() -> dict[str, Any]:
             try:
                 biz = db.query(Business).filter(Business.name == config["name"]).first()
                 if biz is None:
+                    results[config["name"]] = {"skipped": "not in the database yet (no daily run has created it)"}
                     continue
                 handle = config.get("instagram_handle") or ""
                 if not handle:
+                    results[config["name"]] = {"skipped": "no instagram_handle configured"}
                     continue
                 social = asyncio.run(scraper.fetch_instagram(handle))
                 results[config["name"]] = AutoLearner().run_for_business(biz.id, social, db)
@@ -528,6 +535,55 @@ def run_auto_learning() -> dict[str, Any]:
     return results
 
 
+SUMMARY_COLUMNS = (
+    ("posts", "Posts found"), ("candidates", "Prompts eligible"), ("matched", "Matched"),
+    ("deferred", f"Too new (<{MATURITY_HOURS}h)"), ("hidden_likes", "Likes hidden"), ("unusable", "Unusable"),
+    ("refreshed", "Refreshed"), ("learned", "Learned"),
+)
+
+
+def format_summary(results: dict[str, Any]) -> str:
+    """Markdown for the run page. 'Learned 0' alone cannot tell a quiet day from a broken scrape, so
+    every count that explains a zero is shown, plus the reason a business was skipped or failed."""
+    lines = ["### Engagement sync", ""]
+    if not results:
+        return "\n".join(lines + ["No active business to process."])
+    lines += ["| Business | " + " | ".join(label for _, label in SUMMARY_COLUMNS) + " |",
+              "|---|" + "---:|" * len(SUMMARY_COLUMNS)]
+    notes: list[str] = []
+    for name, res in results.items():
+        cells = [str(res.get(key, "-")) if key in res else "-" for key, _ in SUMMARY_COLUMNS]
+        lines.append(f"| {name} | " + " | ".join(cells) + " |")
+        if res.get("skipped"):
+            notes.append(f"- **{name}** skipped: {res['skipped']}")
+        if res.get("error"):
+            notes.append(f"- **{name}** failed: {res['error']}")
+        if res.get("scrape_error"):
+            notes.append(f"- **{name}** scrape returned no posts: {res['scrape_error']}")
+    total = sum(int(r.get("learned", 0)) for r in results.values())
+    lines += ["", f"**Total learned this run: {total}**"]
+    if total == 0:
+        lines.append("Nothing was learned: see the columns above (posts missing, none matched a prompt, still younger than "
+                     f"{MATURITY_HOURS} h, likes hidden) and the notes below.")
+    return "\n".join(lines + ([""] + notes if notes else []))
+
+
+def write_step_summary(results: dict[str, Any]) -> bool:
+    """Append the summary to the GitHub run page. No-op (False) outside Actions."""
+    import os
+
+    target = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not target:
+        return False
+    try:
+        with open(target, "a", encoding="utf-8") as fh:
+            fh.write(format_summary(results) + "\n")
+        return True
+    except OSError as exc:
+        logger.warning("Could not write the step summary: %s", exc)
+        return False
+
+
 if __name__ == "__main__":
     import sys
     from pathlib import Path
@@ -536,5 +592,9 @@ if __name__ == "__main__":
     from src.shared.config import settings
 
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    for name, res in run_auto_learning().items():
-        logger.info("AUTO-LEARN %s: %s", name, res)
+    outcome = run_auto_learning()
+    for name, res in outcome.items():
+        logger.info("AUTO-LEARN %s: %s", name, {k: v for k, v in res.items() if k != "details"})
+        if res.get("scrape_error") or res.get("error"):
+            logger.warning("::warning::Engagement sync for %s learned nothing: %s", name, res.get("scrape_error") or res.get("error"))
+    write_step_summary(outcome)
