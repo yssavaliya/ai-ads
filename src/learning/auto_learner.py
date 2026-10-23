@@ -6,10 +6,11 @@ import re
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
+from src.shared.privacy import redact_text
 from src.shared.utils import load_businesses, utc_now_naive
 from src.storage.models import Business, Engagement, Platform, Prompt, SessionLocal
 
@@ -19,6 +20,8 @@ MIN_SIMILARITY = 0.30          # min caption/prompt token overlap to count as a 
 POST_MATCH_WINDOW_DAYS = 21    # how many days after a prompt the user may have posted
                                   # (manual posting is async; 10d missed late posts)
 MATCH_LOOKBACK_DAYS = 14       # how far back to look for sent prompts
+REFRESH_LOOKBACK_DAYS = 30     # an already-learned prompt keeps getting its engagement refreshed this long
+MATURITY_HOURS = 48            # a post younger than this is not judged yet: its likes are still arriving
 BENCHMARK_LOOKBACK_DAYS = 30   # median engagement window
 NO_HISTORY_BENCHMARK = 0.01    # fallback "good post" bar when a business has no
                                  # positive-engagement posts yet to compute a real median from
@@ -141,15 +144,30 @@ class AutoLearner:
         self._db = db
         matched = self._match(posts, sent_prompts)
 
-        learned = 0
+        learned = deferred = unusable = refreshed = 0
         details = []
+        already = {p["id"]: p["learned"] for p in sent_prompts}
+        now = utc_now_naive()
         for prompt_id, prompt_type, prompt_text, post, segment, fmt in matched:
             rate = engagement_rate(post, followers)
             outcome = self._decide_outcome(post, followers, benchmark, bench_n, post.get("comments_text"))
-            recorded = self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome)
-            # Only update the Bayesian weights on the FIRST sighting of this
-            # post — re-scrapes refresh stored engagement but must not inflate
-            # the trial count (engagement.yml runs hourly).
+
+            # DATA QUALITY before the single, permanent weight update:
+            posted_at = self._parse_date(post.get("posted_at"))
+            mature = posted_at is None or (now - posted_at) >= timedelta(hours=MATURITY_HOURS)
+            # Instagram hides like counts on some posts (reported as -1): a 'zero' there is missing
+            # data, and scoring it would teach the system that the content flopped.
+            usable = not (post.get("likes_hidden") and not post.get("comments"))
+            learn = mature and usable and not already.get(prompt_id)
+            if not already.get(prompt_id):
+                if not mature:
+                    deferred += 1
+                elif not usable:
+                    unusable += 1
+
+            recorded = self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome, learn=learn)
+            # The weights move ONLY the first time a (prompt, post) pair is judged; every later scrape
+            # refreshes the stored engagement without re-counting (engagement.yml runs every 6h).
             if recorded:
                 self.updater.record(
                     weights_key,
@@ -157,31 +175,45 @@ class AutoLearner:
                     prompt_type=prompt_type,
                     format=fmt or post.get("format"),
                     audience_segment=segment,
+                    source="auto",
                 )
                 learned += 1
+            elif already.get(prompt_id):
+                refreshed += 1
             details.append(
-                {"prompt_id": prompt_id, "post_id": post.get("post_id"), "rate": round(rate, 4), "outcome": outcome}
+                {"prompt_id": prompt_id, "post_id": post.get("post_id"), "rate": round(rate, 4), "outcome": outcome,
+                 "learned": recorded, "deferred": (not mature) and not already.get(prompt_id)}
             )
 
         logger.info(
-            "Business %s auto-learned: %d matched, %d recorded (benchmark rate=%.4f)",
-            business_id, len(matched), learned, benchmark,
+            "Business %s auto-learned: %d matched, %d learned, %d deferred (immature), %d unusable, %d refreshed (benchmark rate=%.4f)",
+            business_id, len(matched), learned, deferred, unusable, refreshed, benchmark,
         )
-        return {"matched": len(matched), "learned": learned, "benchmark": round(benchmark, 4), "details": details}
+        return {
+            "matched": len(matched), "learned": learned, "deferred": deferred, "unusable": unusable,
+            "refreshed": refreshed, "benchmark": round(benchmark, 4), "details": details,
+        }
 
     def _recent_prompts(self, db: Any, business_id: int) -> list[dict[str, Any]]:
         cutoff = utc_now_naive() - timedelta(days=MATCH_LOOKBACK_DAYS)
-        rows = (
-            db.query(Prompt)
+        refresh_cutoff = utc_now_naive() - timedelta(days=REFRESH_LOOKBACK_DAYS)
+        # Eligible: prompts nobody judged yet (feedback IS NULL), plus prompts the learner already
+        # counted (auto_learned_at) so their stored engagement can keep growing. Prompts judged by a
+        # human click have feedback but no auto_learned_at: they were counted once already - skip.
+        rows = [
+            p
+            for p in db.query(Prompt)
             .filter(
                 Prompt.business_id == business_id,
-                Prompt.sent_at >= cutoff,
-                Prompt.feedback.is_(None),
+                Prompt.sent_at >= refresh_cutoff,
+                or_(Prompt.feedback.is_(None), Prompt.auto_learned_at.isnot(None)),
             )
             .all()
-        )
+            if p.auto_learned_at is not None or p.sent_at >= cutoff
+        ]
         return [
             {
+                "learned": p.auto_learned_at is not None,
                 "id": p.id,
                 "prompt_type": p.prompt_type.value if p.prompt_type else None,
                 "prompt_text": p.prompt_text,
@@ -337,10 +369,11 @@ class AutoLearner:
         post: dict[str, Any],
         rate: float,
         outcome: str,
+        learn: bool = True,
     ) -> bool:
-        """Persist one learning event. Returns True only the FIRST time a given
-        (prompt, post) pair is seen — subsequent hourly re-scrapes refresh the
-        stored engagement but must NOT re-run the Bayesian weight update, or
+        """Store the post's engagement and, when `learn` is set and the prompt has not been counted
+        yet, record the outcome on the prompt. Returns True only on that first counting - later
+        re-scrapes refresh the stored engagement but must NOT re-run the Bayesian weight update, or
         trials (and thus the weights) get inflated every run."""
         prompt = db.get(Prompt, prompt_id)
         if prompt is None:
@@ -348,13 +381,16 @@ class AutoLearner:
 
         from src.storage.models import FeedbackType
 
-        # A prompt that already carries feedback has been learned from (by a
-        # click or an earlier scrape). A POSTED link alone only creates an
-        # Engagement row — it does not set feedback — so it is still "new".
-        already_learned = prompt.feedback is not None
-        prompt.feedback = FeedbackType.GOOD if outcome == "good" else FeedbackType.BAD
-        prompt.feedback_at = utc_now_naive()
-        db.add(prompt)
+        # `auto_learned_at` (not `feedback`) says whether the learner has counted this prompt. It used
+        # to be `feedback`, which also made the prompt vanish from every later scrape, so engagement
+        # was frozen at the first sighting (audit H-03).
+        already_learned = prompt.auto_learned_at is not None
+        do_learn = learn and not already_learned
+        if do_learn:
+            prompt.feedback = FeedbackType.GOOD if outcome == "good" else FeedbackType.BAD
+            prompt.feedback_at = utc_now_naive()
+            prompt.auto_learned_at = utc_now_naive()
+            db.add(prompt)
 
         platform = Platform.LINKEDIN if post.get("platform") == "linkedin" else Platform.INSTAGRAM
         post_id = str(post.get("post_id") or "")[:100]
@@ -374,7 +410,7 @@ class AutoLearner:
             if short and cand.post_url and shortcode_from_url(cand.post_url) == short:
                 existing = cand
                 break
-        is_new = not already_learned
+        is_new = do_learn
         if existing:
             # Refresh stored engagement (likes/comments grow over time) but do
             # not treat it as a new learning event.
@@ -397,12 +433,19 @@ class AutoLearner:
         db.add(engagement)
         db.commit()
         if is_new:
-            self._log_engagement(prompt_id, post, rate, outcome, prompt.caption or prompt.prompt_text)
+            self._log_engagement(
+                prompt_id, post, rate, outcome, prompt.caption or prompt.prompt_text,
+                meta={
+                    "business": business_id, "prompt_type": prompt_type, "format": prompt.format,
+                    "virality_score": prompt.virality_score,
+                },
+            )
         return is_new
 
     @staticmethod
     def _log_engagement(
-        prompt_id: int, post: dict[str, Any], rate: float, outcome: str, caption: str | None = None
+        prompt_id: int, post: dict[str, Any], rate: float, outcome: str, caption: str | None = None,
+        meta: dict[str, Any] | None = None,
     ) -> None:
         """Append a durable, git-tracked engagement record so learning history
         survives agent.db cache eviction (raw Engagement rows live only in the
@@ -420,11 +463,12 @@ class AutoLearner:
                             "ts": utc_now_naive().isoformat(),
                             "prompt_id": prompt_id,
                             "post_id": str(post.get("post_id") or "")[:100],
-                            "caption": (caption or "")[:500],
+                            "caption": redact_text((caption or "")[:500]),
                             "rate": round(rate, 4),
                             "likes": int(post.get("likes") or 0),
                             "comments": int(post.get("comments") or 0),
                             "outcome": outcome,
+                            **(meta or {}),
                         }
                     )
                     + "\n"

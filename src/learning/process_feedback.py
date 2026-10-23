@@ -210,6 +210,7 @@ def process_feedback() -> int:
                     prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
                     format=prompt.format or None,
                     audience_segment=prompt.audience_segment or None,
+                    source="manual",
                 )
                 db.commit()
                 try:
@@ -235,6 +236,7 @@ def process_feedback() -> int:
                 prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
                 format=prompt.format or None,
                 audience_segment=prompt.audience_segment or None,
+                source="manual",
             )
             db.commit()
             close_issue(issue["issue_number"])

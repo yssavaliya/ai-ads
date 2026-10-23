@@ -159,7 +159,7 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
             business_id=biz.id,
             prompt_text="unique inflate phrase alpha beta gamma delta",
             prompt_type=PromptType.EDUCATIONAL,
-            sent_at=datetime.utcnow() - timedelta(days=1),
+            sent_at=datetime.utcnow() - timedelta(days=6),
         )
         db.add(prompt)
         db.commit()
@@ -177,7 +177,7 @@ def test_auto_learn_does_not_double_count_same_post(tmp_path, monkeypatch):
                     "shares": 0,
                     "saves": 0,
                     "reach": 0,
-                    "posted_at": (datetime.utcnow() - timedelta(hours=20)).isoformat(),
+                    "posted_at": (datetime.utcnow() - timedelta(days=5)).isoformat(),
                 }
             ],
         }
@@ -249,7 +249,7 @@ def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
             business_id=biz.id,
             prompt_text="human confirmed posted phrase zeta eta theta",
             prompt_type=PromptType.EDUCATIONAL,
-            sent_at=datetime.utcnow() - timedelta(days=1),
+            sent_at=datetime.utcnow() - timedelta(days=6),
         )
         db.add(prompt)
         db.commit()
@@ -283,7 +283,7 @@ def test_human_posted_does_not_double_count_on_rescrape(tmp_path, monkeypatch):
                     "shares": 1,
                     "saves": 2,
                     "reach": 500,
-                    "posted_at": (datetime.utcnow() - timedelta(hours=20)).isoformat(),
+                    "posted_at": (datetime.utcnow() - timedelta(days=5)).isoformat(),
                 }
             ],
         }
@@ -346,7 +346,7 @@ def test_learner_matches_by_posted_caption_not_brief(tmp_path, monkeypatch):
             prompt_text="a long internal creative rationale about brand storytelling",
             caption="Ready to grow? Follow Aimagix Studio for AI tips #Ahmedabad #AI",
             prompt_type=PromptType.EDUCATIONAL,
-            sent_at=datetime.utcnow() - timedelta(days=1),
+            sent_at=datetime.utcnow() - timedelta(days=6),
         )
         db.add(prompt)
         db.commit()
@@ -364,7 +364,7 @@ def test_learner_matches_by_posted_caption_not_brief(tmp_path, monkeypatch):
                     "shares": 1,
                     "saves": 3,
                     "reach": 400,
-                    "posted_at": (datetime.utcnow() - timedelta(hours=20)).isoformat(),
+                    "posted_at": (datetime.utcnow() - timedelta(days=5)).isoformat(),
                 }
             ],
         }

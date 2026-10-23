@@ -43,7 +43,7 @@ def _seed(db, *, n_prompts: int = 1, ptype=PromptType.EDUCATIONAL):
             caption=f"caption {i} delta{i} epsilon{i} zeta{i}",
             prompt_type=ptype,
             format="reel",
-            sent_at=datetime.utcnow() - timedelta(days=1),
+            sent_at=datetime.utcnow() - timedelta(days=6),
         )
         db.add(p)
         prompts.append(p)
@@ -190,7 +190,7 @@ def test_explicit_link_matches_the_linked_prompt_and_does_not_crash(tmp_path, mo
         "url": "https://www.instagram.com/p/ABC123/",
         "caption": "nothing in common with either prompt",
         "likes": 40, "comments": 3,
-        "posted_at": datetime.utcnow().isoformat(),
+        "posted_at": (datetime.utcnow() - timedelta(days=3)).isoformat(),
     }
     res = AutoLearner().run_for_business(biz.id, {"posts": [post], "follower_count": 1000}, db)
     assert res["matched"] == 1 and res["learned"] == 1
