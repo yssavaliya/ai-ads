@@ -1,2 +1,3 @@
 * text=auto eol=lf
 *.ttf binary
+data/learning_ledger.jsonl merge=union

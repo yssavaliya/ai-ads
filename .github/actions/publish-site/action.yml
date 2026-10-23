@@ -24,10 +24,28 @@ runs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add -A
         git commit -q -m "Publish site $(date -u +'%Y-%m-%d %H:%M UTC')"
-        git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        # The token goes in a per-command auth header, never into the remote URL (it would end up in
+        # .git/config and in any error output that echoes the URL).
+        echo "::add-mask::${GH_TOKEN}"
+        AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 -w0)"
+        echo "::add-mask::${AUTH#AUTHORIZATION: basic }"
+        git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+        gh_git() { git -c "http.https://github.com/.extraheader=${AUTH}" "$@"; }
+
+        # Rollback point: keep the previous site as gh-pages-backup before it is overwritten.
+        if gh_git fetch -q --depth 1 origin gh-pages 2>/dev/null; then
+          gh_git push -q -f origin FETCH_HEAD:refs/heads/gh-pages-backup || echo "::warning::could not update gh-pages-backup"
+        fi
+
         for attempt in 1 2 3; do
-          if git push -f origin gh-pages; then
+          if gh_git push -f origin gh-pages; then
             echo "Site pushed (attempt $attempt)"
+            # Smoke test: the remote head is our commit and it contains the entry page.
+            remote="$(gh_git ls-remote origin refs/heads/gh-pages | cut -f1)"
+            if [ "$remote" != "$(git rev-parse HEAD)" ] || ! git cat-file -e HEAD:index.html; then
+              echo "::error::post-publish check failed (remote=$remote). The previous site is on gh-pages-backup."
+              exit 1
+            fi
             cd ..
             {
               echo "### Content Hub updated"
