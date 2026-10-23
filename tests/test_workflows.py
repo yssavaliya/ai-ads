@@ -94,7 +94,7 @@ def test_persist_action_stages_files_individually_and_saves_cache_always():
 def test_setup_action_restores_state_without_saving_early():
     steps = _load(GH / "actions" / "setup-agent" / "action.yml")["runs"]["steps"]
     uses = [s.get("uses", "") for s in steps]
-    assert "actions/cache/restore@v4" in uses and not any("cache/save" in u for u in uses)
+    assert any(u.startswith("actions/cache/restore@") for u in uses) and not any("cache/save" in u for u in uses)
     # Reels are best-effort: a missing piper/ffmpeg may warn but must not kill the job
     check = next(s for s in steps if "render dependencies" in s.get("name", ""))
     assert "exit 1" not in check["run"]
@@ -264,7 +264,7 @@ def test_hourly_feedback_job_skips_its_expensive_setup_when_nothing_is_pending()
     assert names.index(precheck["name"]) < names.index("./.github/actions/setup-agent")  # cheap check FIRST
     gate = "steps.pending.outputs.count != '0'"
     for s in steps:
-        if s is precheck or s.get("uses") == "actions/checkout@v4":
+        if s is precheck or str(s.get("uses", "")).startswith("actions/checkout@"):
             continue
         assert gate in str(s.get("if")), f"step {s.get('name') or s.get('uses')!r} would run even with nothing to process"
 
@@ -274,3 +274,37 @@ def test_ci_gates_on_coverage_and_scans_dependencies():
     assert "--cov-fail-under=" in text
     assert "pip-audit" in text
     assert (GH / "dependabot.yml").exists()
+
+
+def test_third_party_actions_are_pinned_to_a_commit_sha():
+    """A moving tag (`@v4`) lets whoever controls it change what runs with our token."""
+    import re
+
+    bad = []
+    for f in list(GH.rglob("*.yml")):
+        for line in f.read_text(encoding="utf-8").splitlines():
+            m = re.search(r"uses:\s*([^\s#]+)", line)
+            if m and not m.group(1).startswith("./") and not re.search(r"@[0-9a-f]{40}$", m.group(1)):
+                bad.append((f.name, m.group(1)))
+    assert not bad, bad
+
+
+def test_publish_never_puts_the_token_in_the_remote_url_and_keeps_a_rollback_branch():
+    text = (GH / "actions" / "publish-site" / "action.yml").read_text(encoding="utf-8")
+    assert "x-access-token:${GH_TOKEN}@" not in text
+    assert "extraheader" in text and "add-mask" in text
+    assert "gh-pages-backup" in text  # previous site kept as a rollback point
+    assert "ls-remote" in text  # post-publish verification
+
+
+def test_every_state_writing_workflow_shares_one_concurrency_group():
+    """persist-state resolves conflicts with `-X theirs`; that is only safe while writers are serialised."""
+    writers = [f for f in (GH / "workflows").glob("*.yml") if "persist-state" in f.read_text(encoding="utf-8")]
+    assert len(writers) >= 5
+    for f in writers:
+        assert "group: ai-ads-repo-state" in f.read_text(encoding="utf-8"), f.name
+
+
+def test_ledger_merges_by_union_so_concurrent_appends_never_conflict():
+    attrs = (GH.parent / ".gitattributes").read_text(encoding="utf-8")
+    assert "data/learning_ledger.jsonl merge=union" in attrs

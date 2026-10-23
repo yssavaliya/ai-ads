@@ -118,10 +118,11 @@ class WebsiteScraper:
     MAX_REDIRECTS = 5
 
     @staticmethod
-    def _assert_public_url(url: str) -> None:
-        """SSRF guard: URLs come from web search results and user input, so
-        refuse anything that resolves to a loopback/private/link-local address
-        (e.g. cloud metadata at 169.254.169.254)."""
+    def _resolve_public(url: str) -> str:
+        """SSRF guard: URLs come from web search results and user input, so refuse anything that
+        resolves to a loopback/private/link-local address (e.g. cloud metadata at 169.254.169.254).
+        Returns the validated IP: the caller connects to THAT address, so a DNS answer that changes
+        between this check and the request (DNS rebinding) cannot redirect the request inward."""
         host = urlparse(url).hostname
         if not host:
             raise ValueError(f"URL has no host: {url!r}")
@@ -129,13 +130,33 @@ class WebsiteScraper:
             infos = socket.getaddrinfo(host, None)
         except socket.gaierror as exc:
             raise ValueError(f"cannot resolve {host}") from exc
-        for info in infos:
-            ip = ipaddress.ip_address(str(info[4][0]).split("%")[0])
+        addresses = [ipaddress.ip_address(str(info[4][0]).split("%")[0]) for info in infos]
+        for ip in addresses:
             if not ip.is_global:
                 raise ValueError(f"refusing non-public address {ip} for {host}")
+        if not addresses:
+            raise ValueError(f"cannot resolve {host}")
+        return str(addresses[0])
+
+    @classmethod
+    def _assert_public_url(cls, url: str) -> None:
+        cls._resolve_public(url)
+
+    @staticmethod
+    def _pin(url: str, ip: str) -> tuple[str, dict[str, str], dict[str, str]]:
+        """The same request aimed at the validated IP: (url, headers, extensions). Host and TLS SNI /
+        certificate checking keep using the original hostname."""
+        parsed = urlparse(url)
+        host = parsed.hostname or ""
+        if host == ip:
+            return url, {}, {}  # already a literal address
+        literal = f"[{ip}]" if ":" in ip else ip
+        port = f":{parsed.port}" if parsed.port else ""
+        pinned = parsed._replace(netloc=f"{literal}{port}").geturl()
+        return pinned, {"Host": parsed.netloc.split("@")[-1]}, {"sni_hostname": host}
 
     def _fetch(self, url: str) -> str:
-        # Redirects are followed by hand so every hop is checked, not just the first.
+        # Redirects are followed by hand so every hop is checked (and pinned), not just the first.
         with httpx.Client(
             headers={"User-Agent": self.USER_AGENT},
             timeout=self.TIMEOUT,
@@ -143,8 +164,8 @@ class WebsiteScraper:
         ) as client:
             current = url
             for _ in range(self.MAX_REDIRECTS + 1):
-                self._assert_public_url(current)
-                with client.stream("GET", current) as resp:
+                target, headers, extensions = self._pin(current, self._resolve_public(current))
+                with client.stream("GET", target, headers=headers, extensions=extensions) as resp:
                     if resp.is_redirect and resp.headers.get("location"):
                         current = urljoin(current, resp.headers["location"])
                         continue

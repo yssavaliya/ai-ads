@@ -135,3 +135,37 @@ def test_all_providers_returning_undecodable_images_yields_none_not_an_exception
     monkeypatch.setattr(ip, "REGISTRY", {"a": ip.ImageProvider("a", lambda p, w, h: corrupt, lambda: True, False)})
     monkeypatch.setattr(settings, "image_provider_order", "a")
     assert ip.generate("p", 128, 128) is None
+
+
+# ---------------------------------------------------------------- H-09: DNS pinning (no rebinding window)
+def test_request_goes_to_the_validated_ip_not_to_a_second_dns_answer(monkeypatch):
+    """First lookup (the check) answers with a public IP; a rebinding attacker answers differently the
+    second time. The connection must use the checked address and still present the real hostname."""
+    import socket
+
+    import httpx
+
+    from src.fetch.website_scraper import WebsiteScraper
+
+    answers = iter(["93.184.216.34", "169.254.169.254", "169.254.169.254"])
+    monkeypatch.setattr(socket, "getaddrinfo", lambda host, port, *a, **k: [(2, 1, 6, "", (next(answers), 0))])
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(host=request.url.host, header=request.headers["host"], sni=request.extensions.get("sni_hostname"))
+        return httpx.Response(200, headers={"content-type": "text/html"}, text="<html>ok</html>")
+
+    real = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+    assert "ok" in WebsiteScraper()._fetch("https://rebind.example/page")
+    assert seen == {"host": "93.184.216.34", "header": "rebind.example", "sni": "rebind.example"}
+
+
+def test_pinning_keeps_port_ipv6_and_literal_urls_intact():
+    from src.fetch.website_scraper import WebsiteScraper
+
+    pin = WebsiteScraper._pin
+    assert pin("http://site.example:8080/a?b=1", "93.184.216.34")[0] == "http://93.184.216.34:8080/a?b=1"
+    assert pin("https://site.example/x", "2606:2800:220:1::1")[0] == "https://[2606:2800:220:1::1]/x"
+    assert pin("http://8.8.8.8/x", "8.8.8.8") == ("http://8.8.8.8/x", {}, {})
+    assert pin("https://user:pw@site.example/x", "1.2.3.4")[1] == {"Host": "site.example"}  # credentials never become the Host
