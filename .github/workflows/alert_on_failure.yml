@@ -1,0 +1,43 @@
+name: Alert on Pipeline Failure
+
+# A run that dies before any of our code starts (invalid action file, runner or checkout error) never
+# reaches the in-pipeline "degraded run" reporter; scheduled runs then fail silently for days.
+# This opens (or updates) ONE issue per workflow so a failed schedule is always visible.
+on:
+  workflow_run:
+    workflows:
+      - Daily Content Intelligence
+      - Weekly Deep Dive
+      - Process Feedback
+      - Sync Instagram Engagement
+      - Discover Business Leads
+      - Drift Check
+    types: [completed]
+
+permissions:
+  issues: write
+  actions: read
+  contents: read
+
+jobs:
+  alert:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Open or update the failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          title="[pipeline] workflow failed - ${WORKFLOW}"
+          body="Run: ${RUN_URL}"$'\n'"Trigger: ${EVENT}"$'\n'"Commit: ${SHA}"$'\n\n'"Open the run, read the failed step, and close this issue once a later run is green."
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"${title}\" in:title" --json number,title --jq "[.[] | select(.title == \"${title}\")][0].number // empty")"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+          fi

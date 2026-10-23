@@ -322,3 +322,16 @@ def test_composite_action_steps_use_only_keys_the_runner_accepts():
         for step in _load(action)["runs"]["steps"]:
             extra = set(step) - COMPOSITE_STEP_KEYS
             assert not extra, f"{action.parent.name}: step {step.get('name') or step.get('uses')!r} has unsupported keys {sorted(extra)}"
+
+
+def test_every_scheduled_pipeline_is_covered_by_the_failure_alert():
+    """Scheduled runs that die before our code starts used to fail silently for a day."""
+    alert = _load(GH / "workflows" / "alert_on_failure.yml")
+    watched = set(alert[True if True in alert else "on"]["workflow_run"]["workflows"])
+    for path in (GH / "workflows").glob("*.yml"):
+        wf = _load(path)
+        triggers = wf.get(True, wf.get("on")) or {}
+        if isinstance(triggers, dict) and "schedule" in triggers:
+            assert wf["name"] in watched, f"{path.name} runs on a schedule but its failures raise no alert"
+    assert alert["jobs"]["alert"]["if"] == "github.event.workflow_run.conclusion == 'failure'"
+    assert alert["permissions"]["issues"] == "write"
