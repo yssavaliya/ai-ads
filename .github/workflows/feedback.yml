@@ -60,6 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
           fetch-depth: 0
 
       # The job runs hourly but most hours there is no feedback. Checking costs ~3 s; the setup it
@@ -78,6 +79,7 @@ jobs:
         with:
           site: "true"
           piper: "true"   # REGENERATE can render a voiced Reel
+          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 
       - name: Process feedback issues
         if: steps.pending.outputs.count != '0'
@@ -86,8 +88,9 @@ jobs:
       - uses: ./.github/actions/persist-state
         if: always() && steps.pending.outputs.count != '0'
         with:
-          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl
+          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl data/site_manifests
           message: "chore: feedback run state"
+          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 
       - uses: ./.github/actions/publish-site
         if: always() && steps.pending.outputs.count != '0'

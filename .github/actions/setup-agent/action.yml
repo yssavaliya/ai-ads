@@ -10,6 +10,9 @@ inputs:
   site:
     description: Restore the published website (gh-pages) into ./site so pipelines can add to it
     default: "false"
+  state_encryption_key:
+    description: Fernet key used to decrypt the private database/cache artifact
+    required: false
 
 runs:
   using: composite
@@ -20,17 +23,13 @@ runs:
         cache: pip
         cache-dependency-path: pyproject.toml
 
-    - name: Restore agent.db + intel cache
+    - name: Restore encrypted agent state
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
-        path: |
-          agent.db
-          agent.db-wal
-          agent.db-shm
-          data/cache
-        key: agent-db-${{ runner.os }}-${{ github.run_id }}
+        path: .agent-state.enc
+        key: agent-state-v1-${{ runner.os }}-${{ github.run_id }}
         restore-keys: |
-          agent-db-${{ runner.os }}-
+          agent-state-v1-${{ runner.os }}-
 
     - name: Restore Piper voice cache
       if: inputs.piper == 'true'
@@ -62,6 +61,18 @@ runs:
         python -m pip install --upgrade pip
         python -m pip install -e .
         if [ "$WITH_PIPER" = "true" ]; then python -m pip install piper-tts; fi
+
+    - name: Decrypt private agent state
+      if: inputs.state_encryption_key != '' && hashFiles('.agent-state.enc') != ''
+      shell: bash
+      env:
+        STATE_ENCRYPTION_KEY: ${{ inputs.state_encryption_key }}
+      run: python scripts/state_cache.py decrypt
+
+    - name: Skip private state restore without encryption key
+      if: inputs.state_encryption_key == ''
+      shell: bash
+      run: echo "::warning::STATE_ENCRYPTION_KEY is not configured; cached prompts and intel history are unavailable"
 
     - name: Provide ffmpeg (static build from pip; no apt mirrors that can stall the job)
       if: inputs.piper == 'true'

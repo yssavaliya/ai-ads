@@ -32,23 +32,37 @@ def parse_feedback_issues() -> list[dict[str, Any]]:
         logger.warning("GitHub feedback not configured (GITHUB_TOKEN/GITHUB_REPO)")
         return []
     try:
-        resp = httpx.get(
-            f"https://api.github.com/repos/{settings.github_repo}/issues",
-            params={"state": "open", "per_page": 50},
-            headers={
-                "Authorization": f"Bearer {settings.github_token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
+        url: str | None = f"https://api.github.com/repos/{settings.github_repo}/issues"
+        params: dict[str, Any] | None = {"state": "open", "per_page": 100}
+        issues: list[dict[str, Any]] = []
+        visited_urls: set[str] = set()
+        headers = {
+            "Authorization": f"Bearer {settings.github_token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        while url:
+            if url in visited_urls:
+                logger.warning("GitHub issues pagination repeated a URL; stopping at %d issues", len(issues))
+                break
+            visited_urls.add(url)
+            resp = httpx.get(url, params=params, headers=headers, timeout=30)
+            resp.raise_for_status()
+            page = resp.json()
+            if not isinstance(page, list):
+                raise ValueError("GitHub issues endpoint returned a non-list response")
+            issues.extend(item for item in page if isinstance(item, dict))
+            links = resp.links
+            next_link = links.get("next") if isinstance(links, dict) else None
+            next_url = next_link.get("url") if isinstance(next_link, dict) else None
+            url = next_url if isinstance(next_url, str) else None
+            params = None
     except Exception as exc:
         logger.error("Failed to fetch issues: %s", exc)
         return []
 
     parsed = []
-    for issue in resp.json():
+    for issue in issues:
         if "pull_request" in issue:
             continue
         title = issue.get("title", "")
@@ -201,24 +215,39 @@ def process_feedback() -> int:
             # A regenerate request is a real negative signal AND must actually
             # produce a fresh replacement prompt (otherwise the button is a no-op).
             if feedback == "regenerate":
-                prompt.feedback = FeedbackType.REGENERATE
-                prompt.feedback_at = utc_now_naive()
-                db.add(prompt)
-                updater.record(
-                    _weights_key(db, prompt.business_id),
-                    "bad",
-                    prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
-                    format=prompt.format or None,
-                    audience_segment=prompt.audience_segment or None,
-                    source="manual",
-                )
-                db.commit()
+                if prompt.replacement_prompt_id is not None:
+                    close_issue(issue["issue_number"])
+                    processed += 1
+                    continue
+                # The same signed link can create a new issue after the first
+                # one closes. Count the negative signal once, while allowing a
+                # failed delivery to retry on the next scheduled run.
+                if prompt.feedback != FeedbackType.REGENERATE:
+                    prompt.feedback = FeedbackType.REGENERATE
+                    prompt.feedback_at = utc_now_naive()
+                    db.add(prompt)
+                    updater.record(
+                        _weights_key(db, prompt.business_id),
+                        "bad",
+                        prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
+                        format=prompt.format or None,
+                        audience_segment=prompt.audience_segment or None,
+                        source="manual",
+                    )
+                    db.commit()
+                replacement_delivered = False
                 try:
-                    regenerate_prompt(prompt, db)
+                    replacement_delivered = regenerate_prompt(prompt, db)
                 except Exception as exc:  # noqa: BLE001
                     logger.error("Regenerate failed for prompt %s: %s", prompt.id, exc)
-                close_issue(issue["issue_number"])
-                processed += 1
+                if replacement_delivered:
+                    close_issue(issue["issue_number"])
+                    processed += 1
+                else:
+                    logger.warning(
+                        "::warning::Replacement for prompt %s was not delivered; leaving issue #%s open to retry",
+                        prompt.id, issue["issue_number"],
+                    )
                 continue
 
             fb = {"good": FeedbackType.GOOD, "bad": FeedbackType.BAD}.get(feedback)
@@ -324,7 +353,7 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
         asset_path=v.get("asset_path"),
         asset_type=v.get("asset_type"),
         format=v.get("format"),
-        sent_at=utc_now_naive(),
+        sent_at=None,
     )
     db.add(new_prompt)
     db.flush()
@@ -332,12 +361,24 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
     db.commit()
 
     try:
-        get_delivery().send_daily_prompts(
+        delivered = get_delivery().send_daily_prompts(
             business,
             [{**v, "prompt_id": new_prompt.id, "feedback_links": links}],
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Regenerate email failed: %s", exc)
+        db.delete(new_prompt)
+        db.commit()
+        return False
+    if not delivered:
+        db.delete(new_prompt)
+        db.commit()
+        return False
+    new_prompt.sent_at = utc_now_naive()
+    db.add(new_prompt)
+    prompt.replacement_prompt_id = new_prompt.id
+    db.add(prompt)
+    db.commit()
     return True
 
 

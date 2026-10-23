@@ -6,6 +6,7 @@ venv/
 .env
 agent.db
 agent.db-*
+.agent-state.enc
 logs/prompts/*
 !logs/prompts/.gitkeep
 .pytest_cache/

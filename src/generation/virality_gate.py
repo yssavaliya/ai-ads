@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from src.generation.prompt_forge import PromptForge
+from src.generation.prompt_forge import PromptForge, single_image_variant
 from src.intelligence.virality_predictor import ViralityPredictor
 from src.shared.concurrency import parallel_map
 from src.shared.config import settings
@@ -82,6 +82,10 @@ class ViralityGate:
                 logger.warning("No variants generated on attempt %d", attempt)
                 break
 
+            # Keep the contract at the orchestration boundary too, including
+            # custom/alternate forges and models that ignore the requested schema.
+            variants = [single_image_variant(v) for v in variants]
+
             scored = []
 
             def _score(variant: dict[str, Any]) -> dict[str, Any]:
@@ -153,6 +157,8 @@ class ViralityGate:
             refined = self.forge.refine_with_hints(
                 best_variant, hints, business_profile, audience_map, trend_data
             )
+            if refined:
+                refined = single_image_variant(refined)
             refined_prediction: dict[str, Any] | None = None
             if refined and refined is not best_variant:
                 try:

@@ -188,6 +188,29 @@ def test_parse_exposes_the_title_for_token_verification(monkeypatch):
     assert issue["title"].endswith("b" * 20) and issue["user"] == "Owner" and issue["feedback"] == "bad"
 
 
+def test_parse_feedback_follows_all_issue_pages(monkeypatch):
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(settings, "github_token", "t")
+    monkeypatch.setattr(settings, "github_repo", "o/r")
+    pages = [
+        ([{"number": 1, "title": "[content-intel-feedback] prompt #1 [GOOD]", "user": {"login": "owner"}}],
+         {"next": {"url": "https://api.github.com/repos/o/r/issues?page=2"}}),
+        ([{"number": 2, "title": "[content-intel-feedback] prompt #2 [BAD]", "user": {"login": "owner"}}], {}),
+    ]
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs.get("params")))
+        resp = MagicMock()
+        resp.json.return_value, resp.links = pages.pop(0)
+        return resp
+
+    monkeypatch.setattr(pf.httpx, "get", fake_get)
+    assert [issue["issue_number"] for issue in pf.parse_feedback_issues()] == [1, 2]
+    assert len(calls) == 2 and calls[1][1] is None
+
+
 # ------------------------------------------------------------------ durable identity migration
 def test_migration_gives_every_legacy_prompt_a_unique_random_uid(tmp_path):
     eng = create_engine(f"sqlite:///{tmp_path / 'legacy.db'}")

@@ -148,16 +148,16 @@ class AutoLearner:
 
             # DATA QUALITY before the single, permanent weight update:
             posted_at = self._parse_date(post.get("posted_at"))
-            mature = posted_at is None or (now - posted_at) >= timedelta(hours=MATURITY_HOURS)
+            mature = posted_at is not None and (now - posted_at) >= timedelta(hours=MATURITY_HOURS)
             # Instagram hides like counts on some posts (reported as -1): a 'zero' there is missing
             # data, and scoring it would teach the system that the content flopped.
-            usable = not (post.get("likes_hidden") and not post.get("comments"))
+            usable = not post.get("likes_hidden")
             learn = mature and usable and not already.get(prompt_id)
             if not already.get(prompt_id):
-                if not mature:
-                    deferred += 1
-                elif not usable:
+                if posted_at is None or not usable:
                     unusable += 1
+                elif not mature:
+                    deferred += 1
 
             recorded = self._record(db, business_id, prompt_id, prompt_type, post, rate, outcome, learn=learn)
             # The weights move ONLY the first time a (prompt, post) pair is judged; every later scrape
@@ -226,7 +226,18 @@ class AutoLearner:
         """Median engagement rate of the business's own recent posts.
         Returns (median, count_of_nonzero_posts) so callers can fall back to an
         absolute bar when there isn't enough history to trust the median."""
-        rates = sorted(engagement_rate(p, followers) for p in posts if engagement_rate(p, followers) > 0)
+        now = utc_now_naive()
+        rates = []
+        for post in posts:
+            posted_at = self._parse_date(post.get("posted_at"))
+            if post.get("likes_hidden") or posted_at is None:
+                continue
+            if now - posted_at < timedelta(hours=MATURITY_HOURS):
+                continue
+            rate = engagement_rate(post, followers)
+            if rate > 0:
+                rates.append(rate)
+        rates.sort()
         if not rates:
             return NO_HISTORY_BENCHMARK, 0
         n = len(rates)
@@ -434,7 +445,8 @@ class AutoLearner:
             self._log_engagement(
                 prompt_id, post, rate, outcome, prompt.caption or prompt.prompt_text,
                 meta={
-                    "business": business_id, "prompt_type": prompt_type, "format": prompt.format,
+                    "business": business_id, "business_key": prompt.business.weights_key,
+                    "prompt_type": prompt_type, "format": prompt.format,
                     "virality_score": prompt.virality_score,
                 },
             )

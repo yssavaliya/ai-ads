@@ -61,12 +61,16 @@ def test_forge_prompts_contain_every_input_and_the_schema():
     llm = CapturingLLM({"prompt-forge": [VARIANT], "prompt-forge-refine": VARIANT})
     forge = PromptForge.__new__(PromptForge)
     forge.llm = llm
-    forge.generate_variants({"name": "PROFILE-MARK"}, {"k": "AUDIENCE-MARK"}, {"k": "TREND-MARK"}, ["educational"],
-                            weights={"topics::educational": 0.9, "w": "WEIGHT-MARK"}, improvement_hints=["HINT-MARK"])
+    generated = forge.generate_variants({"name": "PROFILE-MARK"}, {"k": "AUDIENCE-MARK"}, {"k": "TREND-MARK"}, ["educational"],
+                                        weights={"topics::educational": 0.9, "w": "WEIGHT-MARK"}, improvement_hints=["HINT-MARK"])
     sent = llm.prompts["prompt-forge"]
     for marker in ("PROFILE-MARK", "AUDIENCE-MARK", "TREND-MARK", "WEIGHT-MARK", "HINT-MARK", "educational"):
         assert marker in sent, marker
-    assert "Respond ONLY with JSON" in sent and '"reel_beats"' in sent
+    assert "Respond ONLY with JSON" in sent and '"format": "single image"' in sent
+    assert "exactly one static image" in sent
+    assert generated[0]["format"] == "single image" and generated[0]["reel_beats"] == []
+    assert "exactly one finished static image" in generated[0]["prompt_text"]
+    assert llm.answers["prompt-forge"][0]["format"] == "reel"  # deliberately hostile model response
 
     forge.refine_with_hints({**VARIANT, "title": "BEST-MARK"}, ["CRITIQUE-MARK"], {"name": "PROFILE-MARK"},
                             {"k": "AUDIENCE-MARK"}, {"k": "TREND-MARK"})
@@ -74,6 +78,8 @@ def test_forge_prompts_contain_every_input_and_the_schema():
     for marker in ("BEST-MARK", "CRITIQUE-MARK", "PROFILE-MARK", "AUDIENCE-MARK", "TREND-MARK"):
         assert marker in refined, marker
     assert "Respond ONLY with the improved prompt as JSON" in refined
+    assert '"format": "single image"' in refined
+    assert forge.refine_with_hints({**VARIANT}, ["HINT"], {}, {}, {})["format"] == "single image"
 
 
 def test_audience_trend_and_competitor_prompts_contain_their_inputs():

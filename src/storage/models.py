@@ -124,6 +124,7 @@ class Prompt(Base):
     feedback: Mapped[FeedbackType | None] = mapped_column(SQLEnum(FeedbackType), nullable=True)
     feedback_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     github_issue_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    replacement_prompt_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Set when the auto-learner has counted this prompt's post toward the weights (exactly once).
     auto_learned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     audience_segment: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -250,6 +251,7 @@ def _migrate(bind: Any = None) -> None:
         ("prompts", "format", "VARCHAR(40)"),
         ("prompts", "uid", "VARCHAR(32)"),
         ("prompts", "auto_learned_at", "DATETIME"),
+        ("prompts", "replacement_prompt_id", "INTEGER"),
     ]
     log = logging.getLogger(__name__)
     with (bind or engine).connect() as conn:

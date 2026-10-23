@@ -78,7 +78,7 @@ def test_stateful_workflows_restore_and_persist_state(name):
     assert persist[0]["with"]["files"].strip()
 
 
-def test_persist_action_stages_files_individually_and_saves_cache_always():
+def test_persist_action_stages_files_individually_and_saves_encrypted_cache_always():
     action = _load(GH / "actions" / "persist-state" / "action.yml")
     steps = action["runs"]["steps"]
     commit = next(s for s in steps if s["name"] == "Commit state")["run"]
@@ -87,14 +87,19 @@ def test_persist_action_stages_files_individually_and_saves_cache_always():
     assert "git add data/" not in commit
     assert "git pull --rebase" in commit and "for attempt in 1 2 3" in commit
     save = next(s for s in steps if s.get("uses", "").startswith("actions/cache/save"))
-    assert save["if"] == "always()"
-    assert "data/cache" in save["with"]["path"] and "agent.db" in save["with"]["path"]
+    assert str(save["if"]).startswith("always()")
+    assert save["with"]["path"] == ".agent-state.enc"
+    assert "agent-db-" not in save["with"]["key"]
+    assert any(s.get("name") == "Encrypt private agent state" for s in steps)
 
 
 def test_setup_action_restores_state_without_saving_early():
     steps = _load(GH / "actions" / "setup-agent" / "action.yml")["runs"]["steps"]
     uses = [s.get("uses", "") for s in steps]
     assert any(u.startswith("actions/cache/restore@") for u in uses) and not any("cache/save" in u for u in uses)
+    restore = next(s for s in steps if s.get("uses", "").startswith("actions/cache/restore"))
+    assert restore["with"]["path"] == ".agent-state.enc"
+    assert any(s.get("name") == "Decrypt private agent state" for s in steps)
     # Reels are best-effort: a missing piper/ffmpeg may warn but must not kill the job
     check = next(s for s in steps if "render dependencies" in s.get("name", ""))
     assert "exit 1" not in check["run"]

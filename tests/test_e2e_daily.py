@@ -116,7 +116,7 @@ def test_daily_pipeline_end_to_end(pipeline_env):
     page = (site / "b" / "e2e-bakery" / "index.html").read_text(encoding="utf-8")
     assert "E2E Bakery" in page and "Caption" in page and "#bake" in page
     assert page.count('class="card"') == 3
-    manifest = json.loads((site / "data" / "e2e-bakery.json").read_text(encoding="utf-8"))
+    manifest = json.loads((settings.data_dir / "site_manifests" / "e2e-bakery.json").read_text(encoding="utf-8"))
     assert len(manifest["entries"]) == 3
     for entry in manifest["entries"]:
         assert (site / entry["asset"]["image"]).exists() and (site / entry["asset"]["thumb"]).exists()

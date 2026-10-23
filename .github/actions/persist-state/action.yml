@@ -14,6 +14,9 @@ inputs:
   discard:
     description: Space-separated tracked files to reset (one-off overrides that must not be committed)
     default: ""
+  state_encryption_key:
+    description: Fernet key used to encrypt the private database/cache artifact
+    required: false
 
 runs:
   using: composite
@@ -54,13 +57,21 @@ runs:
         echo "::error::could not push state after 3 attempts"
         exit 1
 
-    - name: Save agent.db + intel cache
-      if: always()
+    - name: Encrypt private agent state
+      if: always() && inputs.state_encryption_key != ''
+      shell: bash
+      env:
+        STATE_ENCRYPTION_KEY: ${{ inputs.state_encryption_key }}
+      run: python scripts/state_cache.py encrypt
+
+    - name: Warn if private state cache encryption is unavailable
+      if: always() && inputs.state_encryption_key == ''
+      shell: bash
+      run: echo "::warning::STATE_ENCRYPTION_KEY is not configured; private agent state was not cached"
+
+    - name: Save encrypted agent state
+      if: always() && inputs.state_encryption_key != ''
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
-        path: |
-          agent.db
-          agent.db-wal
-          agent.db-shm
-          data/cache
-        key: agent-db-${{ runner.os }}-${{ github.run_id }}
+        path: .agent-state.enc
+        key: agent-state-v1-${{ runner.os }}-${{ github.run_id }}

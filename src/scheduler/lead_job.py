@@ -49,13 +49,20 @@ class LeadPipeline:
         self.delivery = get_delivery()
         self.weights = BayesianUpdater()
 
-    def _fetch_social(self, handle: str) -> dict[str, Any]:
+    def _fetch_social(self, handle: str, deadline: float | None = None) -> dict[str, Any]:
         """One Apify/instaloader fetch per handle per run. The learning pass,
         candidate scoring and known-lead merge all need the same data."""
         cache: dict[str, dict[str, Any]] = self.__dict__.setdefault("_social_cache", {})
         key = handle.lstrip("@").lower()
         if key not in cache:
-            cache[key] = asyncio.run(SocialScraper().fetch_instagram(handle))
+            fetch = SocialScraper().fetch_instagram(handle)
+            timeout = None if deadline is None else max(0.0, deadline - time.monotonic())
+            if timeout == 0:
+                return {"posts": [], "error": "lead time budget exhausted"}
+            try:
+                cache[key] = asyncio.run(asyncio.wait_for(fetch, timeout=timeout))
+            except TimeoutError:
+                return {"posts": [], "error": "lead time budget exhausted"}
         return cache[key]
 
     def load_config(self) -> dict[str, Any]:
@@ -81,6 +88,7 @@ class LeadPipeline:
 
     def run(self) -> dict[str, Any]:
         config = self.load_config()
+        deadline = time.monotonic() + settings.lead_time_budget_seconds
         logger.info(
             "Lead pipeline: niches=%s locations=%s target=%d",
             config["niches"], config["locations"], config["target_count"],
@@ -88,17 +96,30 @@ class LeadPipeline:
 
         # 1) Self-learning pass: re-scrape previously discovered leads, match
         #    their new posts to prompts we generated before, update weights.
-        learning = self._learning_pass()
+        learning = self._learning_pass(deadline)
 
-        raw_candidates = asyncio.run(
-            self.finder.discover(
-                config["niches"],
-                config["locations"],
-                config["target_count"] * 4,
-                config["platform_focus"],
-            )
-        )
-        candidates = asyncio.run(self.finder.enrich_with_socials(raw_candidates))
+        raw_candidates: list[dict[str, Any]] = []
+        candidates: list[dict[str, Any]] = []
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            try:
+                raw_candidates = asyncio.run(asyncio.wait_for(
+                    self.finder.discover(
+                        config["niches"], config["locations"],
+                        config["target_count"] * 4, config["platform_focus"],
+                    ),
+                    timeout=remaining,
+                ))
+            except TimeoutError:
+                logger.warning("::warning::Lead time budget exhausted during discovery")
+        remaining = deadline - time.monotonic()
+        if remaining > 0 and raw_candidates:
+            try:
+                candidates = asyncio.run(asyncio.wait_for(
+                    self.finder.enrich_with_socials(raw_candidates), timeout=remaining
+                ))
+            except TimeoutError:
+                logger.warning("::warning::Lead time budget exhausted during enrichment")
         logger.info("Discovered %d candidates with social handles", len(candidates))
 
         if config.get("enforce_location"):
@@ -106,7 +127,6 @@ class LeadPipeline:
             candidates = [c for c in candidates if self._is_local(c, config)]
             logger.info("Location filter dropped %d non-local candidates", before - len(candidates))
 
-        deadline = time.monotonic() + settings.lead_time_budget_seconds
         scored_leads: list[dict[str, Any]] = []
         structurally_ineligible: list[dict[str, Any]] = []
         for candidate in candidates:
@@ -119,7 +139,7 @@ class LeadPipeline:
             handle = candidate.get("instagram_handle") or ""
             social_data = {}
             if handle:
-                social_data = dict(self._fetch_social(handle))
+                social_data = dict(self._fetch_social(handle, deadline))
                 if social_data.get("follower_count"):
                     candidate["follower_count"] = social_data["follower_count"]
                 elif candidate.get("follower_count"):
@@ -158,7 +178,7 @@ class LeadPipeline:
         # keeps delivering content instead of going empty once the good leads
         # have been delivered once and parked in the 21-day seen-cache.
         try:
-            top_leads = self._merge_known_leads(db, top_leads, config)
+            top_leads = self._merge_known_leads(db, top_leads, config, deadline)
         except Exception as exc:
             logger.warning("Could not merge known leads: %s", exc)
 
@@ -301,7 +321,7 @@ class LeadPipeline:
         return {(b.get("name") or "").lower() for b in load_businesses()}
 
     def _merge_known_leads(
-        self, db: Any, top_leads: list[dict[str, Any]], config: dict[str, Any]
+        self, db: Any, top_leads: list[dict[str, Any]], config: dict[str, Any], deadline: float | None = None
     ) -> list[dict[str, Any]]:
         """Include previously-discovered eligible businesses (from the DB) in
         the digest so it keeps delivering content instead of going empty once
@@ -322,12 +342,14 @@ class LeadPipeline:
 
         known: list[dict[str, Any]] = []
         for biz in businesses:
+            if deadline is not None and time.monotonic() >= deadline:
+                break
             handle = (biz.instagram_handle or "").lstrip("@")
             if not handle or handle.lower() in exclude or (biz.name or "").lower() in clients:
                 continue
             social_data: dict[str, Any] = {}
             try:
-                sd = self._fetch_social(handle)
+                sd = self._fetch_social(handle, deadline)
                 if sd.get("follower_count"):
                     social_data = sd
             except Exception as exc:
@@ -360,7 +382,7 @@ class LeadPipeline:
         merged.sort(key=lambda lead: lead.get("opportunity_score", 0), reverse=True)
         return merged[: config["target_count"]]
 
-    def _learning_pass(self) -> dict[str, Any]:
+    def _learning_pass(self, deadline: float | None = None) -> dict[str, Any]:
         """Re-scrape every known lead's Instagram, match new posts to prompts
         we generated earlier, and feed engagement outcomes into the weights."""
         Base.metadata.create_all(bind=db_engine)
@@ -377,10 +399,13 @@ class LeadPipeline:
             )
             clients = self._client_names()
             for biz in businesses:
+                if deadline is not None and time.monotonic() >= deadline:
+                    logger.warning("::warning::Lead time budget exhausted during lead learning")
+                    break
                 if (biz.name or "").lower() in clients:
                     continue  # clients are learned from by engagement.yml / daily job
                 try:
-                    social = self._fetch_social(biz.instagram_handle or "")
+                    social = self._fetch_social(biz.instagram_handle or "", deadline)
                     res = learner.run_for_business(biz.id, social, db)
                     totals["leads_checked"] += 1
                     totals["matched"] += int(res.get("matched") or 0)

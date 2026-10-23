@@ -61,7 +61,7 @@ def test_no_email_address_reaches_any_generated_file_in_any_mode(pub, tmp_path, 
     pub.send_onboarding(BIZ, {"title": "t", "meta_description": "call +91 98765 43210 or info@sweet.example", "headings": ["mail a@b.co"]})
     pub.send_lead_digest("op@x.io", [_lead(tmp_path)])
     assert _site_emails(pub.site_dir) == set()
-    blob = (pub.site_dir / "data/sweet-crumbs-bakery.json").read_text(encoding="utf-8")
+    blob = (settings.data_dir / "site_manifests/sweet-crumbs-bakery.json").read_text(encoding="utf-8")
     assert "98765" not in blob and "[email removed]" in blob
 
 
@@ -84,7 +84,7 @@ def test_rotating_the_secret_revokes_old_urls_and_rehomes_content(pub, tmp_path,
     assert not (pub.site_dir / "assets" / old_key).exists()
     assert (pub.site_dir / "b" / new_key / "index.html").exists() and (pub.site_dir / new_lead_key / "index.html").exists()
     # the content survived: media moved and the manifest points at the new location
-    entry = json.loads((pub.site_dir / "data/sweet-crumbs-bakery.json").read_text())["entries"][0]
+    entry = json.loads((settings.data_dir / "site_manifests/sweet-crumbs-bakery.json").read_text())["entries"][0]
     assert entry["asset"]["image"].startswith(f"assets/{new_key}/") and (pub.site_dir / entry["asset"]["image"]).exists()
     assert old_key not in "\n".join(pub.summary()) and new_key in "\n".join(pub.summary())
     assert (pub.site_dir / ".dirty").exists()  # a sweep alone must trigger a deploy
@@ -94,8 +94,8 @@ def test_rotating_the_secret_revokes_old_urls_and_rehomes_content(pub, tmp_path,
 def test_manifests_are_named_by_the_stable_slug_not_the_secret(pub, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "site_secret", "alpha")
     pub.send_daily_prompts(BIZ, [_prompt(tmp_path)])
-    assert (pub.site_dir / "data/sweet-crumbs-bakery.json").exists()
-    assert not list((pub.site_dir / "data").glob("sweet-crumbs-bakery-*.json"))
+    assert (settings.data_dir / "site_manifests/sweet-crumbs-bakery.json").exists()
+    assert not list((settings.data_dir / "site_manifests").glob("sweet-crumbs-bakery-*.json"))
 
 
 def test_legacy_manifest_named_by_its_old_key_is_normalised_not_duplicated(pub, tmp_path, monkeypatch):
@@ -103,9 +103,12 @@ def test_legacy_manifest_named_by_its_old_key_is_normalised_not_duplicated(pub, 
     monkeypatch.setattr(settings, "site_secret", "alpha")
     pub.send_daily_prompts(BIZ, [_prompt(tmp_path)])
     key = SitePublisher.path_key(BIZ["name"])
-    (pub.site_dir / "data/sweet-crumbs-bakery.json").rename(pub.site_dir / "data" / f"{key}.json")
+    manifest = settings.data_dir / "site_manifests/sweet-crumbs-bakery.json"
+    (pub.site_dir / "data").mkdir(exist_ok=True)
+    manifest.rename(pub.site_dir / "data" / f"{key}.json")
+    pub = SitePublisher(pub.site_dir)  # site checkout exists before the publisher starts in production
     pub.rebuild()
-    assert (pub.site_dir / "data/sweet-crumbs-bakery.json").exists() and not (pub.site_dir / "data" / f"{key}.json").exists()
+    assert manifest.exists() and not (pub.site_dir / "data" / f"{key}.json").exists()
     assert len(list((pub.site_dir / "b").iterdir())) == 1
 
 
@@ -113,7 +116,7 @@ def test_removing_a_business_sweeps_its_pages_and_media(pub, tmp_path):
     pub.send_daily_prompts(BIZ, [_prompt(tmp_path)])
     pub.send_daily_prompts({**BIZ, "name": "Gone Co"}, [_prompt(tmp_path, 2)])
     assert (pub.site_dir / "b/gone-co/index.html").exists()
-    (pub.site_dir / "data/gone-co.json").unlink()  # offboarded
+    (settings.data_dir / "site_manifests/gone-co.json").unlink()  # offboarded
     (pub.site_dir / ".dirty").unlink()
     pub.rebuild()
     assert not (pub.site_dir / "b/gone-co").exists() and not (pub.site_dir / "assets/gone-co").exists()

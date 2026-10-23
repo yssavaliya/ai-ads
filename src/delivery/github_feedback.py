@@ -109,9 +109,13 @@ class GithubFeedback:
         reading Actions logs. Never raises."""
         if not self.enabled or not failures:
             return None
-        import datetime
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
 
-        date_str = datetime.date.today().isoformat()
+        try:
+            date_str = datetime.now(ZoneInfo(settings.default_timezone)).date().isoformat()
+        except Exception:
+            date_str = datetime.now().date().isoformat()
         title = f"{DEGRADED_TITLE} — {date_str}"
         entry_lines = []
         for f in failures[:40]:

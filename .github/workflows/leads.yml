@@ -58,6 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-agent
@@ -99,9 +100,10 @@ jobs:
       - uses: ./.github/actions/persist-state
         if: always()
         with:
-          files: data/leads.json data/lead_seen.json data/lead_rejected.json data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl
+          files: data/leads.json data/lead_seen.json data/lead_rejected.json data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl data/site_manifests
           discard: data/lead_config.json
           message: "chore: lead discovery state"
+          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 
       - uses: ./.github/actions/publish-site
         if: always()

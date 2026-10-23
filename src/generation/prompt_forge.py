@@ -8,6 +8,18 @@ from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_tex
 
 logger = logging.getLogger(__name__)
 
+
+def single_image_variant(variant: dict[str, Any]) -> dict[str, Any]:
+    """Enforce the product's single static image format on generated prompts."""
+    normalized = dict(variant)
+    normalized["format"] = "single image"
+    normalized["reel_beats"] = []
+    text = str(normalized.get("prompt_text", "")).strip()
+    requirement = "Visual deliverable: create exactly one finished static image, with the complete composition in a single frame."
+    if text and requirement.casefold() not in text.casefold():
+        normalized["prompt_text"] = f"{text}\n\n{requirement}"
+    return normalized
+
 PROMPT_TYPE_DESCRIPTIONS = {
     "educational": "Teach one valuable lesson or insight, actionable, with a strong specific hook.",
     "storytelling": "Tell a relatable story with a turning point and a lesson tied to the brand.",
@@ -76,6 +88,8 @@ Learned weights (topic:format:audience → weight, higher = more proven):
 Each generated prompt must include: a scroll-stopping hook, the core message,
 specific details (numbers, examples, Indian context), a call to action,
 and platform guidance (Instagram: visual-first; LinkedIn: thought-leadership).
+Every prompt must be for exactly one static image in one frame. Do not suggest
+multiple slides, a carousel, a Reel, video, animation, or a sequence of frames.
 
 Respond ONLY with JSON:
 [
@@ -86,10 +100,9 @@ Respond ONLY with JSON:
     "prompt_text": "the complete ready-to-use content prompt (150-350 words)",
     "hashtags": ["#tag1", "#tag2", "#tag3"],
     "platform_focus": "instagram" | "linkedin" | "both",
-    "format": "reel" | "carousel" | "story" | "single image" | "text post",
+    "format": "single image",
     "angle": "one sentence on the strategic angle",
-    "audience_segment": "which persona name from the audience map this targets",
-    "reel_beats": ["3-5 short on-screen text lines for a reel version"]
+    "audience_segment": "which persona name from the audience map this targets"
   }}
 ]
 """
@@ -106,7 +119,7 @@ Respond ONLY with JSON:
                 "prompt_text": str(v.get("prompt_text", "")),
                 "hashtags": [str(h) for h in v.get("hashtags", []) if str(h).startswith("#")],
                 "platform_focus": str(v.get("platform_focus", "both")),
-                "format": str(v.get("format", "reel")).lower(),
+                "format": "single image",
                 "angle": str(v.get("angle", "")),
                 "audience_segment": str(v.get("audience_segment", "") or ""),
                 "reel_beats": [str(b).strip() for b in v.get("reel_beats", []) if str(b).strip()][:5],
@@ -116,6 +129,7 @@ Respond ONLY with JSON:
         ]
         if not variants:
             raise ValueError("prompt forge produced no usable variants")
+        variants = [single_image_variant(v) for v in variants]
         logger.info("Generated %d prompt variants", len(variants))
         return variants[:count]
 
@@ -131,6 +145,8 @@ Respond ONLY with JSON:
         hints = "\n".join(f"- {h}" for h in improvement_hints)
         prompt = f"""
 You are a viral content strategist. Improve this content prompt to maximize virality.
+Keep the deliverable to exactly one static image in one frame. Do not suggest slides,
+a carousel, a Reel, video, animation, or a sequence of frames.
 
 Current prompt:
 {fence(best_variant)}
@@ -155,24 +171,23 @@ Respond ONLY with the improved prompt as JSON with the same fields:
   "prompt_text": "...",
   "hashtags": ["..."],
   "platform_focus": "...",
-  "format": "...",
+  "format": "single image",
   "angle": "...",
-  "audience_segment": "...",
-  "reel_beats": ["..."]
+  "audience_segment": "..."
 }}
 """
         try:
             data = self.llm.run_json(prompt, label="prompt-forge-refine", temperature=0.6, expect=(dict,))
             if not isinstance(data, dict) or not data.get("prompt_text"):
                 raise ValueError("refined prompt invalid")
-            return {
+            return single_image_variant({
                 "prompt_type": str(data.get("prompt_type", best_variant.get("prompt_type", "educational"))),
                 "title": str(data.get("title", best_variant.get("title", ""))),
                 "hook": str(data.get("hook", best_variant.get("hook", ""))),
                 "prompt_text": str(data.get("prompt_text", "")),
                 "hashtags": [str(h) for h in data.get("hashtags", best_variant.get("hashtags", []))],
                 "platform_focus": str(data.get("platform_focus", best_variant.get("platform_focus", "both"))),
-                "format": str(data.get("format", best_variant.get("format", "reel"))).lower(),
+                "format": "single image",
                 "angle": str(data.get("angle", best_variant.get("angle", ""))),
                 "audience_segment": str(data.get("audience_segment", "") or best_variant.get("audience_segment", "")),
                 "reel_beats": [
@@ -180,7 +195,7 @@ Respond ONLY with the improved prompt as JSON with the same fields:
                     for b in data.get("reel_beats", best_variant.get("reel_beats", []))
                     if str(b).strip()
                 ][:5],
-            }
+            })
         except Exception as exc:
             # Refinement is an optimization: keep the previous honest variant
             # rather than fabricating, but make the degradation visible.

@@ -70,7 +70,7 @@ def test_weekly_llm_failure_delivers_a_placeholder_but_fails_the_run(weekly_env,
     assert exit_info.value.code == 1
     assert degraded_reports and degraded_reports[0][0]["stage"] == "report" and degraded_reports[0][0]["business"] == "Weekly Co"
     # the placeholder is still delivered so the owner sees the problem on the site, without the internal marker
-    manifest = json.loads((settings.site_dir / "data/weekly-co.json").read_text(encoding="utf-8"))
+    manifest = json.loads((settings.data_dir / "site_manifests/weekly-co.json").read_text(encoding="utf-8"))
     assert "Report generation failed" in json.dumps(manifest["weekly"][0]["report"])
     assert "_degraded" not in json.dumps(manifest)
 

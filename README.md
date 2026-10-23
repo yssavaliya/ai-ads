@@ -232,7 +232,10 @@ touches `data/` or `agent.db`. Optional: `pre-commit install` (ruff on commit, p
 ## Operations notes
 
 - **State:** JSON in `data/` is committed by the workflows; `agent.db` and `data/cache/`
-  live in the Actions cache (saved even when a run fails). Weights are keyed by business
+  live in an encrypted Actions cache (saved even when a run fails). Configure the repository
+  secret `STATE_ENCRYPTION_KEY` (a long random value, e.g. `python -c "import secrets; print(secrets.token_urlsafe(48))"`);
+  `FEEDBACK_SIGNING_KEY` is used as a fallback. Cached state is encrypted before upload, so
+  pull request workflows cannot read it. Weights are keyed by business
   *slug* (`Business.weights_key`), so a rebuilt `agent.db` can never attach them to the wrong business.
 - **Failures are loud:** pipelines exit non-zero when nothing was produced or nothing
   was delivered, and a `[pipeline] degraded run` issue is opened. `drift_check.yml`

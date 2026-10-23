@@ -31,9 +31,9 @@ def test_engagement_rate():
 
 def test_benchmark_median():
     posts = [
-        {"likes": 10, "comments": 0, "shares": 0, "saves": 0, "reach": 100},
-        {"likes": 30, "comments": 0, "shares": 0, "saves": 0, "reach": 100},
-        {"likes": 20, "comments": 0, "shares": 0, "saves": 0, "reach": 100},
+        {"likes": 10, "comments": 0, "shares": 0, "saves": 0, "reach": 100, "posted_at": "2020-01-01T00:00:00Z"},
+        {"likes": 30, "comments": 0, "shares": 0, "saves": 0, "reach": 100, "posted_at": "2020-01-01T00:00:00Z"},
+        {"likes": 20, "comments": 0, "shares": 0, "saves": 0, "reach": 100, "posted_at": "2020-01-01T00:00:00Z"},
     ]
     median, n = AutoLearner()._benchmark_median(posts, None)
     assert abs(median - 0.2) < 1e-6

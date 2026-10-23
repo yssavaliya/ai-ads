@@ -116,11 +116,11 @@ def run_lead_workflow() -> int:
     assert delivered, "Lead digest delivery failed"
 
     # Verify files created on disk
-    site_leads_data = Path("site/data/_leads.json")
+    leads_manifest = Path(settings.data_dir) / "site_manifests" / "_leads.json"
     site_leads_page = Path("site/leads/index.html")
-    assert site_leads_data.exists(), "site/data/_leads.json was not created"
+    assert leads_manifest.exists(), f"{leads_manifest} was not created"
     assert site_leads_page.exists(), "site/leads/index.html was not created"
-    print(f"Verified: {site_leads_data} exists ({site_leads_data.stat().st_size} bytes)")
+    print(f"Verified: {leads_manifest} exists ({leads_manifest.stat().st_size} bytes)")
     print(f"Verified: {site_leads_page} exists ({site_leads_page.stat().st_size} bytes)")
 
     print("\n✅ LEAD WORKFLOW GENERATION COMPLETED SUCCESSFULLY!")

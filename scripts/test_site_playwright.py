@@ -61,9 +61,9 @@ def run_tests() -> int:
             aimagix_title = page.title()
             print(f"Aimagix Studio title: {aimagix_title}")
             assert "Aimagix Studio" in aimagix_title
-            banner = page.locator(".banner.warn")
-            assert banner.count() > 0, "Expected warning banner when no prompts were generated"
-            print(f"Warning banner verified: {banner.text_content()[:60]}...")
+            banner = page.locator(".banner.warn").first
+            assert banner.count() > 0, "Expected warning banner"
+            print(f"Warning banner verified: {(banner.text_content() or '')[:60]}...")
             # Go back to home
             page.locator(".brand").click()
             page.wait_for_load_state("networkidle")

@@ -45,7 +45,7 @@ def pub(tmp_path):
 
 
 def _manifest(pub, key="sweet-crumbs-bakery"):
-    return json.loads((pub.site_dir / "data" / f"{key}.json").read_text(encoding="utf-8"))
+    return json.loads((settings.data_dir / "site_manifests" / f"{key}.json").read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------- publishing
@@ -151,7 +151,7 @@ def test_old_entries_and_their_media_are_pruned(pub, tmp_path, monkeypatch):
     stale_dir.mkdir(parents=True)
     (stale_dir / "old.jpg").write_bytes(b"x")
     manifest["entries"].append({**manifest["entries"][0], "id": f"{old_day}-9", "date": old_day, "created_at": old_day})
-    (pub.site_dir / "data/sweet-crumbs-bakery.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (settings.data_dir / "site_manifests/sweet-crumbs-bakery.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     pub.send_daily_prompts(BIZ, [_prompt(tmp_path, 2)])
     assert {e["date"] for e in _manifest(pub)["entries"]} == {date.today().isoformat()}
@@ -171,7 +171,7 @@ def test_lead_digest_page_hides_contact_emails_unless_private(pub, tmp_path):
     pub.send_lead_digest("ignored@x.io", [_lead(tmp_path)])
     page = (pub.site_dir / "leads/index.html").read_text(encoding="utf-8")
     assert "Green Bakery" in page and "Reveal the cake" in page and "hello@g.example" not in page
-    assert "hello@g.example" not in (pub.site_dir / "data/_leads.json").read_text(encoding="utf-8")
+    assert "hello@g.example" not in (settings.data_dir / "site_manifests/_leads.json").read_text(encoding="utf-8")
     assert 'href="leads/' in (pub.site_dir / "index.html").read_text(encoding="utf-8")
 
 
@@ -183,15 +183,15 @@ def test_lead_digest_never_shows_emails_even_when_the_site_is_secret(pub, tmp_pa
     key = pub.leads_key()
     assert key.startswith("l-")
     assert "hello@g.example" not in (pub.site_dir / key / "index.html").read_text(encoding="utf-8")
-    assert "hello@g.example" not in (pub.site_dir / "data/_leads.json").read_text(encoding="utf-8")
+    assert "hello@g.example" not in (settings.data_dir / "site_manifests/_leads.json").read_text(encoding="utf-8")
     assert not (pub.site_dir / "leads").exists()
 
 
 def test_a_business_called_leads_cannot_clobber_the_leads_manifest(pub, tmp_path):
     pub.send_lead_digest("x", [_lead(tmp_path)])
     pub.send_daily_prompts({**BIZ, "name": "Leads"}, [_prompt(tmp_path)])
-    assert (pub.site_dir / "data/_leads.json").exists() and (pub.site_dir / "data/leads.json").exists()
-    assert json.loads((pub.site_dir / "data/_leads.json").read_text())["digests"][0]["leads"][0]["name"] == "Green Bakery"
+    assert (settings.data_dir / "site_manifests/_leads.json").exists() and (settings.data_dir / "site_manifests/leads.json").exists()
+    assert json.loads((settings.data_dir / "site_manifests/_leads.json").read_text())["digests"][0]["leads"][0]["name"] == "Green Bakery"
 
 
 # -------------------------------------------------------------------- privacy
@@ -235,7 +235,7 @@ def test_rebuild_is_idempotent_and_survives_a_corrupt_manifest(pub, tmp_path):
     pub.rebuild()
     assert (pub.site_dir / "b/sweet-crumbs-bakery/index.html").read_text(encoding="utf-8") == first
 
-    (pub.site_dir / "data/sweet-crumbs-bakery.json").write_text("{ not json", encoding="utf-8")
+    (settings.data_dir / "site_manifests/sweet-crumbs-bakery.json").write_text("{ not json", encoding="utf-8")
     pub.send_daily_prompts(BIZ, [_prompt(tmp_path, 5)])  # starts that business fresh instead of crashing
     assert len(_manifest(pub)["entries"]) == 1
 

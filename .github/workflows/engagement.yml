@@ -28,6 +28,8 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-agent
+        with:
+          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 
       - name: Scrape IG engagement and learn
         run: bash .github/scripts/run_pipeline.sh src.learning.auto_learner
@@ -37,3 +39,4 @@ jobs:
         with:
           files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl
           message: "chore: engagement sync state"
+          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}

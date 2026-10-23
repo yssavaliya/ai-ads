@@ -26,6 +26,8 @@ import shutil
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -45,7 +47,28 @@ NOTICE_KEEP = 7
 
 
 def _today() -> str:
-    return date.today().isoformat()
+    try:
+        return datetime.now(ZoneInfo(settings.default_timezone)).date().isoformat()
+    except Exception:
+        return datetime.now().date().isoformat()
+
+
+def _today_date() -> date:
+    return date.fromisoformat(_today())
+
+
+def _safe_http_url(value: Any) -> str:
+    """Return a browser-safe external URL or an empty string."""
+    if not isinstance(value, str):
+        return ""
+    url: str = value.strip()
+    try:
+        parsed = urlsplit(url)
+        if parsed.scheme.lower() in {"http", "https"} and parsed.hostname:
+            return url
+    except ValueError:
+        pass
+    return ""
 
 
 class SitePublisher:
@@ -61,6 +84,7 @@ class SitePublisher:
         )
         self._env.filters["pretty_type"] = lambda v: str(v or "").replace("_", " ").title()
         self._env.filters["pretty_date"] = _pretty_date
+        self._migrate_public_manifests()
 
     # ------------------------------------------------------------------
     # keys / urls
@@ -98,9 +122,47 @@ class SitePublisher:
     # manifests
     # ------------------------------------------------------------------
     def _data_dir(self) -> Path:
-        d = self.site_dir / "data"
+        # Manifests are application state, not static-site assets. Keeping them
+        # outside the Pages checkout prevents predictable JSON URLs bypassing
+        # the unlisted page URLs when SITE_SECRET is enabled.
+        d = Path(settings.data_dir) / "site_manifests"
         d.mkdir(parents=True, exist_ok=True)
         return d
+
+    def _migrate_public_manifests(self) -> None:
+        """Move legacy manifests out of the published tree on the next run."""
+        legacy = self.site_dir / "data"
+        if not legacy.is_dir():
+            return
+        state = self._data_dir()
+        moved = False
+        for source in legacy.glob("*.json"):
+            target_name = source.name
+            try:
+                legacy_manifest = json.loads(source.read_text(encoding="utf-8"))
+                business_name = legacy_manifest.get("business", {}).get("name")
+                if business_name:
+                    target_name = f"{slugify(business_name)}.json"
+            except (OSError, ValueError, AttributeError):
+                pass
+            target = state / target_name
+            if not target.exists():
+                # Atomically move on the same checkout; if filesystems differ,
+                # copy successfully before removing the only public source.
+                try:
+                    source.replace(target)
+                    moved = True
+                    continue
+                except OSError:
+                    target.write_bytes(source.read_bytes())
+            source.unlink(missing_ok=True)
+            moved = True
+        try:
+            legacy.rmdir()
+        except OSError:
+            pass
+        if moved:
+            self._touch_dirty()
 
     def _manifest_path(self, key: str) -> Path:
         return self._data_dir() / f"{key}.json"
@@ -154,6 +216,7 @@ class SitePublisher:
         self._manifest_path(key).write_text(json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8")
 
     def _touch_dirty(self) -> None:
+        self.site_dir.mkdir(parents=True, exist_ok=True)
         (self.site_dir / ".dirty").write_text(utc_now_naive().isoformat(), encoding="utf-8")
 
     @staticmethod
@@ -162,7 +225,7 @@ class SitePublisher:
         return {
             "name": business.get("name", ""),
             "instagram_handle": business.get("instagram_handle") or "",
-            "website_url": business.get("website_url") or "",
+            "website_url": _safe_http_url(business.get("website_url")),
         }
 
     # ------------------------------------------------------------------
@@ -325,7 +388,7 @@ class SitePublisher:
                 })
             published.append({
                 "name": redact_text(lead.get("name") or ""), "instagram_handle": lead.get("instagram_handle") or "",
-                "website_url": lead.get("website_url") or "", "niche": lead.get("niche") or "",
+                "website_url": _safe_http_url(lead.get("website_url")), "niche": lead.get("niche") or "",
                 "followers": lead.get("followers") or lead.get("follower_count") or 0,
                 "opportunity_score": lead.get("opportunity_score"),
                 "reasons": [redact_text(str(r)) for r in (lead.get("opportunity_reasons") or [])],
@@ -348,7 +411,7 @@ class SitePublisher:
     # retention
     # ------------------------------------------------------------------
     def _prune(self, key: str, manifest: dict[str, Any]) -> None:
-        cutoff = (date.today() - timedelta(days=settings.site_retention_days)).isoformat()
+        cutoff = (_today_date() - timedelta(days=settings.site_retention_days)).isoformat()
         manifest["entries"] = [e for e in manifest["entries"] if e.get("date", "") >= cutoff]
         keep_days = {e["date"] for e in manifest["entries"]}
         assets = self.site_dir / "assets" / key
@@ -380,6 +443,7 @@ class SitePublisher:
         so publishing N businesses cost O(N^2) renders. A full re-render still happens when `changed`
         is None, when a page is missing, or when the templates changed (fingerprint)."""
         self.site_dir.mkdir(parents=True, exist_ok=True)
+        self._migrate_public_manifests()
         fingerprint = self._templates_fingerprint()
         stamp = self._data_dir() / "_build.json"
         try:
@@ -530,8 +594,9 @@ def _pretty_date(value: str) -> str:
         d = datetime.strptime(value, "%Y-%m-%d").date()
     except (TypeError, ValueError):
         return str(value)
-    if d == date.today():
+    today = _today_date()
+    if d == today:
         return "Today"
-    if d == date.today() - timedelta(days=1):
+    if d == today - timedelta(days=1):
         return "Yesterday"
     return d.strftime("%a %d %b %Y")

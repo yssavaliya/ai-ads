@@ -298,6 +298,10 @@ class EmailSender:
 
     @staticmethod
     def _today_str() -> str:
-        import datetime
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
 
-        return datetime.date.today().isoformat()
+        try:
+            return datetime.now(ZoneInfo(settings.default_timezone)).date().isoformat()
+        except Exception:
+            return datetime.now().date().isoformat()

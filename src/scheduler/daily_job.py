@@ -409,6 +409,7 @@ class DailyPipeline:
         prompts = (
             db.query(Prompt)
             .filter(Prompt.business_id == biz.id, Prompt.sent_at >= cutoff)
+            .order_by(Prompt.sent_at.desc())
             .all()
         )
         # Ground the predictor on what was actually POSTED (the caption), not
@@ -431,7 +432,12 @@ class DailyPipeline:
         # business's own posts) — the richer, always-present signal. The log is
         # self-contained (it stores the posted caption), so it still contributes
         # even if the original Prompt row has since been deleted.
-        for rec in self._read_engagement_log():
+        # The durable log is shared by all businesses and append-only. Filter
+        # by its stable business key, then walk newest-first so old entries do
+        # not permanently crowd recent outcomes out of the model context.
+        for rec in reversed(self._read_engagement_log()):
+            if rec.get("business_key") != biz.weights_key:
+                continue
             logged_outcome = rec.get("outcome")
             if not logged_outcome:
                 continue
