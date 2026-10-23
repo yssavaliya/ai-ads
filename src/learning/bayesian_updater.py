@@ -5,7 +5,8 @@ import logging
 from pathlib import Path
 from typing import Any, cast
 
-from src.shared.utils import load_json, load_weights, save_json, save_weights
+from src.shared.config import settings
+from src.shared.utils import load_json, load_weights, save_json, save_weights, utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -44,30 +45,83 @@ class BayesianUpdater:
         prompt_type: str | None = None,
         format: str | None = None,
         audience_segment: str | None = None,
+        source: str = "unknown",
     ) -> None:
-        """feedback: 'good' (hit) or 'bad' (miss). Regenerate is treated as a miss."""
+        """feedback: 'good' (hit) or 'bad' (miss). Regenerate is treated as a miss.
+
+        Every accepted update is also appended to an immutable LEDGER. The weights are pure counts
+        (hits/trials), so replaying the ledger reproduces them exactly: that is the version history,
+        the audit trail ("why is this weight 0.3?") and the rollback mechanism."""
         if feedback not in ("good", "bad"):
             return
         data = self._data()
-        biz = data.setdefault(str(business_id), {"topics": {}, "formats": {}, "audience_segments": {}})
+        key = str(business_id)
+        self._ledger_snapshot_if_new(data)
+        biz = data.setdefault(key, {"topics": {}, "formats": {}, "audience_segments": {}})
+        self.apply_update(biz, feedback, prompt_type, format, audience_segment)
+        self._save(data)
+        self._ledger_append({
+            "type": "update", "ts": utc_now_naive().isoformat(timespec="seconds"), "business": key,
+            "feedback": feedback, "prompt_type": prompt_type, "format": format,
+            "audience_segment": audience_segment, "source": source,
+        })
+        logger.info(
+            "Bayesian update for business %s: type=%s feedback=%s source=%s",
+            business_id, prompt_type, feedback, source,
+        )
+
+    @classmethod
+    def apply_update(
+        cls, biz: dict[str, Any], feedback: str, prompt_type: str | None, format: str | None, audience_segment: str | None
+    ) -> None:
+        """The one place the update rule lives (used live AND by ledger replay)."""
 
         def update(dim: str, key: str | None) -> None:
             if not key:
                 return
             store = biz.setdefault(dim, {})
-            entry = store.setdefault(key, {"weight": self.PRIOR, "trials": 0, "hits": 0})
+            entry = store.setdefault(key, {"weight": cls.PRIOR, "trials": 0, "hits": 0})
             entry["trials"] += 1
             entry["hits"] += 1 if feedback == "good" else 0
-            entry["weight"] = (entry["hits"] + self.PRIOR) / (entry["trials"] + 2 * self.PRIOR)
+            entry["weight"] = (entry["hits"] + cls.PRIOR) / (entry["trials"] + 2 * cls.PRIOR)
 
         update("topics", prompt_type)
         update("formats", format)
         update("audience_segments", audience_segment)
-        self._save(data)
-        logger.info(
-            "Bayesian update for business %s: type=%s feedback=%s",
-            business_id, prompt_type, feedback,
-        )
+
+    # ------------------------------------------------------------------ ledger
+    def ledger_path(self) -> Path:
+        if self.path:
+            return Path(self.path).with_suffix(".ledger.jsonl")
+        return Path(settings.data_dir) / "learning_ledger.jsonl"
+
+    def _ledger_append(self, event: dict[str, Any]) -> None:
+        path = self.ledger_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+    def _ledger_snapshot_if_new(self, data: dict[str, Any]) -> None:
+        """Weights that predate the ledger become its baseline, so a replay is still exact."""
+        path = self.ledger_path()
+        if data and not path.exists():
+            self._ledger_append({"type": "snapshot", "ts": utc_now_naive().isoformat(timespec="seconds"), "weights": data})
+
+    def version(self) -> int:
+        """Number of learning updates applied so far."""
+        return len(effective_updates(read_ledger(self.ledger_path()))[1])
+
+    def rollback(self, to_version: int) -> dict[str, Any]:
+        """Restore the weights as they were after `to_version` updates. Append-only: the rollback
+        itself is recorded, nothing in the ledger is erased."""
+        events = read_ledger(self.ledger_path())
+        current = len(effective_updates(events)[1])
+        if not 0 <= to_version <= current:
+            raise ValueError(f"version must be between 0 and {current}")
+        self._ledger_append({"type": "rollback", "ts": utc_now_naive().isoformat(timespec="seconds"), "to": to_version, "from": current})
+        weights = replay_ledger(read_ledger(self.ledger_path()))
+        self._save(weights)
+        return weights
 
     def _save(self, data: dict[str, Any]) -> None:
         if self.path:
@@ -117,3 +171,42 @@ class BayesianUpdater:
         scored = [(k, sum(v) / len(v)) for k, v in agg.items() if v]
         scored.sort(key=lambda x: -x[1])
         return scored[: self.GLOBAL_TOP_N]
+
+
+def read_ledger(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    events = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line:
+            try:
+                events.append(json.loads(line))
+            except ValueError:
+                logger.warning("Skipping corrupt ledger line")
+    return events
+
+
+def effective_updates(events: list[dict[str, Any]]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """(baseline weights, the updates that currently count). A snapshot resets the baseline; a
+    rollback event drops every update after its first `to`."""
+    baseline: dict[str, Any] = {}
+    updates: list[dict[str, Any]] = []
+    for event in events:
+        kind = event.get("type")
+        if kind == "snapshot":
+            baseline, updates = json.loads(json.dumps(event.get("weights") or {})), []
+        elif kind == "update":
+            updates.append(event)
+        elif kind == "rollback":
+            updates = updates[: max(int(event.get("to", 0)), 0)]
+    return baseline, updates
+
+
+def replay_ledger(events: list[dict[str, Any]], upto: int | None = None) -> dict[str, Any]:
+    """Rebuild the weights from scratch: baseline + the first `upto` effective updates."""
+    weights, updates = effective_updates(events)
+    for event in updates if upto is None else updates[:upto]:
+        biz = weights.setdefault(event["business"], {"topics": {}, "formats": {}, "audience_segments": {}})
+        BayesianUpdater.apply_update(biz, event["feedback"], event.get("prompt_type"), event.get("format"), event.get("audience_segment"))
+    return weights

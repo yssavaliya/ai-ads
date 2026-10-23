@@ -35,5 +35,5 @@ jobs:
       - uses: ./.github/actions/persist-state
         if: always()
         with:
-          files: data/weights.json data/engagement_log.jsonl
+          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl
           message: "chore: engagement sync state"

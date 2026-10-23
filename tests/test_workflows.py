@@ -237,3 +237,19 @@ def test_ci_ffmpeg_step_is_bounded_and_non_fatal():
     ff = next(s for s in steps if "ffmpeg" in s.get("name", ""))
     assert ff["timeout-minutes"] <= 5 and ff["continue-on-error"] is True
     assert ci["jobs"]["test"]["timeout-minutes"] <= 15
+
+
+@pytest.mark.parametrize("name", SITE_PIPELINES)
+def test_security_settings_reach_every_pipeline(name):
+    """Fail-closed settings are useless if the workflow never passes them (audit C-03/H-01)."""
+    env = next(iter(_load(GH / "workflows" / f"{name}.yml")["jobs"].values()))["env"]
+    for var in ("FEEDBACK_SIGNING_KEY", "FEEDBACK_ALLOWED_USERS", "OWNER_EMAIL", "DIGEST_EMAIL", "LLM_KEYLESS_FALLBACK", "BELOW_THRESHOLD_POLICY"):
+        assert var in env, f"{name}: {var} is not passed to the pipeline"
+    assert "secrets." in env["FEEDBACK_SIGNING_KEY"] and "vars." in env["FEEDBACK_ALLOWED_USERS"]
+
+
+@pytest.mark.parametrize("name", ["daily", "weekly", "leads", "onboard", "feedback", "engagement"])
+def test_the_learning_ledger_is_persisted_wherever_weights_are(name):
+    persist = next(s for s in _steps(name) if s.get("uses") == "./.github/actions/persist-state")["with"]["files"].split()
+    if "data/weights.json" in persist:
+        assert "data/learning_ledger.jsonl" in persist, f"{name}: weights are committed without their ledger (no rollback possible)"

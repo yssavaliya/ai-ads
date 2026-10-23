@@ -262,11 +262,13 @@ class SocialScraper:
             url = item.get("url") or (
                 f"https://www.instagram.com/p/{item['shortCode']}/" if item.get("shortCode") else ""
             )
+            raw_likes = item.get("likesCount")
             posts.append(
                 {
                     "post_id": item.get("id") or item.get("shortCode") or "",
                     "caption": caption,
-                    "likes": count(item.get("likesCount")),
+                    "likes_hidden": isinstance(raw_likes, (int, float)) and raw_likes < 0,  # Instagram reports -1
+                    "likes": count(raw_likes),
                     "comments": count(item.get("commentsCount")),
                     "comments_text": comments_text,
                     "video_views": count(item.get("videoViewCount") or item.get("videoPlayCount")),

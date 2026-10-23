@@ -41,6 +41,12 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       DELIVERY_MODE: ${{ vars.DELIVERY_MODE }}
       SITE_SECRET: ${{ secrets.SITE_SECRET }}
+      OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+      DIGEST_EMAIL: ${{ secrets.DIGEST_EMAIL }}
+      FEEDBACK_SIGNING_KEY: ${{ secrets.FEEDBACK_SIGNING_KEY }}
+      FEEDBACK_ALLOWED_USERS: ${{ vars.FEEDBACK_ALLOWED_USERS }}
+      LLM_KEYLESS_FALLBACK: ${{ vars.LLM_KEYLESS_FALLBACK }}
+      BELOW_THRESHOLD_POLICY: ${{ vars.BELOW_THRESHOLD_POLICY }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPO: ${{ github.repository }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
@@ -51,7 +57,6 @@ jobs:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
       # Optional repo variable: comma-separated GitHub logins whose feedback issues count
-      FEEDBACK_ALLOWED_USERS: ${{ vars.FEEDBACK_ALLOWED_USERS }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,7 +73,7 @@ jobs:
       - uses: ./.github/actions/persist-state
         if: always()
         with:
-          files: data/weights.json data/engagement_log.jsonl
+          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl
           message: "chore: feedback run state"
 
       - uses: ./.github/actions/publish-site
