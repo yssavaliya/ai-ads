@@ -74,7 +74,7 @@ def test_stateful_workflows_restore_and_persist_state(name):
     assert "./.github/actions/setup-agent" in uses, name
     persist = [s for s in steps if s.get("uses") == "./.github/actions/persist-state"]
     assert len(persist) == 1, name
-    assert persist[0].get("if") == "always()", f"{name}: state must be saved even when the run fails"
+    assert str(persist[0].get("if")).startswith("always()"), f"{name}: state must be saved even when the run fails"
     assert persist[0]["with"]["files"].strip()
 
 
@@ -166,7 +166,7 @@ def test_pipelines_restore_and_publish_the_site(name):
     setup = next(s for s in steps if s.get("uses") == "./.github/actions/setup-agent")
     assert setup["with"]["site"] == "true", f"{name}: must start from the published site"
     publish = [s for s in steps if s.get("uses") == "./.github/actions/publish-site"]
-    assert len(publish) == 1 and publish[0].get("if") == "always()", name
+    assert len(publish) == 1 and str(publish[0].get("if")).startswith("always()"), name
     order = [s.get("uses") for s in steps]
     assert order.index("./.github/actions/publish-site") > order.index("./.github/actions/persist-state"), name
 
@@ -253,3 +253,17 @@ def test_the_learning_ledger_is_persisted_wherever_weights_are(name):
     persist = next(s for s in _steps(name) if s.get("uses") == "./.github/actions/persist-state")["with"]["files"].split()
     if "data/weights.json" in persist:
         assert "data/learning_ledger.jsonl" in persist, f"{name}: weights are committed without their ledger (no rollback possible)"
+
+
+def test_hourly_feedback_job_skips_its_expensive_setup_when_nothing_is_pending():
+    """Measured: setup-agent costs ~40 s per job; an hourly run with no feedback paid it to do nothing."""
+    steps = _steps("feedback")
+    names = [s.get("name") or s.get("uses") for s in steps]
+    precheck = next(s for s in steps if s.get("id") == "pending")
+    assert "gh issue list" in precheck["run"] and "GITHUB_OUTPUT" in precheck["run"]
+    assert names.index(precheck["name"]) < names.index("./.github/actions/setup-agent")  # cheap check FIRST
+    gate = "steps.pending.outputs.count != '0'"
+    for s in steps:
+        if s is precheck or s.get("uses") == "actions/checkout@v4":
+            continue
+        assert gate in str(s.get("if")), f"step {s.get('name') or s.get('uses')!r} would run even with nothing to process"

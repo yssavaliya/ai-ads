@@ -16,6 +16,7 @@ from urllib.parse import quote
 
 import httpx
 
+from src.shared.concurrency import slots
 from src.shared.config import settings
 from src.shared.llm_providers import HEALTH, classify, csv
 
@@ -187,7 +188,8 @@ def generate(prompt: str, width: int, height: int) -> tuple[bytes, str] | None:
         if provider is None or not provider.configured() or not HEALTH.available(f"img:{name}"):
             continue
         try:
-            data = provider.fn(prompt, width, height)
+            with slots("image", settings.image_concurrency):  # nested parallelism cannot exceed the cap
+                data = provider.fn(prompt, width, height)
         except Exception as exc:  # noqa: BLE001 - network/SDK errors of every kind
             failure = classify(exc)
             HEALTH.mark(f"img:{name}", None, failure)

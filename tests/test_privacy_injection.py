@@ -163,3 +163,43 @@ def test_keyless_public_endpoint_is_off_by_default_and_excluded_from_the_chain(m
     assert "pollinations" not in [p.name for p in lp.configured_providers()]
     monkeypatch.setattr(settings, "llm_keyless_fallback", True)  # explicit opt-in still works
     assert "pollinations" in [p.name for p in lp.configured_providers()]
+
+
+# ------------------------------------------------------------------ performance (ReDoS guard)
+HOSTILE = {
+    "long-token": lambda: "x" * 200_000,  # was 11 s at 50 KB: quadratic scan for an '@' that never comes
+    "digit-run": lambda: "7" * 100_000,
+    "digits-and-spaces": lambda: "1 " * 100_000,
+    "at-signs": lambda: "a@" * 50_000,
+    "dotted": lambda: "a." * 50_000,
+    "base64-like": lambda: "QUJDREVGR0hJSktMTU5PUA" * 9000,
+    "realistic-prose": lambda: "Fresh sourdough baked daily in Ahmedabad. Call us or visit. " * 3000,
+}
+
+
+@pytest.mark.parametrize("name", sorted(HOSTILE))
+def test_redaction_is_linear_time_on_hostile_input(name):
+    """Scraped pages can contain huge unbroken tokens; redaction runs on every prompt. It must stay
+    ~linear (these all take milliseconds; the quadratic version needed seconds to minutes)."""
+    import time
+
+    text = HOSTILE[name]()
+    start = time.perf_counter()
+    redact_text(text)
+    assert time.perf_counter() - start < 1.5, f"{name} took {time.perf_counter() - start:.1f}s"
+
+
+def test_fence_of_a_huge_profile_is_fast_and_bounded():
+    import time
+
+    huge = {"title": "x" * 300_000, "text_blocks": ["y" * 100_000, f"mail {EMAIL}"], "email": EMAIL}
+    start = time.perf_counter()
+    out = fence(huge, 6000)
+    assert time.perf_counter() - start < 1.5 and len(out) < 6200 and EMAIL not in out
+
+
+def test_bounded_patterns_still_catch_ordinary_addresses_and_numbers():
+    text = "Jo.Bloggs+tag@sub.example.co.uk | +91 98765 43210 | (079) 2345-6789 | support@x.io"
+    out = redact_text(text)
+    assert "@" not in out and "98765" not in out and "2345-6789" not in out
+    assert redact_text("1055 followers since 2019, 45% off") == "1055 followers since 2019, 45% off"

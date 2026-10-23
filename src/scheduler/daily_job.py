@@ -21,6 +21,7 @@ from src.generation.virality_gate import ViralityGate, apply_threshold_policy
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
+from src.shared.concurrency import parallel_map
 from src.shared.config import settings
 from src.shared.utils import load_businesses, utc_now_naive
 from src.storage.models import Business, Prompt, PromptType, SessionLocal
@@ -59,15 +60,23 @@ class DailyPipeline:
                 db.commit()
 
             profile = profile or {}
-            competitors = self._cached_intel(
-                business, "competitors",
-                lambda: self.competitors.discover_and_fetch(profile),
-            )
-            social_data = {}
-            if business.get("instagram_handle"):
+            def _competitors() -> Any:
+                return self._cached_intel(
+                    business, "competitors", lambda: self.competitors.discover_and_fetch(profile)
+                )
+
+            def _own_posts() -> dict[str, Any]:
+                if not business.get("instagram_handle"):
+                    return {}
                 from src.fetch.social_scraper import fetch_instagram_sync
 
-                social_data = fetch_instagram_sync(business["instagram_handle"])
+                return fetch_instagram_sync(business["instagram_handle"])
+
+            # Competitor discovery (an LLM call plus up to five scrapes) and the business's own
+            # profile scrape do not depend on each other: overlap them.
+            competitors_out, social_out = parallel_map(lambda job: job(), [_competitors, _own_posts], settings.fetch_concurrency)
+            competitors = competitors_out.unwrap()
+            social_data = social_out.unwrap()
 
             # AUTO-LEARN first: match the business's own recent posts to prompts
             # we sent before, score real engagement, update Bayesian weights.
@@ -151,9 +160,13 @@ class DailyPipeline:
 
             creative = CreativeForge()
             render_warnings: list[str] = []
-            for i, p in enumerate(prompts):
+            # Each prompt's asset is an independent image/Reel render: run them concurrently (the image
+            # providers are additionally capped by IMAGE_CONCURRENCY so nested work stays bounded).
+            jobs = list(enumerate(prompts))
+            rendered = parallel_map(lambda job: creative.render_prompt(job[1], profile, index=job[0]), jobs, settings.image_concurrency)
+            for (_, p), outcome in zip(jobs, rendered):
                 try:
-                    asset = creative.render_prompt(p, profile, index=i)
+                    asset = outcome.unwrap()
                     p["asset_path"] = asset["asset_path"]
                     p["asset_type"] = asset["asset_type"]
                     p["thumbnail"] = asset.get("thumbnail")

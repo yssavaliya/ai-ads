@@ -28,6 +28,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture(autouse=True)
+def _no_real_sleeping(request, monkeypatch):
+    """Retry back-offs and politeness jitter are logic, not something to wait for. Tests that need
+    real elapsed time (concurrency/timing) opt out with @pytest.mark.real_time."""
+    if request.node.get_closest_marker("real_time"):
+        return
+    import asyncio
+    import time
+
+    async def _instant(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(time, "sleep", lambda *_a, **_k: None)
+    monkeypatch.setattr(asyncio, "sleep", _instant)
+
+
+@pytest.fixture(autouse=True)
 def _isolated_state(tmp_path, monkeypatch):
     """Per-test data/logs dirs. Tests that need their own still override these."""
     from src.shared.config import settings
@@ -36,9 +52,11 @@ def _isolated_state(tmp_path, monkeypatch):
     logs_dir = tmp_path / "_logs"
     data_dir.mkdir()
     logs_dir.mkdir()
+    from src.shared.chat_http import reset_clients
     from src.shared.llm_providers import HEALTH
 
     HEALTH.reset()  # provider cool-downs must not leak between tests
+    reset_clients()  # pooled HTTP clients must not leak either
     monkeypatch.setattr(settings, "data_dir", data_dir)
     monkeypatch.setattr(settings, "logs_dir", logs_dir)
     monkeypatch.setattr(settings, "site_dir", tmp_path / "_site")

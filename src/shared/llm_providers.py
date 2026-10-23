@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -172,28 +173,33 @@ class Health:
     def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
         self._clock = clock
         self._until: dict[tuple[str, str | None], float] = {}
+        self._lock = threading.Lock()  # shared by every worker thread
 
     def reset(self) -> None:
-        self._until.clear()
+        with self._lock:
+            self._until.clear()
 
     def available(self, provider: str, model: str | None = None) -> bool:
         now = self._clock()
-        return all(self._until.get(key, 0.0) <= now for key in ((provider, None), (provider, model)))
+        with self._lock:
+            return all(self._until.get(key, 0.0) <= now for key in ((provider, None), (provider, model)))
 
     def mark(self, provider: str, model: str | None, failure: Failure) -> None:
         if failure.scope == "none" or failure.cooldown <= 0:
             return
         key = (provider, None) if failure.scope == "provider" else (provider, model)
         until = math.inf if math.isinf(failure.cooldown) else self._clock() + failure.cooldown
-        self._until[key] = max(self._until.get(key, 0.0), until)
+        with self._lock:
+            self._until[key] = max(self._until.get(key, 0.0), until)
 
     def seconds_until_ready(self, candidates: list[tuple[str, str]]) -> float:
         """Shortest wait before ANY candidate becomes usable (inf if none ever will)."""
         now = self._clock()
         best = math.inf
-        for provider, model in candidates:
-            wait = max(self._until.get((provider, None), 0.0), self._until.get((provider, model), 0.0)) - now
-            best = min(best, max(wait, 0.0))
+        with self._lock:
+            for provider, model in candidates:
+                wait = max(self._until.get((provider, None), 0.0), self._until.get((provider, model), 0.0)) - now
+                best = min(best, max(wait, 0.0))
         return best
 
 

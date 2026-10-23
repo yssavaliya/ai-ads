@@ -105,6 +105,12 @@ class Settings(BaseSettings):
     site_secret: str | None = Field(default=None, description="If set, page URLs carry a keyed hash and the index lists nothing")
     site_base_url: str | None = Field(default=None, description="Public URL override (default: <owner>.github.io/<repo>)")
 
+    # Concurrency caps (1 = the old strictly sequential behaviour). Independent network work overlaps;
+    # the LLM cap is small because free tiers rate-limit tokens per minute, not requests.
+    llm_concurrency: int = Field(default=2, ge=1, le=16, description="Max simultaneous LLM calls")
+    image_concurrency: int = Field(default=3, ge=1, le=16, description="Max simultaneous image-provider calls")
+    fetch_concurrency: int = Field(default=2, ge=1, le=16, description="Max simultaneous scraper runs")
+
     # Scheduling
     daily_cron: str = Field(default="29 18 * * *", description="Daily run cron (UTC) - 11:59 PM IST")
     weekly_cron: str = Field(default="0 2 * * 0", description="Weekly run cron (UTC) - Sunday 8 AM IST")
