@@ -34,12 +34,13 @@ async def main() -> None:
 
     print(f"Token: set (len={len(token)})")
     timeout = SocialScraper.APIFY_TIMEOUT
+    headers = {"Authorization": f"Bearer {token}"}  # same as the pipeline: keeps the token out of URLs/logs
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         t0 = asyncio.get_event_loop().time()
         resp = await client.post(
             f"{SocialScraper.APIFY_BASE}/acts/{SocialScraper.APIFY_SEARCH_ACTOR}/run-sync-get-dataset-items",
-            params={"token": token},
+            headers=headers,
             json={"searchType": "user", "search": query, "resultsLimit": 5},
         )
         dt = asyncio.get_event_loop().time() - t0
@@ -55,7 +56,7 @@ async def main() -> None:
         t0 = asyncio.get_event_loop().time()
         resp = await client.post(
             f"{SocialScraper.APIFY_BASE}/acts/{SocialScraper.APIFY_INSTAGRAM_ACTOR}/run-sync-get-dataset-items",
-            params={"token": token},
+            headers=headers,
             json={
                 "usernames": [handle],
                 "resultsLimit": 5,

@@ -148,7 +148,7 @@ def test_all_stateful_workflows_share_one_concurrency_group():
 
 def test_ci_runs_tests_and_lints_the_workflows():
     ci = _load(GH / "workflows" / "ci.yml")
-    assert set(ci["jobs"]) == {"test", "workflows"}
+    assert set(ci["jobs"]) == {"test", "workflows", "dependencies"}
     text = (GH / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "pytest" in text and "ruff" in text and "mypy" in text and "actionlint" in text
 
@@ -267,3 +267,10 @@ def test_hourly_feedback_job_skips_its_expensive_setup_when_nothing_is_pending()
         if s is precheck or s.get("uses") == "actions/checkout@v4":
             continue
         assert gate in str(s.get("if")), f"step {s.get('name') or s.get('uses')!r} would run even with nothing to process"
+
+
+def test_ci_gates_on_coverage_and_scans_dependencies():
+    text = (GH / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "--cov-fail-under=" in text
+    assert "pip-audit" in text
+    assert (GH / "dependabot.yml").exists()

@@ -201,7 +201,12 @@ def generate(prompt: str, width: int, height: int) -> tuple[bytes, str] | None:
             continue
         assert data is not None
         if not provider.exact_size:
-            data = fit_cover(data, width, height)
+            try:
+                data = fit_cover(data, width, height)
+            except Exception as exc:  # noqa: BLE001 - a valid header with a truncated/corrupt body: try the next provider
+                HEALTH.mark(f"img:{name}", None, classify(exc))
+                logger.warning("Image provider %s returned an undecodable image (%s)", name, exc)
+                continue
         return data, name
     return None
 
