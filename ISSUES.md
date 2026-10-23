@@ -19,6 +19,7 @@ Updated 2026-10-24 during iterative code and workflow review.
 | Failed replacement delivery could close feedback as if successful | Fixed: issue stays open for retry and the draft prompt is removed. |
 | Generated content could ask for a Reel or carousel instead of one image | Fixed: the forge requests one static image, normalizes every model response and refinement to `single image`, clears Reel beats, and adds a one-frame image requirement. The virality gate applies the same rule to alternate forge implementations. |
 | Successful scheduled workflows spawned a separate skipped “Alert on Pipeline Failure” run | Fixed: removed the `workflow_run` watcher and moved issue creation into failure-only steps in each scheduled workflow. Successful runs no longer create alert runs. |
+| Four workflows passed the encryption key to `actions/checkout`, which ignored the unsupported input | Fixed: the key is now passed to `setup-agent`; added a workflow check to prevent future miswiring. |
 
 ## Remaining external verification
 
@@ -26,7 +27,7 @@ Updated 2026-10-24 during iterative code and workflow review.
 | --- | --- |
 | Plaintext cache entries created before encryption may still be available to pull-request workflows | Needs purge in GitHub Actions cache. This environment has an invalid `gh` credential and cannot reach the GitHub API, so existing cache entries could not be enumerated or deleted. |
 | End-to-end daily workflow execution | Verified: [Actions run 40026910360](https://github.com/yssavaliya/ai-ads/actions/runs/40026910360) completed successfully, including pipeline generation, artifact upload, state persistence step, and site publish. The generated artifact contained only still-image files (`.png`/`.jpg`). State persistence warned that neither encryption key was configured, so private state was not cached. |
-| Alert behavior after removing the success-triggered watcher | Static workflow checks pass. Inline alerts run only when a job has started; GitHub runner or job-start failures cannot be reported from inside that job. |
+| Alert behavior after removing the success-triggered watcher | Verified: the no-pending-feedback run [40028850918](https://github.com/yssavaliya/ai-ads/actions/runs/40028850918) succeeded with the inline alert step skipped, and no separate alert run was created. Inline alerts run only after a job starts; GitHub runner or job-start failures cannot be reported from inside that job. |
 
 ## Verification limits
 

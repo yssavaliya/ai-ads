@@ -53,6 +53,19 @@ def test_every_local_action_and_script_reference_exists():
             assert (root / ref).exists(), f"{path.name}: missing script {ref}"
 
 
+def test_state_encryption_key_is_passed_to_setup_not_checkout():
+    for path in WORKFLOWS:
+        wf = _load(path)
+        steps = [step for job in wf["jobs"].values() for step in job.get("steps", [])]
+        for step in steps:
+            if str(step.get("uses", "")).startswith("actions/checkout@"):
+                assert "state_encryption_key" not in step.get("with", {}), path.name
+        setup = next((step for step in steps if step.get("uses") == "./.github/actions/setup-agent"), None)
+        has_persist_step = any(step.get("uses") == "./.github/actions/persist-state" for step in steps)
+        if setup and has_persist_step:
+            assert "state_encryption_key" in setup.get("with", {}), path.name
+
+
 def test_runner_script_keeps_the_pipeline_exit_status():
     """`python ... | while read` swallowed every SystemExit(1) without pipefail."""
     script = (GH / "scripts" / "run_pipeline.sh").read_text(encoding="utf-8")

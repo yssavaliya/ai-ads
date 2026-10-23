@@ -60,7 +60,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
           fetch-depth: 0
 
       # The job runs hourly but most hours there is no feedback. Checking costs ~3 s; the setup it

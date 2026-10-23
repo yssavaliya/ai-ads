@@ -58,11 +58,11 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-agent
         with:
+          state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
           site: "true"
           piper: "true"
 
