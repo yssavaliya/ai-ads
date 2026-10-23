@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 
@@ -13,6 +14,15 @@ from src.shared.config import settings
 from src.shared.utils import load_businesses, save_businesses
 
 logger = logging.getLogger(__name__)
+
+
+_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[A-Za-z]{2,24}$")
+_ENV_REF = re.compile(r"^env:[A-Z][A-Z0-9_]*$")
+
+
+def _valid_email(value: str) -> bool:
+    """A real address, or an `env:NAME` reference (data/*.json keep addresses out of git that way)."""
+    return bool(value) and bool(_EMAIL.match(value) or _ENV_REF.match(value))
 
 
 def onboard(
@@ -26,11 +36,15 @@ def onboard(
 ) -> dict:
     businesses = load_businesses()
 
+    # Validate EVERYTHING before touching any state: a rejected request must leave no half-onboarded business.
+    if not name.strip():
+        raise ValueError("Business name is required")
     if any(b.get("name", "").lower() == name.lower() for b in businesses):
         raise ValueError(f"Business {name!r} already exists")
-
-    if not email or "@" not in email:
-        raise ValueError(f"Invalid email: {email!r}")
+    if not _valid_email(email):
+        raise ValueError("Invalid email: use an address like name@example.com, or env:VAR_NAME to read it from a secret")
+    if not 0 <= int(threshold) <= 100:
+        raise ValueError(f"Threshold must be between 0 and 100, got {threshold}")
 
     business = {
         "id": max((b.get("id", 0) for b in businesses), default=0) + 1,
@@ -45,9 +59,6 @@ def onboard(
         "prompt_types": ["educational", "storytelling", "social_proof"],
         "is_active": True,
     }
-    businesses.append(business)
-    save_businesses(businesses)
-
     profile = {}
     if website:
         try:
@@ -57,6 +68,9 @@ def onboard(
         except Exception as exc:
             logger.warning("Initial website scrape failed: %s", exc)
 
+    # Persist last, once nothing above can fail: businesses.json is the source of truth the pipelines read.
+    businesses.append(business)
+    save_businesses(businesses)
     _store_profile(business, profile)
     if send_email:
         try:

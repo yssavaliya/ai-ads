@@ -63,9 +63,17 @@ The system learns automatically from real post performance:
    (+21 days) + caption/prompt similarity (≥ 0.30 Jaccard/containment)
 3. **Scoring**: engagement rate = (likes + 2·comments + 3·shares + 2·saves) / reach
 4. **Benchmark**: a post is "good" if its rate ≥ the business's own median,
-   "bad" otherwise
-5. **Update**: outcomes feed the Bayesian weight loop (`data/weights.json`) across
-   prompt type × format × audience segment, so the next round favors what worked
+   "bad" otherwise. Posts younger than 48 h are not judged yet (`MATURITY_HOURS`), and
+   posts whose like counts are hidden are skipped, so immature numbers never teach the system
+5. **Update**: outcomes feed the Bayesian weight loop (`data/weights.json`, keyed by business
+   slug) across prompt type × format × audience segment, so the next round favors what worked.
+   Each prompt is counted once and re-judged for 30 days as its numbers mature
+
+What this is, precisely: *online count-based (Beta-Bernoulli) learning* with a rule-based
+benchmark and a bounded ranking boost (±6 points). It is **not** model training, and the
+"history" given to the LLM is retrieval, not learning. Every update is appended to
+`data/learning_ledger.jsonl`, so any weight can be explained, replayed or rolled back
+(`python scripts/rollback_weights.py`) and measured (`python scripts/evaluate_learning.py`).
 
 Manual 👍/👎/🔄 clicks remain as additional signals. Run the auto-learner standalone
 with `python scripts/run_auto_learn.py`.
@@ -84,10 +92,15 @@ with `python scripts/run_auto_learn.py`.
 | `APIFY_TOKEN` | Free tier social scraping (console.apify.com) |
 | `HF_TOKEN` | Optional image fallback (Hugging Face FLUX.1-schnell) |
 | `GITHUB_TOKEN` | Feedback issues + degraded-run tracking (built-in) |
-| `FEEDBACK_ALLOWED_USERS` (repo *variable*, optional) | Comma-separated GitHub logins whose feedback issues count; unset = anyone who can open an issue |
+| `FEEDBACK_SIGNING_KEY` | Signs the 👍/👎 links. **Required for feedback to be accepted** (without it links are inert) |
+| `FEEDBACK_ALLOWED_USERS` (repo *variable*) | Comma-separated GitHub logins whose feedback issues count. **Required**: unset = feedback is ignored (fails closed) |
+| `OWNER_EMAIL`, `DIGEST_EMAIL` | Referenced from `data/*.json` as `env:OWNER_EMAIL` / `env:DIGEST_EMAIL`, so no address is committed |
+| `BELOW_THRESHOLD_POLICY` (repo *variable*) | `flag` (default: publish with a "below threshold" badge), `drop` or `best` |
+| `LLM_KEYLESS_FALLBACK` (repo *variable*) | `false` by default. `true` lets prompts go to the public keyless endpoint as a last resort |
 
-LLM chain: Groq → Gemini (if both fail the run is reported as degraded — there is no keyless text fallback).
-Images: Pollinations (keyless) → HF fallback. No local models run on CPU.
+LLM chain: every configured provider in `LLM_PROVIDER_ORDER` (see *Free fallback chain*). If all fail the run is
+reported as degraded. The keyless text fallback is **off** unless `LLM_KEYLESS_FALLBACK=true`.
+Images: Pollinations (keyless) → Gemini/HF/Together/Cloudflare → local branded card. No local models run on CPU.
 If any stage fails, a `[pipeline] degraded run — <date>` tracking issue is
 created/updated so green CI never hides a dead run.
 
@@ -163,7 +176,8 @@ E-mail is replaced by a small static website published to GitHub Pages
   2. **Free for private repos:** connect **Cloudflare Pages** (or Netlify / Vercel) to the
      repo, production branch `gh-pages`, *no build command*, output directory `/`.
   The first publish creates the branch; every later publish redeploys automatically.
-- **Privacy:** published sites are public on the internet even when the repo is private. Contact e-mail addresses are never
+- **Privacy:** published sites are public on the internet even when the repo is private; `SITE_SECRET` gives
+  unguessable URLs, it is **not** access control. Contact e-mail addresses and phone numbers are never
   published and pages are `noindex`. Set the secret `SITE_SECRET` and every page lives
   at an unguessable keyed URL while the index lists nothing (lead e-mails then show up
   too). The URLs appear in each run's summary. For truly private hosting use a private
@@ -207,7 +221,8 @@ the workflow `env:` block, and the committed file contains no personal data:
 pip install -e ".[dev]"
 python -m ruff check .      # lint
 python -m mypy src          # types
-python -m pytest -q         # ~130 tests incl. an end-to-end dry run of the daily pipeline
+python -m pytest -q         # ~480 tests incl. an end-to-end dry run of the daily pipeline (CI also enforces >= 80% coverage)
+python scripts/benchmark_pipeline.py   # reproducible timing with simulated latency
 ```
 
 CI (`ci.yml`) runs the same three commands on every push and pull request. The test
@@ -218,12 +233,16 @@ touches `data/` or `agent.db`. Optional: `pre-commit install` (ruff on commit, p
 
 - **State:** JSON in `data/` is committed by the workflows; `agent.db` and `data/cache/`
   live in the Actions cache (saved even when a run fails). Weights are keyed by business
-  *name*, so a rebuilt `agent.db` can never attach them to the wrong business.
+  *slug* (`Business.weights_key`), so a rebuilt `agent.db` can never attach them to the wrong business.
 - **Failures are loud:** pipelines exit non-zero when nothing was produced or nothing
   was delivered, and a `[pipeline] degraded run` issue is opened. `drift_check.yml`
   opens an issue if the LLM providers stop answering.
-- **Feedback security:** set the repo variable `FEEDBACK_ALLOWED_USERS` (comma-separated
-  GitHub logins) so only trusted people can move the weights through feedback issues.
+- **Feedback security:** feedback issues are accepted only from `FEEDBACK_ALLOWED_USERS`, carry an
+  HMAC token (`FEEDBACK_SIGNING_KEY`) bound to one prompt, and count once per prompt and button.
+  With either setting missing the job refuses to apply anything.
+- **Speed:** LLM calls (2), image renders (3) and scrapes (2) run concurrently within those caps
+  (`LLM_CONCURRENCY`, `IMAGE_CONCURRENCY`, `FETCH_CONCURRENCY`; `1` restores sequential behaviour).
+  Publishing re-renders only the business that changed.
 - **Budgets:** `LEAD_TIME_BUDGET_SECONDS` caps lead scraping; Apify calls are made once
   per handle per run. Reels are best-effort: if ffmpeg/Piper fail the post falls back to a
   still image (the run warns instead of dropping the asset).
