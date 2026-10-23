@@ -329,14 +329,17 @@ def test_composite_action_steps_use_only_keys_the_runner_accepts():
             assert not extra, f"{action.parent.name}: step {step.get('name') or step.get('uses')!r} has unsupported keys {sorted(extra)}"
 
 
-def test_every_scheduled_pipeline_is_covered_by_the_failure_alert():
-    """Scheduled runs that die before our code starts used to fail silently for a day."""
-    alert = _load(GH / "workflows" / "alert_on_failure.yml")
-    watched = set(alert[True if True in alert else "on"]["workflow_run"]["workflows"])
+def test_scheduled_workflows_alert_inline_only_after_a_failure():
+    """Successful schedules must not spawn a second, skipped workflow run."""
+    assert not (GH / "workflows" / "alert_on_failure.yml").exists()
     for path in (GH / "workflows").glob("*.yml"):
         wf = _load(path)
         triggers = wf.get(True, wf.get("on")) or {}
         if isinstance(triggers, dict) and "schedule" in triggers:
-            assert wf["name"] in watched, f"{path.name} runs on a schedule but its failures raise no alert"
-    assert alert["jobs"]["alert"]["if"] == "github.event.workflow_run.conclusion == 'failure'"
-    assert alert["permissions"]["issues"] == "write"
+            steps = next(iter(wf["jobs"].values()))["steps"]
+            alert_steps = [s for s in steps if s.get("name") == "Alert on pipeline failure"]
+            assert len(alert_steps) == 1, f"{path.name} has no inline failure alert"
+            assert alert_steps[0].get("if") == "failure()", f"{path.name} alerts only when failed"
+            assert "gh issue create" in alert_steps[0].get("run", ""), f"{path.name} alert must work without checkout"
+            assert alert_steps[0].get("env", {}).get("GH_TOKEN") == "${{ github.token }}", path
+            assert wf["permissions"]["issues"] == "write", f"{path.name} cannot open an alert issue"

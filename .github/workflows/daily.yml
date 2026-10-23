@@ -82,3 +82,21 @@ jobs:
 
       - uses: ./.github/actions/publish-site
         if: always()
+
+      - name: Alert on pipeline failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALERT_TITLE: "[pipeline] workflow failed - ${{ github.workflow }}"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          body=$(printf 'Run: %s\nTrigger: %s\nCommit: %s\n\nOpen the run, read the failed step, and close this issue once a later run is green.\n' "$RUN_URL" "$EVENT" "$SHA")
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number,title --jq '[.[] | select(.title == env.ALERT_TITLE)] | .[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$ALERT_TITLE" --body "$body"
+          fi
