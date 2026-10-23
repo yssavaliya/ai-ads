@@ -148,7 +148,7 @@ def test_all_stateful_workflows_share_one_concurrency_group():
 
 def test_ci_runs_tests_and_lints_the_workflows():
     ci = _load(GH / "workflows" / "ci.yml")
-    assert set(ci["jobs"]) == {"test", "workflows", "dependencies"}
+    assert set(ci["jobs"]) == {"test", "workflows", "dependencies", "composite-actions"}
     text = (GH / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "pytest" in text and "ruff" in text and "mypy" in text and "actionlint" in text
 

@@ -81,3 +81,20 @@ jobs:
           if git grep -nIE '(gsk_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}|hf_[A-Za-z0-9]{30,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|apify_api_[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)' -- . ':!tests'; then
             echo "::error::a credential-shaped string is committed"; exit 1
           fi
+
+  composite-actions:
+    # The runner validates a composite action only when it is USED. A bad key in setup-agent once failed
+    # every pipeline in 12 s while CI stayed green, so CI loads and runs it for real.
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: ./.github/actions/setup-agent
+        with:
+          piper: "true"
+
+      - name: Smoke test the environment the pipelines will run in
+        run: |
+          python -c "from src.shared.config import settings; print('settings ok')"
+          command -v ffmpeg && ffmpeg -version | head -1
