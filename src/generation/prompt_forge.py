@@ -2,11 +2,23 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 
 from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_text
 
 logger = logging.getLogger(__name__)
+
+_FORMAT_WORDS = re.compile(r"\b(?:reels?|videos?|slideshows?)\b", re.IGNORECASE)
+_CAROUSEL = re.compile(r"\b(?:video\s+)?carousels?\b", re.IGNORECASE)
+_SLIDE_COUNT = re.compile(
+    r"\b(?:(?:multi[- ]slide)|(?:multiple|several|many|a\s+few|\d+(?:\s*[-–]\s*\d+)?)\s+slides?)\b",
+    re.IGNORECASE,
+)
+_TIMED_VIDEO = re.compile(
+    r"\b(?:create|make|produce)\s+(?:a\s+)?\d+(?:[- ]second|[- ]minute)\s+(?:reel|video)\b",
+    re.IGNORECASE,
+)
 
 
 def single_image_variant(variant: dict[str, Any]) -> dict[str, Any]:
@@ -15,6 +27,15 @@ def single_image_variant(variant: dict[str, Any]) -> dict[str, Any]:
     normalized["format"] = "single image"
     normalized["reel_beats"] = []
     text = str(normalized.get("prompt_text", "")).strip()
+    text = _TIMED_VIDEO.sub("Create a single-image post", text)
+    text = _SLIDE_COUNT.sub("one static composition", text)
+    text = _CAROUSEL.sub("single-image layout", text)
+    text = _FORMAT_WORDS.sub("single image", text)
+    text = re.sub(r"\bon-screen text beats?\b", "text placed within the image", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bscreen[- ]capture\b", "single-frame illustration", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bvisual flow\b", "visual hierarchy", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(?:film|record|shoot)\b", "depict", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bone static composition for a single-image layout\b", "one static composition", text, flags=re.IGNORECASE)
     requirement = "Visual deliverable: create exactly one finished static image, with the complete composition in a single frame."
     if text and requirement.casefold() not in text.casefold():
         normalized["prompt_text"] = f"{text}\n\n{requirement}"

@@ -60,14 +60,14 @@ def test_competitor_finder_raises_instead_of_faking():
             finder.discover({})
 
 
-def test_forge_variants_include_reel_beats_and_segment():
+def test_forge_variants_enforce_one_image_and_keep_segment():
     forge = PromptForge()
     payload = [
         {
             "prompt_type": "educational",
             "title": "T",
             "hook": "H",
-            "prompt_text": "P",
+            "prompt_text": "Create a 30-second Reel with on-screen text beats and several slides for a video carousel.",
             "hashtags": ["#a"],
             "format": "reel",
             "angle": "A",
@@ -83,7 +83,10 @@ def test_forge_variants_include_reel_beats_and_segment():
         variants = forge.generate_variants({}, {}, {}, ["educational"])
     v = variants[0]
     assert v["audience_segment"] == "young couples"
-    assert v["reel_beats"] == ["beat one", "beat two", "beat three"]
+    assert v["format"] == "single image" and v["reel_beats"] == []
+    text = v["prompt_text"].lower()
+    assert "create a single-image post" in text
+    assert not any(word in text for word in ("reel", "video", "carousel", "slides", "text beats"))
 
 def test_groq_path_executes_without_nameerror(monkeypatch):
     """Regression: the Groq call referenced an undefined `max_retries` name

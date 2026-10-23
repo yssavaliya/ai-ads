@@ -92,31 +92,31 @@ def _learn(db, biz, posts):
 
 
 # ================================================================== the experiment
-def test_feedback_changes_subsequent_behaviour_persists_and_can_be_rolled_back(lab, capsys):
+def test_feedback_updates_format_history_while_generation_stays_single_image(lab, capsys):
     db, biz = lab
     key = biz.weights_key
 
-    # 1. BASELINE - nothing learned yet: a tie, so the first variant (reel) wins
+    # 1. BASELINE - format history has no trials; generation still uses the product's single-image format.
     baseline_weights = BayesianUpdater().to_forge_weights(key)
     baseline_choice = _chosen_format(baseline_weights)
-    assert baseline_weights.get("formats::reel") is None and baseline_choice == "reel"
+    assert baseline_weights.get("formats::reel") is None and baseline_choice == "single image"
 
     # 2. LEARN from real (mock-scraped) engagement through the production path
     result = _learn(db, biz, _experiment(db, biz))
     assert result["matched"] == 16 and result["learned"] == 16 and result["deferred"] == 0
 
-    # 3. BEHAVIOUR CHANGED: the system now prefers the format that actually performed
+    # 3. Historical format weights still learn, but they cannot change the requested output format.
     learned_weights = BayesianUpdater().to_forge_weights(key)
     assert learned_weights["formats::carousel"] == pytest.approx(0.9)   # (8 hits + 1) / (8 trials + 2)
     assert learned_weights["formats::reel"] == pytest.approx(0.1)       # (0 hits + 1) / (8 trials + 2)
     learned_choice = _chosen_format(learned_weights)
-    assert learned_choice == "carousel" and learned_choice != baseline_choice
+    assert learned_choice == baseline_choice == "single image"
 
     # 4. PERSISTENCE: a brand-new process (fresh objects, state only from disk) behaves the same
     weights_file = json.loads((Path(settings.data_dir) / "weights.json").read_text(encoding="utf-8"))
     assert weights_file[key]["formats"]["carousel"]["hits"] == 8 and weights_file[key]["formats"]["reel"]["hits"] == 0
     restarted = BayesianUpdater()
-    assert restarted.to_forge_weights(key) == learned_weights and _chosen_format(restarted.to_forge_weights(key)) == "carousel"
+    assert restarted.to_forge_weights(key) == learned_weights and _chosen_format(restarted.to_forge_weights(key)) == "single image"
     assert restarted.version() == 16
 
     # 5. The forge PROMPT carries what was learned too (the second, LLM-side channel of influence)
@@ -134,7 +134,7 @@ def test_feedback_changes_subsequent_behaviour_persists_and_can_be_rolled_back(l
     # 7. ROLLBACK restores the baseline behaviour exactly (append-only: the rollback is recorded)
     restarted.rollback(0)
     assert BayesianUpdater().to_forge_weights(key) == baseline_weights
-    assert _chosen_format(BayesianUpdater().to_forge_weights(key)) == baseline_choice == "reel"
+    assert _chosen_format(BayesianUpdater().to_forge_weights(key)) == baseline_choice == "single image"
     assert read_ledger(restarted.ledger_path())[-1]["type"] == "rollback" and restarted.version() == 0
 
     with capsys.disabled():
@@ -146,7 +146,7 @@ def test_feedback_changes_subsequent_behaviour_persists_and_can_be_rolled_back(l
 
 
 def test_control_group_with_no_signal_does_not_change_behaviour(lab):
-    """Equal engagement for both formats must leave the choice at the tie-break (no spurious learning)."""
+    """Equal engagement leaves history tied; the generated format remains a single image."""
     db, biz = lab
     posts = []
     for i in range(6):
@@ -157,7 +157,7 @@ def test_control_group_with_no_signal_does_not_change_behaviour(lab):
     _learn(db, biz, posts)
     weights = BayesianUpdater().to_forge_weights(biz.weights_key)
     assert abs(weights["formats::reel"] - weights["formats::carousel"]) < 0.01
-    assert _chosen_format(weights) == "reel"  # same as the baseline
+    assert _chosen_format(weights) == "single image"
 
 
 # ================================================================== quality guards

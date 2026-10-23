@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -134,7 +134,7 @@ def test_weekly_report_and_onboarding_pages(pub):
     pub.send_onboarding(BIZ, {"title": "Sweet Crumbs", "meta_description": "bread", "page_count": 7, "headings": ["Bread", "Cakes"]})
     pub.send_weekly_report(BIZ, {"top_performing": [{"prompt": "P", "score": 90, "feedback": "good", "why": "w"}],
                                  "risk_alerts": ["watch out"], "calendar": ["Mon: x"]})
-    day = date.today().isoformat()
+    day = sp._today()
     weekly = (pub.site_dir / f"b/sweet-crumbs-bakery/weekly-{day}.html").read_text(encoding="utf-8")
     assert "Weekly report" in weekly and "watch out" in weekly and "Mon: x" in weekly
     page = (pub.site_dir / "b/sweet-crumbs-bakery/index.html").read_text(encoding="utf-8")
@@ -146,7 +146,7 @@ def test_old_entries_and_their_media_are_pruned(pub, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "site_retention_days", 10)
     pub.send_daily_prompts(BIZ, [_prompt(tmp_path, 1)])
     manifest = _manifest(pub)
-    old_day = (date.today() - timedelta(days=40)).isoformat()
+    old_day = (sp._today_date() - timedelta(days=40)).isoformat()
     stale_dir = pub.site_dir / "assets/sweet-crumbs-bakery" / old_day
     stale_dir.mkdir(parents=True)
     (stale_dir / "old.jpg").write_bytes(b"x")
@@ -154,9 +154,9 @@ def test_old_entries_and_their_media_are_pruned(pub, tmp_path, monkeypatch):
     (settings.data_dir / "site_manifests/sweet-crumbs-bakery.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     pub.send_daily_prompts(BIZ, [_prompt(tmp_path, 2)])
-    assert {e["date"] for e in _manifest(pub)["entries"]} == {date.today().isoformat()}
+    assert {e["date"] for e in _manifest(pub)["entries"]} == {sp._today()}
     assert not stale_dir.exists()
-    assert (pub.site_dir / "assets/sweet-crumbs-bakery" / date.today().isoformat()).exists()
+    assert (pub.site_dir / "assets/sweet-crumbs-bakery" / sp._today()).exists()
 
 
 # ---------------------------------------------------------------------- leads
@@ -241,8 +241,8 @@ def test_rebuild_is_idempotent_and_survives_a_corrupt_manifest(pub, tmp_path):
 
 
 def test_pretty_dates():
-    assert sp._pretty_date(date.today().isoformat()) == "Today"
-    assert sp._pretty_date((date.today() - timedelta(days=1)).isoformat()) == "Yesterday"
+    assert sp._pretty_date(sp._today()) == "Today"
+    assert sp._pretty_date((sp._today_date() - timedelta(days=1)).isoformat()) == "Yesterday"
     assert sp._pretty_date("2026-01-05").endswith("2026") and sp._pretty_date("garbage") == "garbage"
 
 

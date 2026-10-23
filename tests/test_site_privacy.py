@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
+from src.delivery import site_publisher as sp
 from src.delivery.site_publisher import DIGEST_KEEP, SitePublisher
 from src.shared.config import settings
 
@@ -137,7 +137,7 @@ def test_lead_media_beyond_the_digest_window_is_deleted(pub, tmp_path):
     stale.mkdir(parents=True)
     (stale / "old.jpg").write_bytes(b"x")
     pub.send_lead_digest("x", [_lead(tmp_path)])
-    assert not stale.exists() and (pub.site_dir / "assets/leads" / date.today().isoformat()).exists()
+    assert not stale.exists() and (pub.site_dir / "assets/leads" / sp._today()).exists()
     assert DIGEST_KEEP >= 1
 
 

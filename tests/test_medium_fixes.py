@@ -187,6 +187,7 @@ class _FlakyPredictor:
         self.fail_on = fail_on
 
     def score(self, text, *a, **k):
+        text = text.partition("\n\nVisual deliverable:")[0]
         if text in self.fail_on:
             raise RuntimeError("predictor down")
         return {"virality_score": 40, "virality_label": "LOW", "virality_probability": 0.2, "key_factors": ["k"],
@@ -213,7 +214,7 @@ def test_a_failed_prediction_is_unscored_not_an_invented_50():
 def test_an_unscored_variant_never_takes_a_slot_from_a_measured_one():
     """With a bar of 30 the old fake 50 beat the real 40s. Measured scores must always win."""
     out = _gate(_FlakyPredictor(fail_on={"text 1"}), threshold=30).run({}, {}, {}, ["t0", "t1", "t2"])
-    assert {p["prompt_text"] for p in out} == {"text 0", "text 2"}
+    assert {p["prompt_text"].partition("\n\nVisual deliverable:")[0] for p in out} == {"text 0", "text 2"}
     assert all(p["virality_score"] == 40 for p in out)
     below = _gate(_FlakyPredictor(fail_on={"text 1"}), threshold=90).run({}, {}, {}, ["t0", "t1", "t2"])
     assert below and all(p["virality_score"] == 40 and p["below_threshold"] is True for p in below)

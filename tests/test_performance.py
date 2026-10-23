@@ -112,9 +112,10 @@ class _SlowPredictor:
     def score(self, text, *a, **k):
         with self.gauge:
             time.sleep(self.latency)
-        if text == self.fail_on:
+        base_text = text.partition("\n\nVisual deliverable:")[0]
+        if base_text == self.fail_on:
             raise RuntimeError("predictor down")
-        return {"virality_score": 70 + int(text[-1]), "virality_label": "M", "virality_probability": 0.5,
+        return {"virality_score": 70 + int(base_text[-1]), "virality_label": "M", "virality_probability": 0.5,
                 "key_factors": [], "risks": [], "reasoning": "", "improvement_hints": []}
 
 
@@ -145,7 +146,7 @@ def test_one_failed_score_does_not_disturb_the_others_under_concurrency():
         out, _ = _run_gate(3, _SlowPredictor(latency=0.02, fail_on="text 2"))
     finally:
         settings.llm_concurrency = original
-    by_text = {p["prompt_text"]: p for p in out}
+    by_text = {p["prompt_text"].partition("\n\nVisual deliverable:")[0]: p for p in out}
     assert by_text["text 4"]["virality_score"] == 74 and by_text["text 3"]["virality_score"] == 73
     flagged = [p for p in out if p.get("warnings")]
     assert all(p["prompt_text"] == "text 2" for p in flagged)  # only the failed one is marked provisional
