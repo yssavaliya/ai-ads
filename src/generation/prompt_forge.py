@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any
 
-from src.shared.llm_client import LLMClient, extract_json_text, untrusted
+from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_text
 
 logger = logging.getLogger(__name__)
 
@@ -57,21 +57,21 @@ for a human creator. Each prompt must be specific enough that a creator can prod
 from it without further research, but flexible enough to adapt to the platform.
 
 Business profile:
-{untrusted(json.dumps(business_profile, indent=2, default=str)[:6000])}
+{fence(business_profile, 6000)}
 
 Audience map:
-{json.dumps(audience_map, indent=2, default=str)[:6000]}
+{fence(audience_map, 6000)}
 
 Today's trends:
-{json.dumps(trend_data, indent=2, default=str)[:6000]}
+{fence(trend_data, 6000)}
 
 Allowed prompt types:
 {type_descriptions}
 
 Learned weights (topic:format:audience → weight, higher = more proven):
-{json.dumps(weights, indent=2, default=str)[:4000]}
+{fence(weights, 4000)}
 
-{hints_text}
+{fence_text(hints_text)}
 
 Each generated prompt must include: a scroll-stopping hook, the core message,
 specific details (numbers, examples, Indian context), a call to action,
@@ -133,19 +133,19 @@ Respond ONLY with JSON:
 You are a viral content strategist. Improve this content prompt to maximize virality.
 
 Current prompt:
-{json.dumps(best_variant, indent=2, default=str)}
+{fence(best_variant)}
 
 Critique from the predictor (address ALL points):
 {hints}
 
 Business profile:
-{untrusted(json.dumps(business_profile, indent=2, default=str)[:5000])}
+{fence(business_profile, 5000)}
 
 Audience map:
-{json.dumps(audience_map, indent=2, default=str)[:4000]}
+{fence(audience_map, 4000)}
 
 Trends:
-{json.dumps(trend_data, indent=2, default=str)[:4000]}
+{fence(trend_data, 4000)}
 
 Respond ONLY with the improved prompt as JSON with the same fields:
 {{

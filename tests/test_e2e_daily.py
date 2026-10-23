@@ -95,7 +95,7 @@ def test_daily_pipeline_end_to_end(pipeline_env):
     dj, Session = pipeline_env
     result = dj.DailyPipeline().run_for_business(dict(BUSINESS))
 
-    assert result == {"business": "E2E Bakery", "prompts": 3, "delivered": True}
+    assert result == {"business": "E2E Bakery", "prompts": 3, "delivered": True, "channels": {"site": True}}
 
     db = Session()
     rows = db.query(Prompt).all()

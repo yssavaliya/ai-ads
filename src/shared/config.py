@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     mistral_api_key: str | None = Field(default=None, description="Mistral free 'experiment' tier key")
     mistral_model: str = Field(default="mistral-small-latest")
     hf_llm_model: str = Field(default="meta-llama/Llama-3.3-70B-Instruct", description="Used with HF_TOKEN")
-    llm_keyless_fallback: bool = Field(default=True, description="Allow the keyless Pollinations text endpoint as a last resort")
+    llm_keyless_fallback: bool = Field(default=False, description="Opt-in: let the keyless public Pollinations text endpoint see prompts as a last resort")
     pollinations_model: str = Field(default="openai")
 
     # Image providers (free tiers), tried in IMAGE_PROVIDER_ORDER; a local branded card
@@ -84,7 +84,12 @@ class Settings(BaseSettings):
     # GitHub (for feedback issues)
     # Optional comma-separated GitHub logins allowed to submit feedback issues.
     # Unset = anyone who can open an issue (fine for private repos).
-    feedback_allowed_users: str | None = Field(default=None, description="Allowed feedback issue authors")
+    feedback_allowed_users: str | None = Field(
+        default=None, description="GitHub logins whose feedback issues count. REQUIRED: feedback fails closed without it"
+    )
+    feedback_signing_key: str | None = Field(
+        default=None, description="HMAC key for feedback tokens. REQUIRED: without it no feedback links are issued or accepted"
+    )
     github_token: str | None = Field(default=None, description="GitHub token for issue creation")
     github_repo: str | None = Field(default=None, description="GitHub repo (owner/repo)")
 
@@ -107,6 +112,7 @@ class Settings(BaseSettings):
 
     # Virality
     virality_threshold: int = Field(default=75, description="Minimum virality score (0-100)")
+    below_threshold_policy: str = Field(default="flag", description="flag | block: what to do with prompts under the quality bar")
     max_regeneration_attempts: int = Field(default=5, description="Max prompt regeneration attempts")
 
     # Paths
@@ -126,6 +132,14 @@ class Settings(BaseSettings):
 
     # Dry run: write rendered emails/assets to logs/preview/ instead of sending
     dry_run: bool = Field(default=False, description="Preview mode — no SMTP, files written to logs/preview/")
+
+    @field_validator("delivery_mode")
+    @classmethod
+    def _valid_delivery_mode(cls, value: str) -> str:
+        mode = (value or "site").strip().lower()
+        if mode not in ("site", "email", "both"):
+            raise ValueError(f"DELIVERY_MODE must be site, email or both (got {value!r})")
+        return mode
 
     @field_validator("*", mode="before")
     @classmethod

@@ -23,8 +23,7 @@
           {% if lead.instagram_handle %}· <a href="https://instagram.com/{{ lead.instagram_handle }}" target="_blank" rel="noopener">@{{ lead.instagram_handle }}</a>{% endif %}
           {% if lead.website_url %}· <a href="{{ lead.website_url }}" target="_blank" rel="noopener">website</a>{% endif %}
         </p>
-        {% if lead.contact_email %}<p>✉️ <a href="mailto:{{ lead.contact_email }}">{{ lead.contact_email }}</a></p>
-        {% else %}<p class="banner warn small">No public contact e-mail shown — reach out via Instagram DM.</p>{% endif %}
+        <p class="banner warn small">Contact details are deliberately not published here — reach out via the Instagram profile or the business website.</p>
         {% if lead.reasons %}<ul class="small">{% for r in lead.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
         {% if lead.prompt_error %}<p class="banner warn small">⚠️ Sample prompts could not be generated: {{ lead.prompt_error }}</p>{% endif %}
         {% for p in lead.prompts %}

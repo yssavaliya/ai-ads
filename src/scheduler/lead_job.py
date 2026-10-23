@@ -13,16 +13,17 @@ from sqlalchemy import func
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.delivery.channels import get_delivery
+from src.delivery.channels import DeliveryResult, get_delivery
 from src.fetch.lead_finder import LeadFinder
 from src.fetch.social_scraper import SocialScraper
-from src.generation.virality_gate import ViralityGate
+from src.generation.virality_gate import ViralityGate, apply_threshold_policy
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.lead_scorer import LeadScorer
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.auto_learner import AutoLearner
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
+from src.shared.privacy import PII_KEYS
 from src.shared.utils import load_businesses, load_json, resolve_env_ref, save_json, utc_now_naive
 from src.storage.models import Base, Business, Prompt, PromptType, SessionLocal
 from src.storage.models import engine as db_engine
@@ -70,6 +71,7 @@ class LeadPipeline:
             "max_followers": int(default.get("max_followers", 500000)),
             "target_count": int(default.get("target_count", 5)),
             "min_opportunity_score": int(default.get("min_opportunity_score", 60)),
+            "virality_threshold": int(default.get("virality_threshold", settings.virality_threshold)),
             "enforce_location": bool(default.get("enforce_location", False)),
             "digest_email": resolve_env_ref(default.get("digest_email", "")),
             "prompt_types": default.get(
@@ -180,6 +182,7 @@ class LeadPipeline:
                 logger.warning("Could not update lead rejection cache: %s", exc)
         digest = []
         prompt_failures = 0
+        saved_prompt_ids: list[int] = []
         failures = []
         creative = None
         try:
@@ -187,7 +190,7 @@ class LeadPipeline:
                 try:
                     biz = self._get_or_create_business(db, lead)
                     prompts = self._generate_sample_prompts(lead, config, biz.weights_key)
-                    self._save_prompts(db, biz.id, prompts)
+                    saved_prompt_ids.extend(self._save_prompts(db, biz.id, prompts))
 
                     if creative is None:
                         from src.generation.creative_forge import CreativeForge
@@ -235,6 +238,8 @@ class LeadPipeline:
 
         self._save_leads(digest)
         delivered = self._send_digest(digest, config)
+        if delivered:
+            self._stamp_sent(saved_prompt_ids)
 
         result = {
             "candidates_found": len(candidates),
@@ -243,7 +248,8 @@ class LeadPipeline:
             "prompts_generated": sum(len(lead.get("prompts") or []) for lead in digest),
             "prompt_failures": prompt_failures,
             "learning": learning,
-            "delivered": delivered,
+            "delivered": bool(delivered),
+            "channels": getattr(delivered, "channels", {}),
             "generated_at": utc_now_naive().isoformat(),
         }
         logger.info("Lead pipeline result: %s", result)
@@ -436,24 +442,39 @@ class LeadPipeline:
                 db.commit()
         return biz
 
-    def _save_prompts(self, db: Any, business_id: int, prompts: list[dict[str, Any]]) -> None:
-        """Store generated sample prompts so auto-learning can match the
-        lead's future posts against them."""
-        now = utc_now_naive()
+    def _save_prompts(self, db: Any, business_id: int, prompts: list[dict[str, Any]]) -> list[int]:
+        """Store generated sample prompts so auto-learning can match the lead's future posts against
+        them. `sent_at` stays NULL: a prompt only counts as sent once the digest was delivered
+        (audit H-05) - dedup, history and learning all key off it."""
+        rows = []
         for p in prompts:
-            db.add(
-                Prompt(
-                    business_id=business_id,
-                    prompt_text=p.get("prompt_text") or "",
-                    caption=p.get("caption"),
-                    prompt_type=self._prompt_type(p.get("prompt_type") or "educational"),
-                    virality_score=p.get("virality_score"),
-                    virality_label=p.get("virality_label"),
-                    audience_segment=(p.get("audience_segment") or None),
-                    sent_at=now,
-                )
+            row = Prompt(
+                business_id=business_id,
+                prompt_text=p.get("prompt_text") or "",
+                caption=p.get("caption"),
+                prompt_type=self._prompt_type(p.get("prompt_type") or "educational"),
+                virality_score=p.get("virality_score"),
+                virality_label=p.get("virality_label"),
+                audience_segment=(p.get("audience_segment") or None),
+                sent_at=None,
             )
+            db.add(row)
+            rows.append(row)
         db.commit()
+        return [r.id for r in rows]
+
+    def _stamp_sent(self, prompt_ids: list[int]) -> None:
+        """Mark prompts as sent - only called after a confirmed delivery."""
+        if not prompt_ids:
+            return
+        db = SessionLocal()
+        try:
+            now = utc_now_naive()
+            for row in db.query(Prompt).filter(Prompt.id.in_(prompt_ids), Prompt.sent_at.is_(None)).all():
+                row.sent_at = now
+            db.commit()
+        finally:
+            db.close()
 
     def _attach_asset(self, db: Any, business_id: int, prompt: dict[str, Any]) -> None:
         """Record the rendered asset path on the newest matching Prompt row."""
@@ -498,15 +519,19 @@ class LeadPipeline:
             trend_data,
             config.get("prompt_types", ["educational", "storytelling", "social_proof", "promotional"]),
             weights,
+            threshold=config.get("virality_threshold", settings.virality_threshold),
         )
-        return prompts
+        return apply_threshold_policy(prompts)
 
     def _save_leads(self, digest: list[dict[str, Any]]) -> None:
         path = Path(settings.data_dir) / "leads.json"
-        save_json(path, {"generated_at": utc_now_naive().isoformat(), "leads": digest})
+        # leads.json is git-tracked state: never persist contact details (the e-mail channel gets the
+        # full `digest` in memory; scraped contact addresses are third-party personal data)
+        public = [{k: v for k, v in lead.items() if k not in PII_KEYS} for lead in digest]
+        save_json(path, {"generated_at": utc_now_naive().isoformat(), "leads": public})
         logger.info("Saved %d leads to %s", len(digest), path)
 
-    def _send_digest(self, digest: list[dict[str, Any]], config: dict[str, Any]) -> bool:
+    def _send_digest(self, digest: list[dict[str, Any]], config: dict[str, Any]) -> DeliveryResult:
         # `to` only matters for the e-mail channel; the site channel ignores it.
         to = config.get("digest_email") or (settings.smtp_user or "")
         return self.delivery.send_lead_digest(to, digest)
@@ -525,6 +550,16 @@ def main() -> None:
             "::error::%d leads found but 0 prompts generated — LLM chain is down. "
             "Check GROQ_API_KEY / GEMINI_API_KEY and the *_MODEL names.",
             result["top_leads"],
+        )
+        raise SystemExit(1)
+
+    # A digest that reached nobody is a failed run, however many leads were found (audit H-05).
+    if not result.get("delivered"):
+        logger.error("::error::The lead digest was not delivered by any channel (%s)", result.get("channels"))
+        from src.delivery.github_feedback import GithubFeedback
+
+        GithubFeedback().report_degraded_run(
+            [{"business": "lead-digest", "stage": "delivery", "error": f"not delivered: {result.get('channels')}"}]
         )
         raise SystemExit(1)
 

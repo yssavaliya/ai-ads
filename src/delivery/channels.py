@@ -20,6 +20,33 @@ logger = logging.getLogger(__name__)
 METHODS = ("send_daily_prompts", "send_weekly_report", "send_onboarding", "send_lead_digest")
 
 
+class DeliveryResult:
+    """Outcome per channel. Truthy when AT LEAST ONE channel delivered (so `if result:` keeps its
+    old meaning), but partial failures stay visible: `partial` / `failed` / `errors`."""
+
+    def __init__(self, channels: dict[str, bool], errors: dict[str, str] | None = None) -> None:
+        self.channels = channels
+        self.errors = errors or {}
+
+    @property
+    def ok(self) -> bool:
+        return any(self.channels.values())
+
+    @property
+    def failed(self) -> list[str]:
+        return [name for name, done in self.channels.items() if not done]
+
+    @property
+    def partial(self) -> bool:
+        return self.ok and bool(self.failed)
+
+    def __bool__(self) -> bool:
+        return self.ok
+
+    def __repr__(self) -> str:
+        return f"DeliveryResult({self.channels})"
+
+
 class Delivery:
     def __init__(self, channels: list[Any]) -> None:
         self.channels = channels
@@ -28,35 +55,45 @@ class Delivery:
     def names(self) -> list[str]:
         return [getattr(c, "name", type(c).__name__) for c in self.channels]
 
-    def _fan_out(self, method: str, *args: Any) -> bool:
-        delivered = False
+    def _fan_out(self, method: str, *args: Any) -> DeliveryResult:
+        outcome: dict[str, bool] = {}
+        errors: dict[str, str] = {}
         for channel in self.channels:
             label = getattr(channel, "name", type(channel).__name__)
             try:
-                ok = bool(getattr(channel, method)(*args))
+                outcome[label] = bool(getattr(channel, method)(*args))
             except Exception as exc:  # noqa: BLE001 - one channel failing must not block the others
                 logger.error("::error::Delivery via %s failed in %s: %s", label, method, exc)
-                ok = False
-            delivered = delivered or ok
-        return delivered
+                outcome[label], errors[label] = False, str(exc)[:200]
+            if not outcome[label]:
+                logger.warning("::warning::Channel %s did not deliver (%s)", label, method)
+        result = DeliveryResult(outcome, errors)
+        if result.partial:
+            logger.warning("::warning::PARTIAL delivery: ok=%s failed=%s", [n for n, d in outcome.items() if d], result.failed)
+        return result
 
-    def send_daily_prompts(self, business: dict[str, Any], prompts: list[dict[str, Any]]) -> bool:
+    def send_daily_prompts(self, business: dict[str, Any], prompts: list[dict[str, Any]]) -> DeliveryResult:
         return self._fan_out("send_daily_prompts", business, prompts)
 
-    def send_weekly_report(self, business: dict[str, Any], report: dict[str, Any]) -> bool:
+    def send_weekly_report(self, business: dict[str, Any], report: dict[str, Any]) -> DeliveryResult:
         return self._fan_out("send_weekly_report", business, report)
 
-    def send_onboarding(self, business: dict[str, Any], profile: dict[str, Any]) -> bool:
+    def send_onboarding(self, business: dict[str, Any], profile: dict[str, Any]) -> DeliveryResult:
         return self._fan_out("send_onboarding", business, profile)
 
-    def send_lead_digest(self, to: str, leads: list[dict[str, Any]]) -> bool:
+    def send_lead_digest(self, to: str, leads: list[dict[str, Any]]) -> DeliveryResult:
         return self._fan_out("send_lead_digest", to, leads)
+
+
+MODES = ("site", "email", "both")
 
 
 def get_delivery(mode: str | None = None) -> Delivery:
     mode = (mode or settings.delivery_mode or "site").strip().lower()
+    if mode not in MODES:  # a typo must not silently fall back to some other channel
+        raise ValueError(f"Unknown DELIVERY_MODE {mode!r}; expected one of {', '.join(MODES)}")
     channels: list[Any] = []
-    if mode in ("site", "both") or mode not in ("email",):
+    if mode in ("site", "both"):
         from src.delivery.site_publisher import SitePublisher
 
         channels.append(SitePublisher())

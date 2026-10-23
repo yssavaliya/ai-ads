@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import httpx
 
+from src.learning import feedback_tokens
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.config import settings
 from src.shared.utils import load_weights, save_weights, utc_now_naive
@@ -63,6 +64,7 @@ def parse_feedback_issues() -> list[dict[str, Any]]:
                 "feedback": match.group(2).lower(),
                 "body": issue.get("body") or "",
                 "user": ((issue.get("user") or {}).get("login") or ""),
+                "title": title,
             }
         )
     logger.info("Parsed %d feedback issues", len(parsed))
@@ -103,19 +105,28 @@ def process_feedback() -> int:
     a hit: the auto-learner scores the linked post's real engagement later."""
     from src.storage.models import Engagement, Platform
 
+    # FAIL CLOSED (audit C-03). Feedback mutates learned weights and can trigger regeneration, and
+    # anyone on GitHub can open an issue. Without BOTH an author allow-list and a signing key we
+    # accept nothing rather than accept everything.
+    allowed = _allowed_users()
+    if not allowed or not feedback_tokens.enabled():
+        logger.warning(
+            "::warning::Feedback processing is disabled: set FEEDBACK_ALLOWED_USERS (GitHub logins) and "
+            "FEEDBACK_SIGNING_KEY (random secret). No feedback issue was read or changed."
+        )
+        return 0
+
     db = SessionLocal()
     try:
         updater = BayesianUpdater()
         issues = parse_feedback_issues()
-        allowed = _allowed_users()
-        seen: set[tuple[int, str]] = set()
+        seen: set[tuple[str, str]] = set()
         processed = 0
 
         for issue in issues:
-            prompt_id = issue["prompt_id"]
             feedback = issue["feedback"]
 
-            if allowed and (issue.get("user") or "").lower() not in allowed:
+            if (issue.get("user") or "").lower() not in allowed:
                 logger.warning(
                     "::warning::Ignoring feedback issue #%s from non-allowed user %r",
                     issue["issue_number"], issue.get("user"),
@@ -123,18 +134,31 @@ def process_feedback() -> int:
                 close_issue(issue["issue_number"])
                 continue
 
+            # The token binds this issue to ONE durable prompt uid and ONE button kind.
+            uid = feedback_tokens.verify(issue.get("title", ""), feedback)
+            if uid is None:
+                logger.warning(
+                    "::warning::Rejecting feedback issue #%s: missing or invalid token", issue["issue_number"]
+                )
+                close_issue(issue["issue_number"])
+                continue
+
             # Repeated clicks on the same button must not inflate the weights.
-            key = (prompt_id, feedback)
+            key = (uid, feedback)
             if key in seen:
                 close_issue(issue["issue_number"])
                 continue
             seen.add(key)
 
-            prompt = db.get(Prompt, prompt_id)
+            prompt = db.query(Prompt).filter(Prompt.uid == uid).first()
             if prompt is None:
-                logger.warning("Feedback issue #%s references unknown prompt %s; closing anyway", issue["issue_number"], prompt_id)
+                logger.warning(
+                    "Feedback issue #%s carries a valid token for an unknown prompt (cache rebuilt?); closing",
+                    issue["issue_number"],
+                )
                 close_issue(issue["issue_number"])
                 continue
+            prompt_id = prompt.id
 
             if feedback == "posted":
                 url_match = IG_POST_RE.search(issue["body"])
@@ -301,7 +325,7 @@ def regenerate_prompt(prompt: Any, db: Any) -> bool:
     )
     db.add(new_prompt)
     db.flush()
-    links = dj.feedback.create_feedback_links(new_prompt.id, biz.name, v.get("title", ""))
+    links = dj.feedback.create_feedback_links(new_prompt.id, biz.name, v.get("title", ""), new_prompt.uid)
     db.commit()
 
     try:

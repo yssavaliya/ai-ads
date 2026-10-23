@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import uuid
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -106,6 +107,9 @@ class Prompt(Base):
     __tablename__ = "prompts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Durable random identity. The integer id is recycled if the cached database is rebuilt, so
+    # nothing external (feedback links) may refer to it.
+    uid: Mapped[str] = mapped_column(String(32), default=lambda: uuid.uuid4().hex, index=True)
     business_id: Mapped[int] = mapped_column(Integer, ForeignKey("businesses.id"), nullable=False)
     prompt_text: Mapped[str] = mapped_column(Text, nullable=False)
     prompt_type: Mapped[PromptType] = mapped_column(SQLEnum(PromptType), nullable=False)
@@ -120,6 +124,8 @@ class Prompt(Base):
     feedback: Mapped[FeedbackType | None] = mapped_column(SQLEnum(FeedbackType), nullable=True)
     feedback_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     github_issue_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Set when the auto-learner has counted this prompt's post toward the weights (exactly once).
+    auto_learned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     audience_segment: Mapped[str | None] = mapped_column(String(255), nullable=True)
     caption: Mapped[str | None] = mapped_column(Text, nullable=True)
     asset_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -232,7 +238,7 @@ def init_db() -> None:
     _init_done = True
 
 
-def _migrate() -> None:
+def _migrate(bind: Any = None) -> None:
     """Lightweight additive migrations for SQLite (create_all won't ALTER)."""
     import logging
 
@@ -242,9 +248,11 @@ def _migrate() -> None:
         ("prompts", "asset_path", "VARCHAR(500)"),
         ("prompts", "asset_type", "VARCHAR(20)"),
         ("prompts", "format", "VARCHAR(40)"),
+        ("prompts", "uid", "VARCHAR(32)"),
+        ("prompts", "auto_learned_at", "DATETIME"),
     ]
     log = logging.getLogger(__name__)
-    with engine.connect() as conn:
+    with (bind or engine).connect() as conn:
         for table, column, ddl in migrations:
             try:
                 conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
@@ -252,6 +260,8 @@ def _migrate() -> None:
             except OperationalError as exc:
                 if "duplicate column" not in str(exc).lower():
                     log.warning("Migration %s.%s failed: %s", table, column, exc)
+        # rows created before `uid` existed get a random one (never derived from the id)
+        conn.exec_driver_sql("UPDATE prompts SET uid = lower(hex(randomblob(16))) WHERE uid IS NULL OR uid = ''")
         conn.commit()
 
 

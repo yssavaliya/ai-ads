@@ -36,11 +36,13 @@ class ViralityGate:
         prompt_types: list[str],
         weights: dict[str, Any] | None = None,
         history: list[dict[str, Any]] | None = None,
+        threshold: int | None = None,
     ) -> list[dict[str, Any]]:
         """Returns up to 3 prompts that meet the threshold (diverse types),
         or the best available ones. Learned `weights` bias selection toward
         proven format/angle combos; `history` grounds the predictor in real
         past performance."""
+        thr = self.threshold if threshold is None else int(threshold)  # per-business quality bar
         selected: dict[str, dict[str, Any]] = {}
         best_overall: dict[str, Any] | None = None
         best_score = -1
@@ -111,7 +113,7 @@ class ViralityGate:
                 if combined > best_score:
                     best_score = combined
                     best_overall = v
-                if score >= self.threshold:
+                if score >= thr:
                     ptype = v.get("prompt_type", "educational")
                     if ptype not in selected or selected[ptype].get("_combined", 0) < combined:
                         selected[ptype] = v
@@ -121,7 +123,7 @@ class ViralityGate:
             if len(selected) >= min(3, len(set(prompt_types)) or 3):
                 logger.info(
                     "Virality gate passed at attempt %d: %d types above threshold %d",
-                    attempt, len(selected), self.threshold,
+                    attempt, len(selected), thr,
                 )
                 break
 
@@ -160,7 +162,7 @@ class ViralityGate:
                 refined["generation_attempt"] = attempt
                 refined_combined = refined["virality_score"] + self._weight_boost(weights, refined)
                 refined["_combined"] = refined_combined
-                if refined["virality_score"] >= self.threshold:
+                if refined["virality_score"] >= thr:
                     ptype = refined.get("prompt_type", "educational")
                     if ptype not in selected or selected[ptype].get("_combined", 0) < refined_combined:
                         selected[ptype] = refined
@@ -188,10 +190,13 @@ class ViralityGate:
             if key not in seen or r["virality_score"] > seen[key]["virality_score"]:
                 seen[key] = r
         final = sorted(seen.values(), key=lambda v: v["virality_score"], reverse=True)[:3]
+        for v in final:
+            v["threshold"] = thr
+            v["below_threshold"] = v["virality_score"] < thr
 
         logger.info(
             "Virality gate final: %d prompts, best score=%d (threshold=%d)",
-            len(final), max((v["virality_score"] for v in final), default=0), self.threshold,
+            len(final), max((v["virality_score"] for v in final), default=0), thr,
         )
         return final
 
@@ -233,3 +238,27 @@ class ViralityGate:
                 seen.add(key)
                 unique.append(h)
         return unique[:6]
+
+
+def apply_threshold_policy(prompts: list[dict[str, Any]], policy: str | None = None) -> list[dict[str, Any]]:
+    """What happens to prompts that never reached the business's quality bar.
+
+    The gate always returns its best candidates ("best available") so a bad day is visible,
+    but README promised "refined until >= threshold". Policy (BELOW_THRESHOLD_POLICY):
+      flag  (default) keep them, marked `below_threshold` with a visible warning on the page
+      block drop them; a day with nothing above the bar publishes nothing
+    """
+    policy = (policy or settings.below_threshold_policy or "flag").lower()
+    out: list[dict[str, Any]] = []
+    for p in prompts:
+        if not p.get("below_threshold"):
+            out.append(p)
+            continue
+        if policy == "block":
+            logger.warning("::warning::Dropped below-threshold prompt (%s < %s): %s", p.get("virality_score"), p.get("threshold"), p.get("title"))
+            continue
+        p.setdefault("warnings", []).append(
+            f"Below your quality bar ({p.get('virality_score')}/100, bar {p.get('threshold')}) - review before posting."
+        )
+        out.append(p)
+    return out

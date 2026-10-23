@@ -5,6 +5,7 @@ from typing import Any
 
 import httpx
 
+from src.learning import feedback_tokens
 from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
@@ -26,9 +27,13 @@ class GithubFeedback:
     def enabled(self) -> bool:
         return bool(self.token and self.repo)
 
-    def create_feedback_links(self, prompt_id: int, business_name: str, prompt_title: str) -> dict[str, str]:
-        """Return feedback URLs for a prompt, or placeholder '#' if GitHub is not configured."""
-        if not self.enabled:
+    def create_feedback_links(
+        self, prompt_id: int, business_name: str, prompt_title: str, prompt_uid: str | None = None
+    ) -> dict[str, str]:
+        """Signed feedback URLs for a prompt. Returns placeholder '#' links when GitHub is not
+        configured OR no FEEDBACK_SIGNING_KEY exists: an unsigned link would be unverifiable,
+        and feedback processing refuses anything without a valid token."""
+        if not self.enabled or not feedback_tokens.enabled() or not prompt_uid:
             return {"good": "#", "bad": "#", "regenerate": "#", "posted": "#"}
         title = f"{FEEDBACK_PREFIX} prompt #{prompt_id}"
         body = (
@@ -53,7 +58,7 @@ class GithubFeedback:
             ("regenerate", "REGENERATE 🔄"),
             ("posted", "POSTED 📎"),
         ):
-            issue_title = f"{base_title} [{word}]"
+            issue_title = f"{base_title} [{word}] {feedback_tokens.sign(prompt_uid, label)}"
             issue_body = posted_body if label == "posted" else body.replace("__FEEDBACK__", word)
             urls[label] = (
                 f"https://github.com/{self.repo}/issues/new?"

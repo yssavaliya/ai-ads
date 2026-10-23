@@ -10,6 +10,7 @@ from typing import Any
 from src.shared import llm_providers
 from src.shared.config import settings
 from src.shared.llm_providers import HEALTH, classify
+from src.shared.privacy import redact, redact_text
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,19 @@ def untrusted(text: str) -> str:
     """Wrap scraped/third-party text so the model treats it as data, not instructions."""
     safe = text.replace("</untrusted_data>", "")
     return f"<untrusted_data>\n{safe}\n</untrusted_data>"
+
+
+def fence(value: object, limit: int | None = None) -> str:
+    """The ONLY way structured context should enter a prompt: PII redacted, serialised, bounded,
+    and wrapped as untrusted data (audit H-01/H-02)."""
+    text = json.dumps(redact(value), indent=2, default=str, ensure_ascii=False)
+    return untrusted(text[:limit] if limit else text)
+
+
+def fence_text(text: str, limit: int | None = None) -> str:
+    """Same for free text (captions, summaries, past prompts)."""
+    safe = redact_text(text or "")
+    return untrusted(safe[:limit] if limit else safe)
 
 
 class AllProvidersFailedError(RuntimeError):

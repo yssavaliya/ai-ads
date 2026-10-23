@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.shared.llm_client import LLMClient, extract_json_text, untrusted
+from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_text
 
 logger = logging.getLogger(__name__)
 
@@ -70,23 +70,23 @@ You are a viral content strategist for the Indian social media market (Instagram
 Predict the virality potential of a content prompt for this business.
 
 Business profile:
-{untrusted(json.dumps(business_profile, indent=2, default=str)[:CONTEXT_CHARS])}
+{fence(business_profile, CONTEXT_CHARS)}
 
 Audience map:
-{json.dumps(audience_map, indent=2, default=str)[:CONTEXT_CHARS]}
+{fence(audience_map, CONTEXT_CHARS)}
 
 Today's trends:
-{json.dumps(trend_data, indent=2, default=str)[:CONTEXT_CHARS]}
+{fence(trend_data, CONTEXT_CHARS)}
 
 Prompt type: {prompt_type}
 
 REAL PAST PERFORMANCE for this business (use to ground your judgment — favor
 patterns similar to winners, penalize patterns similar to losers):
-{self._format_history(history)}
+{fence_text(self._format_history(history))}
 
 Content prompt to evaluate:
 """
-        + f'"""{prompt_text}"""\n'
+        + f"{fence_text(prompt_text)}\n"
         + """
 Evaluate like a senior growth marketer. Consider: hook strength (first 3 words),
 emotional trigger, specificity, Indian cultural relevance, platform fit,

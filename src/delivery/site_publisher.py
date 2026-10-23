@@ -30,6 +30,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from src.shared.config import settings
+from src.shared.privacy import redact, redact_text
 from src.shared.utils import utc_now_naive
 from src.storage.models import slugify
 
@@ -113,6 +114,37 @@ class SitePublisher:
                 logger.warning("Corrupt site manifest %s (%s); starting fresh", path, exc)
         return {"business": {}, "entries": [], "weekly": [], "notices": [], "about": None}
 
+    def _open(self, name: str) -> tuple[str, str, dict[str, Any]]:
+        """(manifest slug, current URL key, manifest). The manifest is named by the STABLE slug;
+        only URLs/asset folders carry the secret-derived key, so rotating SITE_SECRET re-homes
+        content instead of orphaning it (audit C-02)."""
+        slug = slugify(name)
+        pk = self.path_key(name)
+        manifest = self._load_manifest(slug)
+        self._rehome(pk, manifest)
+        return slug, pk, manifest
+
+    def _rehome(self, pk: str, manifest: dict[str, Any]) -> None:
+        old = manifest.get("path_key")
+        manifest["path_key"] = pk
+        if not old or old == pk:
+            return
+        src, dst = self.site_dir / "assets" / old, self.site_dir / "assets" / pk
+        if src.exists():
+            if dst.exists():
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+                shutil.rmtree(src, ignore_errors=True)
+            else:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                src.rename(dst)
+        for entry in manifest.get("entries", []):
+            asset = entry.get("asset")
+            if isinstance(asset, dict):
+                for field, value in list(asset.items()):
+                    if isinstance(value, str):
+                        asset[field] = value.replace(f"assets/{old}/", f"assets/{pk}/")
+        logger.info("Re-homed site content %s -> %s", old, pk)
+
     def _save_manifest(self, key: str, manifest: dict[str, Any]) -> None:
         self._manifest_path(key).write_text(json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8")
 
@@ -177,8 +209,7 @@ class SitePublisher:
     # delivery API (same names as EmailSender so pipelines are channel-agnostic)
     # ------------------------------------------------------------------
     def send_daily_prompts(self, business: dict[str, Any], prompts: list[dict[str, Any]]) -> bool:
-        key = self.path_key(business["name"])
-        manifest = self._load_manifest(key)
+        slug, key, manifest = self._open(business["name"])
         manifest["business"] = self._business_meta(business)
         day = _today()
 
@@ -196,6 +227,8 @@ class SitePublisher:
                 "title": p.get("title") or "",
                 "prompt_type": p.get("prompt_type") or "",
                 "score": p.get("virality_score"),
+                "below_threshold": bool(p.get("below_threshold")),
+                "threshold": p.get("threshold"),
                 "label": p.get("virality_label") or "",
                 "hook": p.get("hook") or "",
                 "angle": p.get("angle") or "",
@@ -214,40 +247,42 @@ class SitePublisher:
                 "asset": self._import_assets(key, day, entry_id, p),
                 "feedback_links": {k: v for k, v in (p.get("feedback_links") or {}).items() if v and v != "#"},
             }
+            # Defence in depth (audit C-02/H-01): model output must not carry contact details onto a
+            # public page even if one slipped through (e.g. an address echoed from a scraped profile).
+            entry.update(redact({k: v for k, v in entry.items()
+                                 if k not in ("id", "date", "created_at", "prompt_id", "asset", "feedback_links")}))
             # a regenerated/re-run prompt replaces its earlier entry
             manifest["entries"] = [e for e in manifest["entries"] if e.get("id") != entry_id]
             manifest["entries"].append(entry)
 
         self._prune(key, manifest)
-        self._save_manifest(key, manifest)
+        self._save_manifest(slug, manifest)
         self._touch_dirty()
         self.rebuild()
         logger.info("Site updated for %s: %d new entries -> %s", business["name"], len(prompts), self.business_url(business["name"]))
         return True
 
     def send_weekly_report(self, business: dict[str, Any], report: dict[str, Any]) -> bool:
-        key = self.path_key(business["name"])
-        manifest = self._load_manifest(key)
+        slug, key, manifest = self._open(business["name"])
         manifest["business"] = self._business_meta(business)
         day = _today()
-        manifest["weekly"] = ([{"date": day, "report": report}] + [w for w in manifest.get("weekly", []) if w.get("date") != day])[:WEEKLY_KEEP]
-        self._save_manifest(key, manifest)
+        manifest["weekly"] = ([{"date": day, "report": redact(report)}] + [w for w in manifest.get("weekly", []) if w.get("date") != day])[:WEEKLY_KEEP]
+        self._save_manifest(slug, manifest)
         self._touch_dirty()
         self.rebuild()
         return True
 
     def send_onboarding(self, business: dict[str, Any], profile: dict[str, Any]) -> bool:
-        key = self.path_key(business["name"])
-        manifest = self._load_manifest(key)
+        slug, key, manifest = self._open(business["name"])
         manifest["business"] = self._business_meta(business)
         manifest["about"] = {
             "onboarded": _today(),
-            "title": (profile or {}).get("title") or "",
-            "description": ((profile or {}).get("meta_description") or "")[:300],
+            "title": redact_text((profile or {}).get("title") or ""),
+            "description": redact_text(((profile or {}).get("meta_description") or "")[:300]),
             "pages": (profile or {}).get("page_count") or 0,
-            "headings": list((profile or {}).get("headings") or [])[:8],
+            "headings": [redact_text(str(h)) for h in ((profile or {}).get("headings") or [])[:8]],
         }
-        self._save_manifest(key, manifest)
+        self._save_manifest(slug, manifest)
         self._touch_dirty()
         self.rebuild()
         return True
@@ -263,29 +298,33 @@ class SitePublisher:
                 digests = []
         day = _today()
         published = []
-        show_email = bool(settings.site_secret)
         for li, lead in enumerate(leads):
             lead_prompts = []
             for pi, p in enumerate(lead.get("prompts") or []):
                 entry_id = f"{day}-lead{li}-{pi}"
                 lead_prompts.append({
-                    "title": p.get("title") or "", "prompt_type": p.get("prompt_type") or "",
-                    "score": p.get("virality_score"), "prompt_text": p.get("prompt_text") or "",
-                    "caption": p.get("caption") or "",
+                    "title": redact_text(p.get("title") or ""), "prompt_type": p.get("prompt_type") or "",
+                    "score": p.get("virality_score"), "prompt_text": redact_text(p.get("prompt_text") or ""),
+                    "caption": redact_text(p.get("caption") or ""),
                     "asset": self._import_assets("leads", day, entry_id, p),
                 })
             published.append({
-                "name": lead.get("name") or "", "instagram_handle": lead.get("instagram_handle") or "",
+                "name": redact_text(lead.get("name") or ""), "instagram_handle": lead.get("instagram_handle") or "",
                 "website_url": lead.get("website_url") or "", "niche": lead.get("niche") or "",
                 "followers": lead.get("followers") or lead.get("follower_count") or 0,
                 "opportunity_score": lead.get("opportunity_score"),
-                "reasons": list(lead.get("opportunity_reasons") or []),
-                "contact_email": (lead.get("contact_email") or "") if show_email else "",
-                "prompt_error": lead.get("prompt_error") or "",
+                "reasons": [redact_text(str(r)) for r in (lead.get("opportunity_reasons") or [])],
+                "prompt_error": redact_text(lead.get("prompt_error") or ""),
                 "prompts": lead_prompts,
             })
         digests = ([{"date": day, "leads": published}] + [d for d in digests if d.get("date") != day])[:DIGEST_KEEP]
         path.write_text(json.dumps({"digests": digests, "key": key}, indent=1, ensure_ascii=False), encoding="utf-8")
+        keep_days = {d["date"] for d in digests}
+        lead_assets = self.site_dir / "assets" / "leads"
+        if lead_assets.exists():  # digests beyond DIGEST_KEEP no longer reference their media
+            for day_dir in lead_assets.iterdir():
+                if day_dir.is_dir() and day_dir.name not in keep_days:
+                    shutil.rmtree(day_dir, ignore_errors=True)
         self._touch_dirty()
         self.rebuild()
         return True
@@ -307,19 +346,59 @@ class SitePublisher:
     # rendering
     # ------------------------------------------------------------------
     def rebuild(self) -> None:
-        """Re-render every page from the manifests (idempotent)."""
+        """Re-render every page from the manifests (idempotent) and delete whatever is no longer
+        part of the current site: pages of removed businesses, pages under an old SITE_SECRET,
+        stale lead pages and orphaned media."""
         self.site_dir.mkdir(parents=True, exist_ok=True)
         self._copy_static()
         businesses = []
+        live: set[str] = set()
         for path in sorted(self._data_dir().glob("*.json")):
             if path.name.startswith("_"):
                 continue
             manifest = self._load_manifest(path.stem)
             if not manifest.get("business"):
                 continue
-            businesses.append(self._render_business(path.stem, manifest))
+            name = manifest["business"]["name"]
+            slug, pk = slugify(name), self.path_key(name)
+            if path.stem != slug:  # legacy: manifest was named by its (secret-derived) path key
+                target = self._manifest_path(slug)
+                if target.exists():
+                    path.unlink()
+                    continue
+                path.rename(target)
+            self._rehome(pk, manifest)
+            self._save_manifest(slug, manifest)
+            businesses.append(self._render_business(pk, manifest))
+            live.add(pk)
         has_leads = self._render_leads()
+        self._sweep(live, self.leads_key() if has_leads else None)
         self._render_index(businesses, has_leads)
+
+    def _sweep(self, live_business_keys: set[str], leads_key: str | None) -> list[str]:
+        removed: list[str] = []
+
+        def drop(path: Path) -> None:
+            shutil.rmtree(path, ignore_errors=True)
+            removed.append(path.relative_to(self.site_dir).as_posix())
+
+        pages = self.site_dir / "b"
+        if pages.exists():
+            for d in pages.iterdir():
+                if d.is_dir() and d.name not in live_business_keys:
+                    drop(d)
+        assets = self.site_dir / "assets"
+        if assets.exists():
+            for d in assets.iterdir():
+                if d.is_dir() and d.name not in live_business_keys | {"leads"}:
+                    drop(d)
+        for d in self.site_dir.iterdir():
+            if d.is_dir() and (d.name == "leads" or d.name.startswith("l-")) and d.name != leads_key:
+                drop(d)
+        if removed:
+            self._touch_dirty()  # the deploy must happen even if nothing else changed
+            logger.warning("::warning::Removed stale site content: %s", ", ".join(removed))
+        return removed
 
     def _copy_static(self) -> None:
         src = Path(settings.templates_dir) / "site" / "static"
@@ -365,7 +444,7 @@ class SitePublisher:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return False
-        key = data.get("key") or self.leads_key()
+        key = self.leads_key()
         html = self._env.get_template("leads.html").render(root="../", digests=data.get("digests", []))
         self._write(f"{key}/index.html", html)
         return True
@@ -388,7 +467,7 @@ class SitePublisher:
                 continue
             manifest = self._load_manifest(path.stem)
             if manifest.get("business"):
-                lines.append(f"- {manifest['business']['name']}: {base}/b/{path.stem}/")
+                lines.append(f"- {manifest['business']['name']}: {base}/b/{self.path_key(manifest['business']['name'])}/")
         if (self._data_dir() / "_leads.json").exists():
             lines.append(f"- Leads: {base}/{self.leads_key()}/")
         return lines
