@@ -278,7 +278,17 @@ class SocialScraper:
                 }
             )
         first = items[0] if items else {}
+        result_error = None
+        if not posts:
+            # The actor reports "private account", "no such user", "rate limited" as an ITEM with an `error`
+            # field and still answers HTTP 200/201, so a dead scrape used to look like an empty profile.
+            reported = next((i for i in items if i.get("error") or i.get("errorDescription")), None)
+            if reported is not None:
+                result_error = f"{reported.get('error') or 'error'}: {reported.get('errorDescription') or ''}".strip(": ")
+            elif not items:
+                result_error = "the actor returned no items"
         return {
+            "error": result_error,
             "handle": profile.get("username") or first.get("ownerUsername") or first.get("username") or "",
             "follower_count": profile.get("followersCount"),
             "following_count": profile.get("followingCount"),

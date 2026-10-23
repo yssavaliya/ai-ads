@@ -129,7 +129,7 @@ class AutoLearner:
             logger.info("Business %s: no posts available for auto-learning", business_id)
             # say WHY: a scrape error (no token, blocked, actor failed) and a genuinely empty profile
             # look identical as "0 learned" otherwise
-            return {"posts": 0, "matched": 0, "learned": 0, "scrape_error": social_data.get("error")}
+            return {"posts": 0, "matched": 0, "learned": 0, "scrape_error": social_data.get("error"), "followers": followers}
 
         biz_row = db.get(Business, business_id) if db is not None else None
         weights_key = biz_row.weights_key if biz_row is not None else str(business_id)
@@ -560,6 +560,9 @@ def format_summary(results: dict[str, Any]) -> str:
             notes.append(f"- **{name}** failed: {res['error']}")
         if res.get("scrape_error"):
             notes.append(f"- **{name}** scrape returned no posts: {res['scrape_error']}")
+        elif res.get("posts") == 0 and "followers" in res:
+            seen = f"profile found ({res['followers']} followers)" if res["followers"] is not None else "no profile data came back"
+            notes.append(f"- **{name}** has no posts to learn from yet: {seen}.")
     total = sum(int(r.get("learned", 0)) for r in results.values())
     lines += ["", f"**Total learned this run: {total}**"]
     if total == 0:

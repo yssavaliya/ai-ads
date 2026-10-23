@@ -39,7 +39,7 @@ def test_counts_explain_every_post_that_was_not_learned(lab):  # noqa: F811
 def test_an_empty_scrape_reports_the_scrape_error_not_just_zero(lab):  # noqa: F811
     db, biz = lab
     res = AutoLearner().run_for_business(biz.id, {"handle": "x", "error": "no apify token", "posts": []}, db)
-    assert res == {"posts": 0, "matched": 0, "learned": 0, "scrape_error": "no apify token"}
+    assert res == {"posts": 0, "matched": 0, "learned": 0, "scrape_error": "no apify token", "followers": None}
     quiet = AutoLearner().run_for_business(biz.id, {"handle": "x", "posts": []}, db)
     assert quiet["scrape_error"] is None  # an empty profile is not an error
 
@@ -151,3 +151,25 @@ def test_engagement_workflow_runs_the_entrypoint_that_writes_the_summary():
     assert "run_pipeline.sh src.learning.auto_learner" in workflow
     entry = Path(al.__file__).read_text(encoding="utf-8").split('if __name__ == "__main__":')[1]
     assert "write_step_summary(outcome)" in entry
+
+
+# ------------------------------------------------------------------ Apify reports failures as ITEMS
+def test_an_actor_error_item_is_an_error_not_an_empty_profile():
+    from src.fetch.social_scraper import SocialScraper
+
+    norm = SocialScraper._normalize_instagram
+    private = norm([{"error": "no_items", "errorDescription": "Empty or private data for provided input"}])
+    assert private["posts"] == [] and private["error"] == "no_items: Empty or private data for provided input"
+    assert norm([])["error"] == "the actor returned no items"
+    assert norm([{"followersCount": 10, "latestPosts": []}])["error"] is None  # a real profile with no posts is not an error
+    ok = norm([{"followersCount": 10, "latestPosts": [{"shortCode": "A", "likesCount": 5, "caption": "hi"}]}])
+    assert ok["error"] is None and len(ok["posts"]) == 1
+
+
+def test_a_profile_with_no_posts_is_explained_in_the_summary():
+    md = format_summary({
+        "New": {"posts": 0, "matched": 0, "learned": 0, "scrape_error": None, "followers": 120},
+        "Gone": {"posts": 0, "matched": 0, "learned": 0, "scrape_error": None, "followers": None},
+    })
+    assert "**New** has no posts to learn from yet: profile found (120 followers)." in md
+    assert "**Gone** has no posts to learn from yet: no profile data came back." in md
