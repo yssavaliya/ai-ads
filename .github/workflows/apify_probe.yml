@@ -1,0 +1,29 @@
+name: Apify Probe
+
+# Manual diagnostic: shows what the Instagram actor returns for one handle with each input shape.
+# Uses a few Apify credits; never prints the token.
+on:
+  workflow_dispatch:
+    inputs:
+      handle:
+        description: Instagram handle (without @)
+        required: true
+        default: aimagix.studio
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      HANDLE: ${{ inputs.handle }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: ./.github/actions/setup-agent
+
+      - name: Probe the actor
+        run: python scripts/probe_apify_instagram.py "$HANDLE"
