@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 import wave
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ from urllib.parse import quote
 import httpx
 
 from src.generation import image_providers
+from src.shared.concurrency import parallel_map
 from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
@@ -22,6 +24,7 @@ FEED_H = 1350
 REEL_W = 1080
 REEL_H = 1920
 FPS = 25
+DEFAULT_BRAND = (31, 111, 104)
 MAX_ZOOM_GAIN = 0.08  # Ken Burns: end at 108% of the frame
 
 FONT_PATH = Path("assets/fonts/Poppins-Bold.ttf")
@@ -53,8 +56,27 @@ class CreativeForge:
     def __init__(self) -> None:
         self.output_dir = Path(settings.logs_dir) / "assets"
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self._card_color: tuple[int, int, int] = (31, 111, 104)
-        self._pending_warnings: list[str] = []
+        # Per-render state lives in thread-local storage: renders for several prompts (and several Reel
+        # beats) run on worker threads, and a shared colour/warning list would leak between them.
+        self._tl = threading.local()
+
+    @property
+    def _card_color(self) -> tuple[int, int, int]:
+        return getattr(self._tl, "color", DEFAULT_BRAND)  # type: ignore[no-any-return]
+
+    @_card_color.setter
+    def _card_color(self, value: tuple[int, int, int]) -> None:
+        self._tl.color = value
+
+    @property
+    def _pending_warnings(self) -> list[str]:
+        if not hasattr(self._tl, "warnings"):
+            self._tl.warnings = []
+        return self._tl.warnings  # type: ignore[no-any-return]
+
+    @_pending_warnings.setter
+    def _pending_warnings(self, value: list[str]) -> None:
+        self._tl.warnings = value
 
     @staticmethod
     def _run_ffmpeg(cmd: list[str], timeout: int, what: str) -> None:
@@ -249,18 +271,31 @@ class CreativeForge:
 
         warnings: list[str] = []
         stills: list[str] = []
-        for i, beat in enumerate(beats):
-            try:
-                raw = self.generate_image(
-                    self._image_prompt({**prompt, "hook": beat}, business_profile),
-                    REEL_W, REEL_H, f"{base_name}-beat{i}",
-                )
-                stills.append(
-                    self.overlay_text(raw, beat, brand_color=self._brand_color(business_profile))
-                )
-            except CreativeForgeError as exc:
-                warnings.append(f"Beat {i} image skipped: {exc}")
+        card_color = self._card_color
+
+        def make_still(job: tuple[int, str]) -> tuple[str, list[str]]:
+            i, beat = job
+            self._card_color = card_color  # this worker thread's own copy
+            self._take_warnings()
+            raw = self.generate_image(
+                self._image_prompt({**prompt, "hook": beat}, business_profile),
+                REEL_W, REEL_H, f"{base_name}-beat{i}",
+            )
+            return self.overlay_text(raw, beat, brand_color=self._brand_color(business_profile)), self._take_warnings()
+
+        # The beat images are independent network calls: generate them concurrently (capped by
+        # IMAGE_CONCURRENCY, order preserved). A failed beat is skipped exactly as before.
+        jobs = list(enumerate(beats))
+        for (i, _beat), outcome in zip(jobs, parallel_map(make_still, jobs, settings.image_concurrency)):
+            if outcome.ok:
+                still, beat_warnings = outcome.value
+                stills.append(still)
+                self._pending_warnings.extend(beat_warnings)
+            elif isinstance(outcome.error, CreativeForgeError):
+                warnings.append(f"Beat {i} image skipped: {outcome.error}")
                 logger.warning("::warning::%s", warnings[-1])
+            else:
+                outcome.unwrap()  # anything unexpected still aborts the reel (-> image fallback)
         if not stills:
             raise CreativeForgeError("every beat image failed")
 

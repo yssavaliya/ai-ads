@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.shared import llm_providers
+from src.shared.chat_http import HttpChatClient
+from src.shared.concurrency import slots
 from src.shared.config import settings
 from src.shared.llm_providers import HEALTH, classify
 from src.shared.privacy import redact, redact_text
@@ -43,6 +45,11 @@ def untrusted(text: str) -> str:
     """Wrap scraped/third-party text so the model treats it as data, not instructions."""
     safe = text.replace("</untrusted_data>", "")
     return f"<untrusted_data>\n{safe}\n</untrusted_data>"
+
+
+def make_client(provider: llm_providers.Provider, timeout: float) -> HttpChatClient:
+    """The one place an HTTP chat client is built (tests substitute it with scripted fakes)."""
+    return HttpChatClient(provider.base_url, provider.api_key, timeout, provider.headers or None)
 
 
 def fence(value: object, limit: int | None = None) -> str:
@@ -229,27 +236,16 @@ class LLMClient:
         if provider is None:
             logger.debug("LLM provider %s not configured; skipping", name)
             return None
-        try:
-            from openai import OpenAI
-        except ImportError:  # pragma: no cover
-            logger.error("openai package missing; cannot call %s", name)
-            return None
-
         for model in provider.models:
             if not HEALTH.available(name, model) or f"{name}/{model}" in self._skip:
                 continue
             try:
-                client = OpenAI(
-                    api_key=provider.api_key,
-                    base_url=provider.base_url,
-                    timeout=self.timeout_seconds,
-                    max_retries=0,  # _chat owns the retry policy; SDK retries would multiply it
-                    default_headers=provider.headers or None,
-                )
+                client = make_client(provider, self.timeout_seconds)
                 start = time.monotonic()
-                response = self._chat(client, model, prompt, temperature, max_retries)
+                with slots("llm", settings.llm_concurrency):  # shared by every thread in the process
+                    response = self._chat(client, model, prompt, temperature, max_retries)
                 if isinstance(response, str):
-                    # the SDK hands back the raw body when the endpoint did not answer in the API's format
+                    # the client hands back the raw body when the endpoint did not answer in the API's format
                     raise ValueError(f"non-JSON response from {provider.base_url}: {response[:200]!r}")
                 choice = response.choices[0]
                 content = _THINK_RE.sub("", choice.message.content or "").strip()

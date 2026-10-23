@@ -62,19 +62,32 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The job runs hourly but most hours there is no feedback. Checking costs ~3 s; the setup it
+      # lets us skip costs ~40 s (Python deps, cache restore, Piper, site checkout).
+      - name: Any open feedback issues?
+        id: pending
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          n=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "content-intel-feedback in:title" --limit 1 --json number --jq length)
+          echo "count=${n:-0}" >> "$GITHUB_OUTPUT"
+          echo "open feedback issues (>=): ${n:-0}"
+
       - uses: ./.github/actions/setup-agent
+        if: steps.pending.outputs.count != '0'
         with:
           site: "true"
           piper: "true"   # REGENERATE can render a voiced Reel
 
       - name: Process feedback issues
+        if: steps.pending.outputs.count != '0'
         run: bash .github/scripts/run_pipeline.sh src.learning.process_feedback
 
       - uses: ./.github/actions/persist-state
-        if: always()
+        if: always() && steps.pending.outputs.count != '0'
         with:
           files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl
           message: "chore: feedback run state"
 
       - uses: ./.github/actions/publish-site
-        if: always()
+        if: always() && steps.pending.outputs.count != '0'

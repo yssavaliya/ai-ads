@@ -5,6 +5,7 @@ from typing import Any
 
 from src.generation.prompt_forge import PromptForge
 from src.intelligence.virality_predictor import ViralityPredictor
+from src.shared.concurrency import parallel_map
 from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
@@ -73,16 +74,22 @@ class ViralityGate:
                 break
 
             scored = []
-            for v in variants:
+
+            def _score(variant: dict[str, Any]) -> dict[str, Any]:
+                return self.predictor.score(  # type: ignore[no-any-return]
+                    variant["prompt_text"],
+                    business_profile,
+                    audience_map,
+                    trend_data,
+                    variant.get("prompt_type", "educational"),
+                    history=history,
+                )
+
+            # The variants are independent (same context, different text): score them concurrently,
+            # capped, order preserved. LLM_CONCURRENCY=1 restores the old one-after-another loop.
+            for v, outcome in zip(variants, parallel_map(_score, variants, settings.llm_concurrency)):
                 try:
-                    prediction = self.predictor.score(
-                        v["prompt_text"],
-                        business_profile,
-                        audience_map,
-                        trend_data,
-                        v.get("prompt_type", "educational"),
-                        history=history,
-                    )
+                    prediction = outcome.unwrap()
                 except Exception as exc:
                     # Prediction failed for this variant: keep the (real) variant
                     # text but score it neutral so generation still proceeds.

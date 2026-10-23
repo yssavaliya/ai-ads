@@ -50,21 +50,25 @@ Respond ONLY with a JSON array:
         return competitors[: self.COMPETITOR_COUNT]
 
     async def fetch_competitor_posts(self, competitors: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        enriched = []
-        for comp in competitors:
-            try:
-                if comp["platform"] == "instagram":
-                    data = await self.social.fetch_instagram(comp["handle"])
-                else:
-                    data = await self.social.fetch_linkedin(comp["handle"])
-                comp["profile"] = data
-                comp["top_posts"] = data.get("posts", [])[:5]
-                enriched.append(comp)
-            except Exception as exc:
-                logger.warning("Failed fetching competitor %s: %s", comp.get("handle"), exc)
-                comp["top_posts"] = []
-                enriched.append(comp)
-        return enriched
+        """Scrape every competitor, `FETCH_CONCURRENCY` at a time (each Apify run can take minutes and
+        they are independent). Order is preserved; one failure never loses the others."""
+        gate = asyncio.Semaphore(max(1, settings.fetch_concurrency))
+
+        async def one(comp: dict[str, Any]) -> dict[str, Any]:
+            async with gate:
+                try:
+                    if comp["platform"] == "instagram":
+                        data = await self.social.fetch_instagram(comp["handle"])
+                    else:
+                        data = await self.social.fetch_linkedin(comp["handle"])
+                    comp["profile"] = data
+                    comp["top_posts"] = data.get("posts", [])[:5]
+                except Exception as exc:
+                    logger.warning("Failed fetching competitor %s: %s", comp.get("handle"), exc)
+                    comp["top_posts"] = []
+                return comp
+
+        return list(await asyncio.gather(*(one(c) for c in competitors)))
 
     def discover_and_fetch(self, business_profile: dict[str, Any]) -> list[dict[str, Any]]:
         competitors = self.discover(business_profile)

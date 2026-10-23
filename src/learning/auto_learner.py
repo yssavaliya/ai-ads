@@ -132,15 +132,7 @@ class AutoLearner:
         biz_row = db.get(Business, business_id) if db is not None else None
         weights_key = biz_row.weights_key if biz_row is not None else str(business_id)
         benchmark, bench_n = self._benchmark_median(posts, followers)
-        sent_prompts = self._recent_prompts(db, business_id)
-        for p in sent_prompts:
-            p["audience_segment"] = None
-            if db is not None:
-                from src.storage.models import Prompt
-
-                row = db.get(Prompt, p["id"])
-                if row is not None:
-                    p["audience_segment"] = row.audience_segment
+        sent_prompts = self._recent_prompts(db, business_id)  # already carries audience_segment (was an N+1)
         self._db = db
         matched = self._match(posts, sent_prompts)
 
@@ -219,6 +211,7 @@ class AutoLearner:
                 "prompt_text": p.prompt_text,
                 "caption": p.caption or "",
                 "format": p.format or "",
+                "audience_segment": p.audience_segment,
                 "sent_at": p.sent_at,
             }
             for p in rows

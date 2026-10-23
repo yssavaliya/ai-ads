@@ -124,11 +124,15 @@ class SitePublisher:
         self._rehome(pk, manifest)
         return slug, pk, manifest
 
-    def _rehome(self, pk: str, manifest: dict[str, Any]) -> None:
+    def _rehome(self, pk: str, manifest: dict[str, Any]) -> bool:
+        """Move media/links to the current URL key. True if the manifest was modified."""
         old = manifest.get("path_key")
         manifest["path_key"] = pk
-        if not old or old == pk:
-            return
+        if old == pk:
+            return False
+        if not old:
+            return True  # first time this key is recorded
+
         src, dst = self.site_dir / "assets" / old, self.site_dir / "assets" / pk
         if src.exists():
             if dst.exists():
@@ -144,6 +148,7 @@ class SitePublisher:
                     if isinstance(value, str):
                         asset[field] = value.replace(f"assets/{old}/", f"assets/{pk}/")
         logger.info("Re-homed site content %s -> %s", old, pk)
+        return True
 
     def _save_manifest(self, key: str, manifest: dict[str, Any]) -> None:
         self._manifest_path(key).write_text(json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8")
@@ -188,12 +193,22 @@ class SitePublisher:
                 poster = self._save_jpeg(poster_src, out_dir / f"{entry_id}-poster.jpg") if poster_src and Path(poster_src).exists() else None
                 return {"type": "reel", "video": video, "poster": f"{rel_base}/{poster}" if poster else None,
                         "thumb": f"{rel_base}/{poster}" if poster else None}
-            full = self._save_jpeg(src, out_dir / f"{entry_id}.jpg")
-            thumb = self._save_jpeg(src, out_dir / f"{entry_id}-thumb.jpg", width=THUMB_WIDTH)
+            full, thumb = self._save_jpeg_pair(src, out_dir / f"{entry_id}.jpg", out_dir / f"{entry_id}-thumb.jpg")
             return {"type": "image", "image": f"{rel_base}/{full}", "thumb": f"{rel_base}/{thumb}"}
         except Exception as exc:  # noqa: BLE001 - a bad asset must not lose the prompt text
             logger.warning("::warning::Could not publish asset %s: %s", src, exc)
             return None
+
+    @staticmethod
+    def _save_jpeg_pair(src: str, full_dest: Path, thumb_dest: Path) -> tuple[str, str]:
+        """Full-size web JPEG + thumbnail from a single decode of the source."""
+        from PIL import Image
+
+        img = Image.open(src).convert("RGB")
+        img.save(full_dest, "JPEG", quality=FEED_JPEG_QUALITY, optimize=True, progressive=True)
+        thumb = img.resize((THUMB_WIDTH, round(img.height * THUMB_WIDTH / img.width)), Image.Resampling.LANCZOS) if img.width > THUMB_WIDTH else img
+        thumb.save(thumb_dest, "JPEG", quality=FEED_JPEG_QUALITY, optimize=True, progressive=True)
+        return full_dest.name, thumb_dest.name
 
     @staticmethod
     def _save_jpeg(src: str | None, dest: Path, width: int | None = None) -> str:
@@ -258,7 +273,7 @@ class SitePublisher:
         self._prune(key, manifest)
         self._save_manifest(slug, manifest)
         self._touch_dirty()
-        self.rebuild()
+        self.rebuild(changed=slug)
         logger.info("Site updated for %s: %d new entries -> %s", business["name"], len(prompts), self.business_url(business["name"]))
         return True
 
@@ -269,7 +284,7 @@ class SitePublisher:
         manifest["weekly"] = ([{"date": day, "report": redact(report)}] + [w for w in manifest.get("weekly", []) if w.get("date") != day])[:WEEKLY_KEEP]
         self._save_manifest(slug, manifest)
         self._touch_dirty()
-        self.rebuild()
+        self.rebuild(changed=slug)
         return True
 
     def send_onboarding(self, business: dict[str, Any], profile: dict[str, Any]) -> bool:
@@ -284,7 +299,7 @@ class SitePublisher:
         }
         self._save_manifest(slug, manifest)
         self._touch_dirty()
-        self.rebuild()
+        self.rebuild(changed=slug)
         return True
 
     def send_lead_digest(self, to: str, leads: list[dict[str, Any]]) -> bool:  # noqa: ARG002 - `to` kept for interface parity
@@ -326,7 +341,7 @@ class SitePublisher:
                 if day_dir.is_dir() and day_dir.name not in keep_days:
                     shutil.rmtree(day_dir, ignore_errors=True)
         self._touch_dirty()
-        self.rebuild()
+        self.rebuild(changed="_leads")
         return True
 
     # ------------------------------------------------------------------
@@ -345,11 +360,34 @@ class SitePublisher:
     # ------------------------------------------------------------------
     # rendering
     # ------------------------------------------------------------------
-    def rebuild(self) -> None:
-        """Re-render every page from the manifests (idempotent) and delete whatever is no longer
-        part of the current site: pages of removed businesses, pages under an old SITE_SECRET,
-        stale lead pages and orphaned media."""
+    def _templates_fingerprint(self) -> str:
+        """Hash of every template/static file: a changed template must re-render ALL pages, because
+        the incremental path only re-renders the business that just changed."""
+        digest = hashlib.sha256()
+        root = Path(settings.templates_dir) / "site"
+        for f in sorted(p for p in root.rglob("*") if p.is_file()):
+            digest.update(f.relative_to(root).as_posix().encode())
+            digest.update(f.read_bytes())
+        digest.update(str(settings.site_retention_days).encode())
+        return digest.hexdigest()[:16]
+
+    def rebuild(self, changed: str | None = None) -> None:
+        """Re-render the site from its manifests and delete whatever is no longer part of it: pages of
+        removed businesses, pages under an old SITE_SECRET, stale lead pages and orphaned media.
+
+        `changed` names the one manifest (slug) that was just modified. Only its pages are re-rendered
+        (the index and leads page always are); this used to re-render EVERY business on every publish,
+        so publishing N businesses cost O(N^2) renders. A full re-render still happens when `changed`
+        is None, when a page is missing, or when the templates changed (fingerprint)."""
         self.site_dir.mkdir(parents=True, exist_ok=True)
+        fingerprint = self._templates_fingerprint()
+        stamp = self._data_dir() / "_build.json"
+        try:
+            known = json.loads(stamp.read_text(encoding="utf-8")).get("templates") if stamp.exists() else None
+        except (OSError, ValueError):
+            known = None
+        if known != fingerprint:
+            changed = None  # templates (or retention) changed: everything is stale
         self._copy_static()
         businesses = []
         live: set[str] = set()
@@ -361,19 +399,26 @@ class SitePublisher:
                 continue
             name = manifest["business"]["name"]
             slug, pk = slugify(name), self.path_key(name)
+            dirty = False
             if path.stem != slug:  # legacy: manifest was named by its (secret-derived) path key
                 target = self._manifest_path(slug)
                 if target.exists():
                     path.unlink()
                     continue
                 path.rename(target)
-            self._rehome(pk, manifest)
-            self._save_manifest(slug, manifest)
-            businesses.append(self._render_business(pk, manifest))
+                dirty = True
+            dirty = self._rehome(pk, manifest) or dirty
+            if dirty:
+                self._save_manifest(slug, manifest)
             live.add(pk)
+            if changed is None or slug == changed or not (self.site_dir / "b" / pk / "index.html").exists():
+                businesses.append(self._render_business(pk, manifest))
+            else:
+                businesses.append(self._business_summary(pk, manifest))
         has_leads = self._render_leads()
         self._sweep(live, self.leads_key() if has_leads else None)
         self._render_index(businesses, has_leads)
+        stamp.write_text(json.dumps({"templates": fingerprint}), encoding="utf-8")
 
     def _sweep(self, live_business_keys: set[str], leads_key: str | None) -> list[str]:
         removed: list[str] = []
@@ -413,6 +458,13 @@ class SitePublisher:
         path = self.site_dir / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(html, encoding="utf-8")
+
+    @staticmethod
+    def _business_summary(key: str, manifest: dict[str, Any]) -> dict[str, Any]:
+        """What the index page needs about a business, without rendering its pages."""
+        dates = [e.get("date", "") for e in manifest.get("entries", [])]
+        return {"key": key, "name": manifest["business"]["name"], "count": len(dates),
+                "latest": max(dates) if dates else "", "weekly": len(manifest.get("weekly", []))}
 
     def _render_business(self, key: str, manifest: dict[str, Any]) -> dict[str, Any]:
         entries = sorted(manifest["entries"], key=lambda e: e.get("created_at", ""), reverse=True)

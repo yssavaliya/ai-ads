@@ -13,9 +13,12 @@ PII_KEYS = frozenset({
     "email", "emails", "contact_email", "contact_emails", "e_mail", "mail",
     "phone", "phones", "telephone", "mobile", "whatsapp", "contact_phone",
 })
-EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+# Quantifiers are BOUNDED (RFC 5321: local part <= 64, domain <= 255, phone numbers <= ~20 chars). An
+# unbounded `[...]+@` re-scans the whole remaining run from every start position: a 50 KB token with no
+# '@' took 11 s. Bounded, the worst case is O(64 x n).
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,255}\.[A-Za-z]{2,24}")
 # +91 98765 43210 / (079) 2345-6789 / 98765-43210 ... at least 9 digits once separators are removed
-PHONE_RE = re.compile(r"(?<![\w.])(?:\+?\d[\d\s().\-]{7,}\d)(?![\w])")
+PHONE_RE = re.compile(r"(?<![\w.])\+?\d[\d\s().\-]{7,20}\d(?![\w])")
 
 
 def redact_text(text: str) -> str:

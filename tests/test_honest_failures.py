@@ -100,7 +100,7 @@ def test_groq_path_executes_without_nameerror(monkeypatch):
     fake_client = MagicMock()
     fake_client.chat.completions.create.return_value = fake_resp
 
-    with patch("openai.OpenAI", return_value=fake_client):
+    with patch("src.shared.llm_client.make_client", return_value=fake_client):
         result = LLMClient().run("say hi", label="regression")
 
     assert '"ok"' in result.stdout  # fences stripped, Groq answer used

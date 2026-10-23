@@ -75,7 +75,7 @@ def chain(monkeypatch):
 
     def install(script):
         net = FakeNetwork(script)
-        patcher = patch("openai.OpenAI", side_effect=lambda **kw: net.factory(**kw))
+        patcher = patch("src.shared.llm_client.make_client", side_effect=lambda provider, timeout: net.factory(base_url=provider.base_url))
         patcher.start()
         monkeypatch.setattr(lc, "LLMClient", lc.LLMClient)
         net._patcher = patcher
