@@ -816,6 +816,74 @@
  ],
  "weekly": [
   {
+   "date": "2026-10-25",
+   "report": {
+    "top_performing": [
+     {
+      "prompt": "Storytelling: high‑stakes pitch",
+      "score": 85,
+      "feedback": "none",
+      "why": "High emotional tension + relatable founder scenario + vivid midnight‑office visual taps into the creative community’s aspirations and fear of missing deadlines."
+     },
+     {
+      "prompt": "Educational: AI‑midjourney workflow",
+      "score": 78,
+      "feedback": "none",
+      "why": "Practical, step‑by‑step guide with measurable ROI (30% faster, 20% cheaper) resonates with tech‑startup founders seeking efficiency."
+     },
+     {
+      "prompt": "Social proof: FinTech metric graphic",
+      "score": 70,
+      "feedback": "none",
+      "why": "Clear, data‑driven result (+42% reach) offers credibility; single‑frame design is easy to consume on Instagram."
+     }
+    ],
+    "audience_insights": [
+     "Growing appetite for AI‑augmented design tools among Indian startup founders.",
+     "Preference for concise, data‑rich visuals that demonstrate tangible ROI within 30‑day windows."
+    ],
+    "competitor_moves": [
+     "Rival studios are publishing short Reel tutorials on Midjourney v6 prompt engineering.",
+     "Several agencies have launched carousel case‑studies highlighting before/after client metrics tied to regional festivals (e.g., Diwali campaigns)."
+    ],
+    "content_pillars": [
+     {
+      "pillar": "AI‑Powered Design Workflow",
+      "rationale": "Positions Aimagix as a tech‑forward partner; aligns with audience’s interest in speed and cost savings.",
+      "suggested_frequency": "2x/week"
+     },
+     {
+      "pillar": "Client Success & Social Proof",
+      "rationale": "Data‑driven results build trust and showcase the studio’s impact on Indian SMEs.",
+      "suggested_frequency": "1x/week"
+     },
+     {
+      "pillar": "Creative Storytelling & Culture",
+      "rationale": "Narratives around high‑pressure pitches and local festivals deepen emotional connection with the Mumbai‑centric creative community.",
+      "suggested_frequency": "1x/week"
+     }
+    ],
+    "calendar": [
+     "Mon: Reel – 60‑second AI mock‑up workflow teaser (AI‑Powered Design Workflow).",
+     "Tue: Carousel – Step‑by‑step guide to using Midjourney v6 for pitch decks (Educational).",
+     "Wed: Single‑image post – Client metric graphic for FinTech +42% reach (Social Proof).",
+     "Thu: Story poll – “What’s your biggest deadline nightmare?” (Audience engagement).",
+     "Fri: Storytelling post – Midnight pitch narrative with moody office visual (Creative Storytelling).",
+     "Sat: Community spotlight – Repost a follower’s AI‑enhanced design with brief interview (Social Proof)."
+    ],
+    "recommendations": [
+     "Add a clear CTA (e.g., “DM for a free 15‑min AI design audit”) to every post to drive leads.",
+     "Incorporate 5–7 high‑impact hashtags (#AIDesign, #IndianStartups, #Midjourney, #CreativeProcess, #Diwali2026) to boost discoverability.",
+     "Test carousel format for educational content to increase dwell time.",
+     "Schedule posts between 7‑9 PM IST when the target creative audience is most active."
+    ],
+    "risk_alerts": [
+     "Avoid overstating AI speed (“instant”) to prevent backlash if results vary.",
+     "Monitor Instagram algorithm updates that may deprioritize static images in favor of Reels; diversify format accordingly."
+    ]
+   }
+  },
+  {
    "date": "2026-10-23",
    "report": {
     "top_performing": [
