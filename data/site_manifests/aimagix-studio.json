@@ -1972,62 +1972,67 @@
    "report": {
     "top_performing": [
      {
-      "prompt": "Midnight Pitch Story",
+      "prompt": "48 hrs 3× ROI Social Proof",
+      "score": 88,
+      "feedback": "none",
+      "why": "Clear, quantifiable ROI hook + split‑screen before/after visual creates instant proof, targeting startup founders who prioritize speed and measurable impact."
+     },
+     {
+      "prompt": "Midnight Pitch Storytelling",
       "score": 85,
       "feedback": "none",
-      "why": "High‑stakes, cinematic storytelling combined with a vivid Diwali‑themed visual creates strong emotional pull for Mumbai‑based founders; the midnight‑desk setting resonates with the target audience’s hustle culture."
+      "why": "High‑drama narrative set in a Mumbai office at midnight taps into founder fatigue and urgency, while the moody visual adds cinematic appeal."
      },
      {
       "prompt": "Before/After Split Social Proof",
       "score": 85,
       "feedback": "none",
-      "why": "Clear visual contrast (generic vs. polished) instantly demonstrates value; the split‑screen format is proven to boost scroll‑stop rates on Instagram and LinkedIn."
+      "why": "Strong visual contrast between generic and polished designs reinforces transformation; the hook emphasizes speed and engagement lift, resonating with SME marketers."
      }
     ],
     "audience_insights": [
-     "The audience responds best to visual before‑after comparisons that quantify impact (e.g., turnaround time, sales lift).",
-     "Storytelling that frames tight deadlines and crisis‑to‑triumph narratives drives higher virality than pure educational posts."
+     "Startup founders are responding best to speed‑focused ROI hooks (48‑hour turnarounds, 3× return).",
+     "SME marketing leaders value concrete visual proof (before/after) and localized festival themes (Diwali) that demonstrate cultural relevance."
     ],
     "competitor_moves": [
-     "Leading Indian design studios are launching short‑form reels that showcase AI‑generated concepts morphing into hand‑crafted finals.",
-     "Several competitors have begun publishing carousel case studies with embedded micro‑testimonials and KPI snapshots."
+     "Rival studios are launching AI‑augmented design packages promising 30% faster delivery and lower costs.",
+     "Several agencies are shifting toward carousel and short‑form video reels to bypass static‑image fatigue on Instagram."
     ],
     "content_pillars": [
      {
-      "pillar": "Rapid AI‑Human Design Workflow",
-      "rationale": "Positions Aimagix as the go‑to partner for speed‑critical projects; aligns with high virality scores on AI‑enhanced storytelling.",
-      "suggested_frequency": "2×/week"
+      "pillar": "Speed & ROI Proof",
+      "rationale": "Data‑driven founders prioritize quick turnarounds and measurable returns; this pillar leverages before/after splits and numeric hooks.",
+      "suggested_frequency": "2x/week"
      },
      {
-      "pillar": "Before‑After Client Success",
-      "rationale": "Visual proof of transformation drives trust and shares; proven top‑performing format.",
-      "suggested_frequency": "2×/week"
+      "pillar": "Localized Festival Campaigns",
+      "rationale": "Diwali and other regional events drive high engagement in India; showcasing festive makeovers demonstrates cultural fluency.",
+      "suggested_frequency": "1x/week"
      },
      {
-      "pillar": "Educational Quick‑Tips",
-      "rationale": "Keeps the feed informative and attracts founders looking for actionable AI design hacks; balances promotional content.",
-      "suggested_frequency": "1×/week"
+      "pillar": "Educational AI Design Tips",
+      "rationale": "Growing interest in AI tools (Midjourney, Firefly) creates demand for actionable tutorials that position Aimagix as a thought leader.",
+      "suggested_frequency": "1x/week"
      }
     ],
     "calendar": [
-     "Mon: Before‑After carousel – retail brand makeover (static split‑screen + KPI badge).",
-     "Tue: Reel – 15‑sec AI‑to‑hand polish timelapse with voice‑over tip.",
-     "Wed: Storytelling post – 2 AM pitch crisis narrative (single image + caption).",
-     "Thu: Educational graphic – Hybrid AI Design Workflow infographic.",
-     "Fri: Client testimonial video snippet – renewable‑energy case study.",
-     "Sat: Community poll – “Which visual style do you prefer for Diwali campaigns?”"
+     "Mon: Speed & ROI Proof – 48‑hr brand refresh case study carousel",
+     "Tue: Educational AI Design Tips – 3‑step Midjourney workflow Reel",
+     "Wed: Localized Festival Campaign – Diwali packaging before/after static post",
+     "Thu: Speed & ROI Proof – SME testimonial split‑screen graphic",
+     "Fri: Educational AI Design Tips – Firefly micro‑tip carousel",
+     "Sat: Community engagement – poll on preferred design turnaround time"
     ],
     "recommendations": [
-     "Add a clear CTA (e.g., “DM for a 48‑hr turnaround quote”) to every storytelling and social‑proof post.",
-     "Incorporate localized Hindi/Marathi copy in captions for Mumbai‑based audiences to boost relevance.",
-     "Test carousel format for before‑after content to increase dwell time.",
-     "Leverage trending hashtags (#Diwali2026, #AIDesign, #CreativeHustle) consistently.",
-     "Rotate between static images, short reels, and carousel posts to avoid algorithm fatigue."
+     "Add micro‑testimonials or badge overlays to before/after visuals to boost credibility.",
+     "Rotate hook types (numeric ROI, urgency, curiosity) to avoid audience fatigue.",
+     "Experiment with short video loops (3‑5 sec) that animate the split‑screen transition.",
+     "Tailor captions per platform: concise, emoji‑rich for Instagram; longer, data‑focused for LinkedIn."
     ],
     "risk_alerts": [
-     "Over‑promising AI speed may attract regulatory scrutiny; ensure all claims are backed by internal metrics.",
-     "Repeated use of AI‑generated assets without proper licensing could lead to copyright disputes.",
-     "High frequency of high‑intensity storytelling may cause audience fatigue; monitor engagement decay."
+     "Overreliance on static before/after images may lead to diminishing returns as the audience becomes desensitized.",
+     "AI‑generated assets must be vetted for copyright compliance to avoid platform takedowns.",
+     "Instagram algorithm updates favor video content; static‑only strategy could see reach decline."
     ]
    }
   },
