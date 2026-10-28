@@ -141,6 +141,7 @@ class AutoLearner:
         learned = deferred = unusable = refreshed = 0
         details = []
         already = {p["id"]: p["learned"] for p in sent_prompts}
+        prompt_map = {p["id"]: p for p in sent_prompts}
         now = utc_now_naive()
         for prompt_id, prompt_type, prompt_text, post, segment, fmt in matched:
             rate = engagement_rate(post, followers)
@@ -163,12 +164,14 @@ class AutoLearner:
             # The weights move ONLY the first time a (prompt, post) pair is judged; every later scrape
             # refreshes the stored engagement without re-counting (engagement.yml runs every 6h).
             if recorded:
+                hook_type = prompt_map.get(prompt_id, {}).get("hook_type")
                 self.updater.record(
                     weights_key,
                     outcome,
                     prompt_type=prompt_type,
                     format=fmt or post.get("format"),
                     audience_segment=segment,
+                    hook_type=hook_type,
                     source="auto",
                 )
                 learned += 1
@@ -217,6 +220,7 @@ class AutoLearner:
                 "caption": p.caption or "",
                 "format": p.format or "",
                 "audience_segment": p.audience_segment,
+                "hook_type": getattr(p, "hook_type", None),
                 "sent_at": p.sent_at,
             }
             for p in rows

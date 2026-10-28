@@ -34,7 +34,7 @@ class BayesianUpdater:
         data = self._data()
         key = str(business_id)
         if key not in data:
-            data[key] = {"topics": {}, "formats": {}, "audience_segments": {}}
+            data[key] = {"topics": {}, "formats": {}, "audience_segments": {}, "hook_types": {}}
             self._save(data)
         return cast(dict[str, Any], data[key])
 
@@ -45,6 +45,7 @@ class BayesianUpdater:
         prompt_type: str | None = None,
         format: str | None = None,
         audience_segment: str | None = None,
+        hook_type: str | None = None,
         source: str = "unknown",
     ) -> None:
         """feedback: 'good' (hit) or 'bad' (miss). Regenerate is treated as a miss.
@@ -57,22 +58,28 @@ class BayesianUpdater:
         data = self._data()
         key = str(business_id)
         self._ledger_snapshot_if_new(data)
-        biz = data.setdefault(key, {"topics": {}, "formats": {}, "audience_segments": {}})
-        self.apply_update(biz, feedback, prompt_type, format, audience_segment)
+        biz = data.setdefault(key, {"topics": {}, "formats": {}, "audience_segments": {}, "hook_types": {}})
+        self.apply_update(biz, feedback, prompt_type, format, audience_segment, hook_type)
         self._save(data)
         self._ledger_append({
             "type": "update", "ts": utc_now_naive().isoformat(timespec="seconds"), "business": key,
             "feedback": feedback, "prompt_type": prompt_type, "format": format,
-            "audience_segment": audience_segment, "source": source,
+            "audience_segment": audience_segment, "hook_type": hook_type, "source": source,
         })
         logger.info(
-            "Bayesian update for business %s: type=%s feedback=%s source=%s",
-            business_id, prompt_type, feedback, source,
+            "Bayesian update for business %s: type=%s hook=%s feedback=%s source=%s",
+            business_id, prompt_type, hook_type, feedback, source,
         )
 
     @classmethod
     def apply_update(
-        cls, biz: dict[str, Any], feedback: str, prompt_type: str | None, format: str | None, audience_segment: str | None
+        cls,
+        biz: dict[str, Any],
+        feedback: str,
+        prompt_type: str | None,
+        format: str | None,
+        audience_segment: str | None,
+        hook_type: str | None = None,
     ) -> None:
         """The one place the update rule lives (used live AND by ledger replay)."""
 
@@ -88,6 +95,7 @@ class BayesianUpdater:
         update("topics", prompt_type)
         update("formats", format)
         update("audience_segments", audience_segment)
+        update("hook_types", hook_type)
 
     # ------------------------------------------------------------------ ledger
     def ledger_path(self) -> Path:
@@ -142,7 +150,7 @@ class BayesianUpdater:
         of its own data."""
         biz = self._business(business_id)
         flat: dict[str, float] = {}
-        dims = ("topics", "formats", "audience_segments")
+        dims = ("topics", "formats", "audience_segments", "hook_types")
         for dim in dims:
             for key, entry in biz.get(dim, {}).items():
                 flat[f"{dim}::{key}"] = round(entry["weight"], 3)
@@ -164,7 +172,7 @@ class BayesianUpdater:
         data = self._data()
         agg: dict[str, list[float]] = {}
         for biz in data.values():
-            for dim in ("topics", "formats", "audience_segments"):
+            for dim in ("topics", "formats", "audience_segments", "hook_types"):
                 for key, entry in (biz.get(dim) or {}).items():
                     k = f"{dim}::{key}"
                     agg.setdefault(k, []).append(float(entry.get("weight", 0.0)))
@@ -207,6 +215,13 @@ def replay_ledger(events: list[dict[str, Any]], upto: int | None = None) -> dict
     """Rebuild the weights from scratch: baseline + the first `upto` effective updates."""
     weights, updates = effective_updates(events)
     for event in updates if upto is None else updates[:upto]:
-        biz = weights.setdefault(event["business"], {"topics": {}, "formats": {}, "audience_segments": {}})
-        BayesianUpdater.apply_update(biz, event["feedback"], event.get("prompt_type"), event.get("format"), event.get("audience_segment"))
+        biz = weights.setdefault(event["business"], {"topics": {}, "formats": {}, "audience_segments": {}, "hook_types": {}})
+        BayesianUpdater.apply_update(
+            biz,
+            event["feedback"],
+            event.get("prompt_type"),
+            event.get("format"),
+            event.get("audience_segment"),
+            event.get("hook_type"),
+        )
     return weights

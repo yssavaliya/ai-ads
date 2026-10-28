@@ -97,6 +97,9 @@ def main() -> None:
     parser.add_argument("--title", type=str, help="Custom prompt title")
     parser.add_argument("--hook", type=str, help="Custom ad hook / overlay text")
     parser.add_argument("--prompt", type=str, help="Custom visual scene description")
+    parser.add_argument("--visual-scene", type=str, help="Physical scene description for FLUX image generator")
+    parser.add_argument("--hook-type", type=str, default="roi_proof", help="Hook type (contrarian, roi_proof, curiosity_gap, before_after, framework)")
+    parser.add_argument("--handle", type=str, default="aimagix.studio", help="Instagram handle for watermark footer")
     parser.add_argument("--brand", type=str, default="Aimagix Studio", help="Business or brand name")
     parser.add_argument("--color", type=str, default="#1F6F68", help="Brand hex color for overlays")
     parser.add_argument("--format", type=str, default="single image", choices=["single image", "reel"])
@@ -108,7 +111,7 @@ def main() -> None:
         return
 
     prompt_data = None
-    business_profile = {"name": args.brand, "color_hex": args.color}
+    business_profile = {"name": args.brand, "color_hex": args.color, "instagram_handle": args.handle}
 
     if args.prompt_id:
         found = find_prompt_in_manifests(args.prompt_id)
@@ -117,11 +120,14 @@ def main() -> None:
             print("Run 'python scripts/generate_creative.py --list' to see available IDs.")
             sys.exit(1)
         prompt_data, business_profile = found
+        business_profile.setdefault("instagram_handle", args.handle)
         print(f"Found prompt: '{prompt_data.get('title')}' for {business_profile.get('name')}")
     elif args.prompt or args.hook or args.title:
         prompt_data = {
             "title": args.title or "Custom Ad",
             "hook": args.hook or args.title or "Exclusive Offer",
+            "hook_type": args.hook_type,
+            "visual_scene": args.visual_scene or args.prompt or "",
             "angle": "Promotional",
             "prompt_text": args.prompt or args.hook or "Professional modern visual",
             "format": args.format,

@@ -66,3 +66,26 @@ def test_cold_start_disabled_after_enough_trials(tmp_path):
     flat = biz.to_forge_weights(1)
     # Once it has its own trials, global reel seed should NOT appear.
     assert all(not k.endswith("::reel") for k in flat), flat
+
+
+def test_hook_type_learning(tmp_path):
+    updater = BayesianUpdater(str(tmp_path / "weights.json"))
+    updater.record(1, "good", prompt_type="educational", hook_type="contrarian")
+    updater.record(1, "good", prompt_type="educational", hook_type="contrarian")
+    updater.record(1, "bad", prompt_type="educational", hook_type="curiosity_gap")
+
+    weights = updater.get_weights(1)
+    assert "hook_types" in weights
+    contrarian = weights["hook_types"]["contrarian"]
+    curiosity = weights["hook_types"]["curiosity_gap"]
+
+    assert contrarian["trials"] == 2
+    assert contrarian["hits"] == 2
+    assert curiosity["trials"] == 1
+    assert curiosity["hits"] == 0
+    assert contrarian["weight"] > curiosity["weight"]
+
+    flat = updater.to_forge_weights(1)
+    assert "hook_types::contrarian" in flat
+    assert flat["hook_types::contrarian"] > flat["hook_types::curiosity_gap"]
+

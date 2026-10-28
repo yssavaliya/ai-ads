@@ -155,12 +155,12 @@ class DailyPipeline:
             # Attach a ready-to-post brief (caption + best time) to every prompt.
             self._attach_posting_brief(business, prompts, social_data, audience_map)
 
-            # Render real creative assets (image inline / Reel MP4 attachment).
+            # Render one static image for each approved prompt.
             from src.generation.creative_forge import CreativeForge
 
             creative = CreativeForge()
             render_warnings: list[str] = []
-            # Each prompt's asset is an independent image/Reel render: run them concurrently (the image
+            # Each prompt's image is independent: run renders concurrently (the image
             # providers are additionally capped by IMAGE_CONCURRENCY so nested work stays bounded).
             jobs = list(enumerate(prompts))
             rendered = parallel_map(lambda job: creative.render_prompt(job[1], profile, index=job[0]), jobs, settings.image_concurrency)
@@ -187,6 +187,7 @@ class DailyPipeline:
                     prompt_text=p["prompt_text"],
                     caption=p.get("caption"),
                     prompt_type=self._prompt_type(p.get("prompt_type", "educational")),
+                    hook_type=p.get("hook_type"),
                     virality_score=p.get("virality_score"),
                     virality_label=p.get("virality_label"),
                     virality_probability=p.get("virality_probability"),
@@ -278,11 +279,21 @@ class DailyPipeline:
         post_time = self._recommend_post_time(business, social_data, audience_map)
         handle = business.get("instagram_handle") or business.get("name") or ""
         for p in prompts:
+            caption = (p.get("caption") or "").strip()
             hook = (p.get("hook") or "").strip()
             hashtags = " ".join(p.get("hashtags") or [])
-            caption = hook
-            if hashtags:
-                caption = f"{caption}\n\n{hashtags}".strip() if caption else hashtags
+            if not caption:
+                angle = p.get("angle", "")
+                parts = [hook]
+                if angle:
+                    parts.append(f"💡 {angle}")
+                parts.append("📌 Save this breakdown for your next campaign.")
+                parts.append(f"👉 Follow @{handle} for daily high-converting playbooks.")
+                if hashtags:
+                    parts.append(hashtags)
+                caption = "\n\n".join(parts).strip()
+            elif hashtags and hashtags not in caption:
+                caption = f"{caption}\n\n{hashtags}".strip()
             p["caption"] = caption
             p["recommended_post_time"] = post_time
             # First-comment CTA: posting a pinned first comment reliably lifts

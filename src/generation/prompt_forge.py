@@ -85,9 +85,8 @@ class PromptForge:
         )
 
         prompt = f"""
-You are a viral content strategist. Generate {count} distinct, ready-to-use content prompts
-for a human creator. Each prompt must be specific enough that a creator can produce a post
-from it without further research, but flexible enough to adapt to the platform.
+You are a top-tier viral content strategist specializing in explosive social media growth (Instagram & LinkedIn).
+Generate {count} distinct, scroll-stopping content prompts engineered to maximize saves, shares, and watch time.
 
 Business profile:
 {fence(business_profile, 6000)}
@@ -95,35 +94,54 @@ Business profile:
 Audience map:
 {fence(audience_map, 6000)}
 
-Today's trends:
+Today's trends & competitor insights:
 {fence(trend_data, 6000)}
 
 Allowed prompt types:
 {type_descriptions}
 
-Learned weights (topic:format:audience → weight, higher = more proven):
+Learned weights (dimension::item → weight, higher = more proven with this audience):
 {fence(weights, 4000)}
 
 {fence_text(hints_text)}
 
-Each generated prompt must include: a scroll-stopping hook, the core message,
-specific details (numbers, examples, Indian context), a call to action,
-and platform guidance (Instagram: visual-first; LinkedIn: thought-leadership).
-Every prompt must be for exactly one static image in one frame. Do not suggest
-multiple slides, a carousel, a Reel, video, animation, or a sequence of frames.
+VIRAL HOOK PSYCHOLOGY:
+Every prompt must choose an explicit "hook_type":
+- "contrarian": Challenge conventional wisdom or reveal a common mistake ("Why 90% of AI Ads Fail").
+- "roi_proof": Specific hard numbers, metrics, or revenue case studies ("₹75K Budget, +35% Conversions in 48h").
+- "curiosity_gap": A surprising insight or hidden mechanism ("The 1 Prompt Structure Agencies Hide").
+- "before_after": Dramatic contrast between old manual way vs new automated way ("Agency in 2024 vs Autonomous AI Studio in 2026").
+- "framework": Actionable 3-4 step blueprint or checklist ("The 3-Step AI Creative Engine").
+
+VISUAL SCENE FOR FLUX.1:
+Provide a photographic, cinematic scene in "visual_scene" describing:
+- Tangible physical subject & environment (e.g. minimalist high-tech studio desk, glowing indigo rim light, 35mm lens, f/1.8).
+- ZERO text, ZERO letters, ZERO words inside the image.
+
+CAPTION ARCHITECTURE:
+Provide a complete, ready-to-post "caption" with:
+- Opening line repeating the hook
+- 3-4 clear value points / insights separated by newlines
+- Strong CTA to save or comment ("Bookmark this before your next campaign")
+- Tiered hashtags: 3 hyper-niche, 3 industry, 2 broad discovery
+
+Deliverable: exactly one static image in one frame. Do not suggest slides, carousels, or videos.
 
 Respond ONLY with JSON:
 [
   {{
     "prompt_type": "educational",
+    "hook_type": "contrarian" | "roi_proof" | "curiosity_gap" | "before_after" | "framework",
     "title": "short working title",
-    "hook": "the exact opening hook (max 15 words)",
-    "prompt_text": "the complete ready-to-use content prompt (150-350 words)",
-    "hashtags": ["#tag1", "#tag2", "#tag3"],
+    "hook": "exact opening hook (max 12 words)",
+    "visual_scene": "photographic scene description for image generation (no text)",
+    "caption": "complete ready-to-post Instagram caption with value points and CTA",
+    "prompt_text": "complete creator brief detailing strategy, execution, and audience psychology (150-350 words)",
+    "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5", "#tag6", "#tag7", "#tag8"],
     "platform_focus": "instagram" | "linkedin" | "both",
     "format": "single image",
-    "angle": "one sentence on the strategic angle",
-    "audience_segment": "which persona name from the audience map this targets"
+    "angle": "one sentence strategic angle",
+    "audience_segment": "persona name from audience map"
   }}
 ]
 """
@@ -135,8 +153,11 @@ Respond ONLY with JSON:
         variants = [
             {
                 "prompt_type": str(v.get("prompt_type", "educational")),
+                "hook_type": str(v.get("hook_type", "contrarian")),
                 "title": str(v.get("title", "")),
                 "hook": str(v.get("hook", "")),
+                "visual_scene": str(v.get("visual_scene", "")),
+                "caption": str(v.get("caption", "")),
                 "prompt_text": str(v.get("prompt_text", "")),
                 "hashtags": [str(h) for h in v.get("hashtags", []) if str(h).startswith("#")],
                 "platform_focus": str(v.get("platform_focus", "both")),
@@ -187,8 +208,11 @@ Trends:
 Respond ONLY with the improved prompt as JSON with the same fields:
 {{
   "prompt_type": "...",
+  "hook_type": "contrarian" | "roi_proof" | "curiosity_gap" | "before_after" | "framework",
   "title": "...",
   "hook": "...",
+  "visual_scene": "photographic scene for FLUX.1 (no text)",
+  "caption": "ready-to-post Instagram caption",
   "prompt_text": "...",
   "hashtags": ["..."],
   "platform_focus": "...",
@@ -203,8 +227,11 @@ Respond ONLY with the improved prompt as JSON with the same fields:
                 raise ValueError("refined prompt invalid")
             return single_image_variant({
                 "prompt_type": str(data.get("prompt_type", best_variant.get("prompt_type", "educational"))),
+                "hook_type": str(data.get("hook_type", best_variant.get("hook_type", "contrarian"))),
                 "title": str(data.get("title", best_variant.get("title", ""))),
                 "hook": str(data.get("hook", best_variant.get("hook", ""))),
+                "visual_scene": str(data.get("visual_scene", best_variant.get("visual_scene", ""))),
+                "caption": str(data.get("caption", best_variant.get("caption", ""))),
                 "prompt_text": str(data.get("prompt_text", "")),
                 "hashtags": [str(h) for h in data.get("hashtags", best_variant.get("hashtags", []))],
                 "platform_focus": str(data.get("platform_focus", best_variant.get("platform_focus", "both"))),

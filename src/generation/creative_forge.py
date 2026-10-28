@@ -132,12 +132,25 @@ class CreativeForge:
         image_path = self.generate_image(
             self._image_prompt(prompt, business_profile), FEED_W, FEED_H, f"{base_name}-{index}"
         )
-        final_path = self.overlay_text(
-            image_path,
-            prompt.get("hook") or prompt.get("title") or "",
-            brand_color=self._brand_color(business_profile),
-            out_path=str(self.output_dir / f"{base_name}-{index}-final.png"),
-        )
+        category = prompt.get("hook_type") or prompt.get("prompt_type")
+        brand_handle = business_profile.get("instagram_handle") or business_profile.get("name")
+        out_target = str(self.output_dir / f"{base_name}-{index}-final.png")
+        try:
+            final_path = self.overlay_text(
+                image_path,
+                prompt.get("hook") or prompt.get("title") or "",
+                brand_color=self._brand_color(business_profile),
+                out_path=out_target,
+                category=category,
+                brand_handle=brand_handle,
+            )
+        except TypeError:
+            final_path = self.overlay_text(
+                image_path,
+                prompt.get("hook") or prompt.get("title") or "",
+                brand_color=self._brand_color(business_profile),
+                out_path=out_target,
+            )
         return {"asset_path": str(final_path), "asset_type": "image", "warnings": warnings + self._take_warnings()}
 
     # ------------------------------------------------------------------
@@ -179,14 +192,42 @@ class CreativeForge:
 
     @staticmethod
     def _image_prompt(prompt: dict[str, Any], business_profile: dict[str, Any]) -> str:
-        parts = [
-            prompt.get("hook", ""),
-            prompt.get("angle", ""),
-            f"for {business_profile.get('name', '')}",
-            business_profile.get("meta_description", "")
-            or " ".join(business_profile.get("headings", [])[:5]),
-        ]
-        return ". ".join(p for p in parts if p)[:800] + IMAGE_STYLE_SUFFIX
+        # Prioritize explicit visual scene instructions engineered for diffusion models
+        visual_scene = str(prompt.get("visual_scene") or "").strip()
+        if visual_scene:
+            return (
+                f"{visual_scene}, cinematic studio lighting, 35mm photography, high contrast, tactile textures, "
+                f"hyper-detailed, award-winning composition, 8k resolution, no text, no words, no letters"
+            )[:800]
+
+        # Synthesize an editorial photographic scene rather than concatenating text hooks
+        name = str(business_profile.get("name") or "")
+        name_lower = name.lower()
+        industry_visuals = {
+            "aimagix": "modern minimalist creative AI tech agency, sleek floating glass desk, glowing indigo and violet rim lighting, cinematic 35mm photography, shallow depth of field, premium dark aesthetic",
+            "fitness": "high-end modern athletic performance training gym, dynamic dramatic rim lighting, premium matte fitness equipment, cinematic editorial fitness photography, high contrast",
+            "bakery": "artisanal gourmet sourdough and pastries on rustic dark marble counter, warm natural morning window light, shallow depth of field, editorial food magazine photography",
+            "cake": "artisanal gourmet cake decorating studio, warm soft cinematic lighting, shallow depth of field, editorial food photography",
+            "jewel": "luxury bespoke diamond jewelry on black velvet podium, focused directional macro spotlight, sparkling reflections, editorial commercial jewelry photography",
+            "decor": "stylish Scandinavian interior living room, natural sunlight through sheer curtains, warm architectural textures, architectural digest photography",
+        }
+        base_visual = None
+        for key, vis in industry_visuals.items():
+            if key in name_lower:
+                base_visual = vis
+                break
+
+        if not base_visual:
+            base_visual = (
+                f"editorial commercial photography for {name}, modern high-end studio setting, "
+                f"cinematic rim lighting, 35mm lens, f/1.8, shallow depth of field, rich color grading"
+            )
+
+        angle = str(prompt.get("angle") or "").strip()
+        angle_ctx = f", depicting {angle}" if angle else ""
+        return (
+            f"{base_visual}{angle_ctx}, 8k resolution, award-winning composition, tactile textures, photorealistic, no text, no words, no letters"
+        )[:800]
 
     # ------------------------------------------------------------------
     # Text overlay
@@ -198,9 +239,11 @@ class CreativeForge:
         brand_color: tuple[int, int, int] = (31, 111, 104),
         band_alpha: int = 170,
         out_path: str | None = None,
+        category: str | None = None,
+        brand_handle: str | None = None,
     ) -> str:
-        """Composite hook text over a translucent brand-colored band near the
-        bottom of the image, inside Instagram's safe area."""
+        """Composite hook text over a sleek, modern gradient scrim vignette with
+        category badge and brand footer inside Instagram's safe area."""
         from PIL import Image, ImageDraw, ImageFont
 
         if not text:
@@ -210,23 +253,68 @@ class CreativeForge:
         overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
 
-        font_size = max(36, w // 16)
+        font_size = max(38, min(62, w // 17))
         font = self._load_font(font_size)
+        cat_font = self._load_font(max(20, min(28, int(font_size * 0.44))))
+        footer_font = self._load_font(max(18, min(24, int(font_size * 0.38))))
+
         lines = self._wrap_text(draw, text.upper(), font, max_width=int(w * 0.86))
-        line_height = int(font_size * 1.28)
-        pad_y = int(h * 0.05)
+        line_height = int(font_size * 1.25)
+        text_block_h = line_height * len(lines)
 
-        block_h = line_height * len(lines) + 2 * pad_y
-        band_top = h - int(h * 0.075) - block_h  # keep 7.5% bottom safe area clear
+        # Scrim: smooth quadratic gradient over bottom ~44-50%
+        scrim_h = max(int(h * 0.44), min(int(h * 0.58), text_block_h + 360))
+        scrim_top = h - scrim_h
 
-        draw.rectangle([0, band_top, w, band_top + block_h], fill=(*brand_color, band_alpha))
-        y = band_top + pad_y
+        # Render gradient line by line
+        for y in range(scrim_top, h):
+            prog = (y - scrim_top) / scrim_h
+            alpha = int(235 * (prog ** 1.6))
+            # Deep rich dark tone matching brand subtle warmth/coolness
+            r, g, b = brand_color
+            scrim_rgb = (max(8, r // 10), max(10, g // 10), max(16, b // 8))
+            draw.line([(0, y), (w, y)], fill=(*scrim_rgb, alpha))
+
+        # 1. Category Pill Badge (if category given)
+        cur_y = scrim_top + max(35, int((scrim_h - text_block_h - 140) * 0.35))
+        if category:
+            cat_label = f"✦ {str(category).replace('_', ' ').strip().upper()} ✦"
+            cat_w = draw.textlength(cat_label, font=cat_font)
+            pill_pad_x = 20
+            pill_pad_y = 7
+            pill_w = cat_w + 2 * pill_pad_x
+            pill_h = int(getattr(cat_font, "size", 24)) + 2 * pill_pad_y
+            pill_x1 = (w - pill_w) // 2
+            pill_x2 = pill_x1 + pill_w
+            pill_y1 = cur_y
+            pill_y2 = pill_y1 + pill_h
+
+            # Pill fill with brand color & subtle white outline
+            draw.rounded_rectangle([pill_x1, pill_y1, pill_x2, pill_y2], radius=14, fill=(*brand_color, 215), outline=(255, 255, 255, 140), width=1)
+            text_x = pill_x1 + pill_pad_x
+            draw.text((text_x, pill_y1 + pill_pad_y - 1), cat_label, font=cat_font, fill=(255, 255, 255, 255))
+            cur_y = pill_y2 + 22
+        else:
+            cur_y = scrim_top + max(40, (scrim_h - text_block_h - 80) // 2)
+
+        # 2. Main Headline Hook Text (centered with crisp drop shadow)
         for line in lines:
-            text_w = draw.textlength(line, font=font)
-            x = (w - text_w) // 2
-            draw.text((x + 2, y + 2), line, font=font, fill=(0, 0, 0, 140))
-            draw.text((x, y), line, font=font, fill=(255, 255, 255, 255))
-            y += line_height
+            line_w = draw.textlength(line, font=font)
+            x = (w - line_w) // 2
+            # Drop shadow for high contrast & 3D pop
+            draw.text((x + 2, cur_y + 3), line, font=font, fill=(0, 0, 0, 190))
+            draw.text((x, cur_y), line, font=font, fill=(255, 255, 255, 255))
+            cur_y += line_height
+
+        # 3. Brand Handle Footer (keeps 6% bottom safe area clear)
+        if brand_handle:
+            clean_handle = brand_handle if brand_handle.startswith("@") else f"@{brand_handle}"
+            foot_text = f"• {clean_handle} •"
+            foot_w = draw.textlength(foot_text, font=footer_font)
+            foot_x = (w - foot_w) // 2
+            foot_y = h - int(h * 0.055)
+            draw.text((foot_x + 1, foot_y + 1), foot_text, font=footer_font, fill=(0, 0, 0, 140))
+            draw.text((foot_x, foot_y), foot_text, font=footer_font, fill=(215, 225, 235, 190))
 
         combined = Image.alpha_composite(img, overlay).convert("RGB")
         out = out_path or str(Path(image_path).with_name(Path(image_path).stem + "-texted.png"))
@@ -487,6 +575,8 @@ class CreativeForge:
     def _brand_color(business_profile: dict[str, Any]) -> tuple[int, int, int]:
         name = (business_profile.get("name") or "").lower()
         palette = {
+            "aimagix": (99, 102, 241),   # Electric indigo
+            "studio": (79, 70, 229),    # Royal violet
             "bakery": (146, 64, 14),
             "cake": (190, 84, 20),
             "jewel": (88, 28, 105),

@@ -116,3 +116,31 @@ def test_render_prompt_reel_falls_back_to_image_when_beats_fail(forge):
     # Reel failed -> fell back to a single feed image
     assert result["asset_type"] == "image"
     assert any("Reel render failed" in w for w in result["warnings"])
+
+
+def test_overlay_text_with_category_and_handle(tmp_path, forge):
+    src = tmp_path / "in_cat.png"
+    from PIL import Image
+
+    Image.new("RGB", (FEED_W, FEED_H), (30, 40, 50)).save(src)
+    out = forge.overlay_text(
+        str(src),
+        "The 48-Hour AI Brand Sprint",
+        category="ROI PROOF",
+        brand_handle="aimagix.studio",
+        out_path=str(tmp_path / "out_cat.png"),
+    )
+    assert out == str(tmp_path / "out_cat.png")
+    assert __import__("os").path.getsize(out) > 0
+
+
+def test_image_prompt_uses_visual_scene():
+    prompt = {
+        "visual_scene": "A high-tech holographic neon studio with sleek floating monitors",
+        "hook": "Why agencies fail",
+    }
+    biz = {"name": "Aimagix Studio"}
+    p = CreativeForge._image_prompt(prompt, biz)
+    assert "holographic neon studio" in p
+    assert "cinematic studio lighting" in p
+
