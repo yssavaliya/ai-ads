@@ -85,20 +85,27 @@ class Delivery:
         return self._fan_out("send_lead_digest", to, leads)
 
 
-MODES = ("site", "email", "both")
+MODES = ("site", "email", "both", "buffer")
 
 
 def get_delivery(mode: str | None = None) -> Delivery:
-    mode = (mode or settings.delivery_mode or "site").strip().lower()
-    if mode not in MODES:  # a typo must not silently fall back to some other channel
-        raise ValueError(f"Unknown DELIVERY_MODE {mode!r}; expected one of {', '.join(MODES)}")
+    raw_mode = (mode or settings.delivery_mode or "site").strip().lower()
+    selected = [m.strip() for m in raw_mode.split(",") if m.strip()]
+    for m in selected:
+        if m not in MODES:
+            raise ValueError(f"Unknown DELIVERY_MODE {m!r}; expected one of {', '.join(MODES)}")
+
     channels: list[Any] = []
-    if mode in ("site", "both"):
+    if any(m in ("site", "both") for m in selected):
         from src.delivery.site_publisher import SitePublisher
 
         channels.append(SitePublisher())
-    if mode in ("email", "both"):
+    if any(m in ("email", "both") for m in selected):
         from src.delivery.email_sender import EmailSender
 
         channels.append(EmailSender())
+    if any(m == "buffer" for m in selected):
+        from src.delivery.buffer_publisher import BufferPublisher
+
+        channels.append(BufferPublisher())
     return Delivery(channels)

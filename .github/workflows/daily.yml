@@ -57,7 +57,6 @@ jobs:
         with:
           state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
           site: "true"
-          piper: "true"
 
       - name: Run daily pipeline
         run: bash .github/scripts/run_pipeline.sh src.scheduler.daily_job
@@ -82,6 +81,13 @@ jobs:
 
       - uses: ./.github/actions/publish-site
         if: always()
+
+      - name: Publish top creative to Buffer
+        if: success()
+        env:
+          BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
+          BUFFER_PROFILE_IDS: ${{ secrets.BUFFER_PROFILE_IDS || secrets.BUFFER_PROFILE_ID }}
+        run: python scripts/publish_buffer.py
 
       - name: Alert on pipeline failure
         if: failure()

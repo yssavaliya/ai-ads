@@ -99,11 +99,17 @@ class Settings(BaseSettings):
 
     # Delivery: how finished content reaches people. "site" (default) publishes a static
     # website; "email" is the legacy SMTP e-mail; "both" does both.
-    delivery_mode: str = Field(default="site", description="site | email | both")
+    delivery_mode: str = Field(default="site", description="site | email | both | buffer")
     site_dir: Path = Field(default=Path("site"), description="Checkout of the published gh-pages branch")
     site_retention_days: int = Field(default=45, description="Days of prompts kept on the site")
     site_secret: str | None = Field(default=None, description="If set, page URLs carry a keyed hash and the index lists nothing")
     site_base_url: str | None = Field(default=None, description="Public URL override (default: <owner>.github.io/<repo>)")
+
+    # Buffer (Social publishing)
+    buffer_access_token: str | None = Field(default=None, description="Buffer API access token")
+    buffer_profile_ids: str | None = Field(default=None, description="Comma-separated Buffer profile IDs (or single ID)")
+    buffer_draft_mode: bool = Field(default=False, description="Whether to create Buffer posts as drafts for review")
+    buffer_now: bool = Field(default=False, description="Whether to post immediately to Buffer channels rather than queueing")
 
     # Concurrency caps (1 = the old strictly sequential behaviour). Independent network work overlaps;
     # the LLM cap is small because free tiers rate-limit tokens per minute, not requests.
