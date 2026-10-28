@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "29 18 * * *"   # 23:59 IST
   workflow_dispatch:
+    inputs:
+      post_now:
+        description: "Post immediately to Instagram via Buffer (skip queue)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -87,6 +92,7 @@ jobs:
         env:
           BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
           BUFFER_PROFILE_IDS: ${{ secrets.BUFFER_PROFILE_IDS || secrets.BUFFER_PROFILE_ID }}
+          BUFFER_NOW: ${{ inputs.post_now || vars.BUFFER_NOW || 'false' }}
         run: python scripts/publish_buffer.py
 
       - name: Alert on pipeline failure

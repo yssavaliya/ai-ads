@@ -77,11 +77,14 @@ def main() -> None:
         print("Skipping Buffer publication.")
         sys.exit(0)
 
+    is_draft = args.draft or os.getenv("BUFFER_DRAFT_MODE", "").lower() in ("true", "1", "yes")
+    is_now = args.now or os.getenv("BUFFER_NOW", "").lower() in ("true", "1", "yes")
+
     publisher = BufferPublisher(
         access_token=token,
         profile_ids=[profile_id],
-        draft_mode=args.draft,
-        now=args.now,
+        draft_mode=is_draft,
+        now=is_now,
     )
 
     prompts = get_latest_prompts()
