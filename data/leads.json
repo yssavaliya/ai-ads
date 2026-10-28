@@ -1,4 +1,319 @@
 {
-  "generated_at": "2026-10-26T09:18:56.236019",
-  "leads": []
+  "generated_at": "2026-10-28T18:46:22.920836",
+  "leads": [
+    {
+      "name": "MK DECOR",
+      "website_url": "http://www.mkdecor.co.in",
+      "instagram_handle": "mkdecor_wallpaper_ahmedabad",
+      "linkedin_handle": "",
+      "niche": "home decor",
+      "location": "Ahmedabad",
+      "follower_count": 5491,
+      "found_via": "instagram-search",
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "5491 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 5491,
+      "prompts": [
+        {
+          "prompt_type": "social_proof",
+          "title": "Diwali Heritage Wall Makeover",
+          "hook": "Diwali sparkle in 30 min! Grandma’s 60-year-old heritage wall reborn under ₹2,999!",
+          "prompt_text": "Create a high-impact, single-frame vertical image split (50/50 side-by-side) for Instagram showcasing a heritage wall transformation in an Ahmedabad home. Left side: original faded, 60-year-old hand-painted Gujarati wall. Right side: restored wall featuring a washable, eco-friendly wallpaper by local Vadodara artisans mirroring the traditional motif, enhanced with warm Diwali ambient lighting. Bold visual text overlay across the center: 'DIWALI SPARKLE: Heritage Wall Reborn Under ₹2,999!'. Caption starts: 'Diwali sparkle in 30 min! Give your home a heritage makeover without breaking the bank.' Details: 'Partnered with local Vadodara artisans using natural dyes and durable, washable material. Transform any feature wall for under ₹2,999 with zero hassle.' Call to action: 'Use the AR preview link in our bio to see it on your wall instantly! Tag #MyMKDecor with your wall stories to win a free Diwali makeover kit. DM us to start your transformation today!' Visual layout guidance: Instagram 4:5 vertical single frame, earthy festive tones, high-contrast typography, crisp side-by-side comparison.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+          "hashtags": [
+            "#DiwaliDecor",
+            "#HomeMakeover",
+            "#AhmedabadHomes",
+            "#TraditionalAesthetic",
+            "#SustainableLiving",
+            "#MKDecor"
+          ],
+          "platform_focus": "instagram",
+          "format": "single image",
+          "angle": "Budget-friendly festive heritage transformation combining authentic Gujarati craftsmanship with instant visual proof.",
+          "audience_segment": "Young Urban Homeowner",
+          "reel_beats": [],
+          "virality_score": 78,
+          "virality_label": "HIGH",
+          "virality_probability": 0.78,
+          "key_factors": [
+            "Strong Diwali‑centric hook and cultural relevance to Gujarati heritage",
+            "Clear, budget‑specific promise (₹2,999) that appeals to price‑sensitive young homeowners",
+            "User‑generated content incentive (#MyMKDecor contest) driving shareability",
+            "Visual split‑screen before‑after format aligns with proven transformation hooks"
+          ],
+          "risks": [
+            "Static image may be less scroll‑stopping than a short reel, especially for the “quick‑makeover” audience",
+            "AR preview CTA could be ignored if the link isn’t prominently integrated in the bio",
+            "Price point might still feel high for the most budget‑conscious segment"
+          ],
+          "reasoning": "The prompt combines a high‑impact visual transformation with Diwali timing, heritage storytelling, and a clear price cue, all of which match the top audience personas. The contest and AR element add share potential, though the lack of motion could limit immediate hook strength.",
+          "improvement_hints": [
+            "Convert the split‑screen concept into a 3‑second reel with a rapid before‑after reveal to exploit the high‑performing video hook pattern.",
+            "Add a bold overlay number (e.g., \"30‑min makeover\") to emphasize speed and budget, mirroring successful carousel styles.",
+            "Feature a short testimonial quote from a local customer or artisan to boost trust and social proof.",
+            "Place a clear “Tap bio for AR preview” sticker in the image to increase click‑through on the AR link."
+          ],
+          "generation_attempt": 2,
+          "_combined": 78.0,
+          "threshold": 75,
+          "below_threshold": false,
+          "asset_path": "logs/assets/mk-decor-diwali-heritage-wall-makeover-0-final.png",
+          "asset_type": "image",
+          "thumbnail": null
+        },
+        {
+          "prompt_type": "educational",
+          "title": "30‑Minute Diwali Glow",
+          "hook": "Turn your living room into a Diwali‑ready lounge in 30 minutes!",
+          "prompt_text": "Create a single‑frame Instagram image that captures the instant before‑and‑after of a dull living‑room wall turned festive with MK DECOR’s Diwali‑inspired wallpaper. The left side of the frame shows the original beige wall with a faint, tired light fixture. The right side is a vibrant, rangoli‑patterned wallpaper in warm gold and maroon, with a simple string of fairy lights draped overhead. Overlay bold text in the upper center: ‘Diwali Glow – ₹2,999 Only’. In the bottom right corner place a small arrow pointing from the dull side to the bright side, with the caption ‘Watch it transform in 30 min!’. Include a subtle, upbeat Gujarati folk tune icon to hint at the audio cue. The core message is that a single wall can be revitalized for a Diwali celebration on a tight budget. Add a clear call to action: ‘DM us for a free 5‑step design guide and start your makeover today!’ Keep the text minimal, using a friendly Hinglish tone: ‘हमारे साथ सजाएं, बजट में ब्यूटी!’ Highlight the hashtag cluster #DiwaliDecor #HomeMakeover #BudgetFriendly, ensuring the visual is vertical and mobile‑first. This prompt guides the creator to produce a striking, single‑image single image‑style composition that can be posted as a static image on Instagram, encouraging quick engagement and direct messaging for leads.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+          "hashtags": [
+            "#DiwaliDecor",
+            "#HomeMakeover",
+            "#BudgetFriendly"
+          ],
+          "platform_focus": "instagram",
+          "format": "single image",
+          "angle": "Show how a quick, affordable wallpaper swap can energize a space for Diwali.",
+          "audience_segment": "Young Urban Homeowner",
+          "reel_beats": [],
+          "virality_score": 78,
+          "virality_label": "HIGH",
+          "virality_probability": 0.78,
+          "key_factors": [
+            "High seasonal relevance leveraging the peak Diwali Home Makeover trend",
+            "Strong price anchoring (₹2,999) directly solving the primary budget constraint pain point",
+            "Instant visual value proof through clear split-screen before-and-after composition",
+            "High conversion CTA offering a free lead magnet (5-step design guide via DM)"
+          ],
+          "risks": [
+            "Static single-image format receives lower algorithmic priority on Instagram compared to Reels",
+            "Visual clutter from combining text overlays, price tags, arrows, and audio icons in a single frame",
+            "Static image cannot actually leverage audio cues, making the Gujarati folk tune icon confusing"
+          ],
+          "reasoning": "The prompt effectively taps into the massive Diwali makeover search volume with an explicit price point that addresses the primary barrier for young urban homeowners in Gujarat. While the split-screen before-and-after visual generates high save and share rates, executing this as a static post rather than an Instagram Reel slightly caps its viral reach potential on the platform.",
+          "improvement_hints": [
+            "Convert the static single frame into a short 5-7 second Instagram Reel featuring dynamic transition cuts and trending Gujarati/Festive audio",
+            "Reduce text clutter on the image by placing the full 'DM for free guide' offer into the text hook/caption rather than crowding the visual",
+            "Add a local trust tag like 'Same-day Ahmedabad delivery' to build regional urgency"
+          ],
+          "generation_attempt": 3,
+          "_combined": 78.0,
+          "threshold": 75,
+          "below_threshold": false,
+          "asset_path": "logs/assets/mk-decor-30-minute-diwali-glow-1-final.png",
+          "asset_type": "image",
+          "thumbnail": null,
+          "warnings": [
+            "All AI image providers failed or are rate limited — used a branded card background instead"
+          ]
+        },
+        {
+          "prompt_type": "storytelling",
+          "title": "Resale Ready Transformation",
+          "hook": "From drab to dream: How a 40‑year‑old home turned into a resale gem.",
+          "prompt_text": "Compose a single‑frame LinkedIn post that tells the story of a 35‑year‑old homeowner who renovated their living room using MK DECOR’s premium moisture‑resistant wallpaper. The image should depict a split‑screen: the left side shows the original plain wall with faded paint, while the right side displays a modern, deep‑blue wallpaper with subtle geometric accents. In the center overlay a semi‑transparent banner reading ‘Before: ₹45,000 • After: ₹1,50,000 – 50% Value Increase’. Include a small icon of a house with a price tag to emphasize resale value. Beneath the image, add a caption: ‘I spent 2 months and ₹1,20,000 on quality, and my home sold 30% faster. MK DECOR made it happen.’ End with a call to action: ‘Book a free design consultation and discover how you can boost your property value.’ Use a professional, yet warm tone, incorporating a subtle Indian architectural motif in the background. The visual should be vertical, optimized for LinkedIn’s feed, and include hashtags #HomeRenovation #ResaleValue #InteriorDesign. This prompt ensures the creator delivers a compelling, single‑image narrative that resonates with mid‑career renovators seeking credible, high‑quality upgrades.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+          "hashtags": [
+            "#HomeRenovation",
+            "#ResaleValue",
+            "#InteriorDesign"
+          ],
+          "platform_focus": "linkedin",
+          "format": "single image",
+          "angle": "Highlight tangible resale benefits of premium, moisture‑resistant wallpaper.",
+          "audience_segment": "Mid‑career Renovator",
+          "reel_beats": [],
+          "virality_score": 78,
+          "virality_label": "HIGH",
+          "virality_probability": 0.78,
+          "key_factors": [
+            "High-intent financial hook (ROI focus)",
+            "Strong alignment with 'Mid-career Renovator' persona",
+            "Visual proof of value (Before/After split-screen)",
+            "Professional platform fit for LinkedIn",
+            "Clear, actionable CTA"
+          ],
+          "risks": [
+            "Potential for the image to look like a 'spammy' real estate ad",
+            "LinkedIn algorithm may penalize heavy text overlays on images",
+            "Risk of appearing too commercial rather than storytelling-focused"
+          ],
+          "reasoning": "This prompt hits the 'Mid-career Renovator' pain point perfectly by linking home decor to financial ROI, which is highly effective on LinkedIn. The visual contrast of a 50% value increase is a powerful psychological trigger that encourages engagement and saves, though the design must be executed with high-end aesthetics to avoid looking like a low-quality flyer.",
+          "improvement_hints": [
+            "Shift the caption from a sales pitch to a first-person narrative: 'How I added 30% to my property value in 2 months' to increase organic reach.",
+            "Reduce the text overlay on the image; move the price breakdown to the first comment or the caption to ensure the image remains clean and premium.",
+            "Incorporate a 'human element'—perhaps a small, blurred silhouette of a person in the 'After' frame to make the space feel lived-in and aspirational."
+          ],
+          "generation_attempt": 3,
+          "_combined": 78.0,
+          "threshold": 75,
+          "below_threshold": false
+        }
+      ]
+    },
+    {
+      "name": "Gujarat Decor",
+      "website_url": "https://www.gujaratdecor.com/",
+      "instagram_handle": "gujarat_decor33",
+      "linkedin_handle": "",
+      "niche": "home decor",
+      "location": "Ahmedabad",
+      "found_via": "search",
+      "website_title": "Gujarat Decor | Furnishings, Fabrics & Interior | Ahmedabad",
+      "follower_count": 1611,
+      "opportunity_score": 65,
+      "opportunity_reasons": [
+        "1611 followers (sweet spot)",
+        "limited recent activity",
+        "no engagement data yet",
+        "has website (full profile available)",
+        "has social handle"
+      ],
+      "followers": 1611,
+      "prompts": [
+        {
+          "prompt_type": "social_proof",
+          "title": "Rohit’s 28-sq-ft Diwali Transformation",
+          "hook": "Limited space? Create a stunning Diwali oasis in under 3 minutes for just ₹3,000!",
+          "prompt_text": "Create a high-contrast, professional-grade static image of a small balcony transformed for Diwali. The composition must be a split-screen: the left side shows a 'Before' (plain, empty corner) and the right side shows the 'After' (the same corner glowing with warmth). Feature three distinct product elements: a cluster of bamboo lanterns, hand-painted terracotta diyas on the floor, and an embroidered cushion. Overlay a clean, aesthetic 'Customer Review' badge in the corner that says: 'Most Instagram-worthy corner of the house! - Rohit, Software Engineer'. Include a small text callout: 'Saved ₹1,200 with our Diwali Bundle'. The overall aesthetic must be warm, festive, and high-end to build trust. CTA at the bottom: 'DM us BALCONY2026 for 10% off. Tag a friend who needs this makeover!'\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+          "hashtags": [
+            "#Diwali2026",
+            "#BudgetMakeover",
+            "#GujaratCrafts",
+            "#FestiveHome",
+            "#SmallSpaceDecor"
+          ],
+          "platform_focus": "instagram",
+          "format": "single image",
+          "angle": "Build trust and virality through a high-contrast, numbers-backed visual transformation that addresses the 'small space' pain point.",
+          "audience_segment": "The Aspiring Homeowner",
+          "reel_beats": [],
+          "virality_score": 88,
+          "virality_label": "HIGH",
+          "virality_probability": 0.88,
+          "key_factors": [
+            "High-contrast 'Before/After' visual hook",
+            "Strong social proof via relatable persona (Software Engineer)",
+            "Clear value proposition (monetary savings + aesthetic appeal)",
+            "High cultural resonance with Diwali festive sentiment",
+            "Direct, actionable CTA with a specific discount code"
+          ],
+          "risks": [
+            "Static images often underperform compared to Reels in the current Instagram algorithm",
+            "Text-heavy overlays can clutter the visual aesthetic if not professionally kerned",
+            "Risk of looking like a 'paid ad' rather than organic content, which may lower engagement"
+          ],
+          "reasoning": "This prompt hits the 'Aspiring Homeowner' persona perfectly by addressing both the budget pain point and the desire for an 'Instagrammable' space. By combining a high-contrast visual transformation with specific social proof and a clear incentive, it effectively bridges the trust gap identified in the audience insights.",
+          "improvement_hints": [
+            "Convert the static image into a 7-second 'looping' Reel with ambient festive music to boost algorithmic reach.",
+            "Ensure the 'Customer Review' badge looks like a native Instagram Story mention or DM screenshot for higher authenticity.",
+            "Use a warmer, more 'lived-in' lighting filter to avoid the image looking too sterile or overly commercial."
+          ],
+          "generation_attempt": 1,
+          "_combined": 88.0,
+          "threshold": 75,
+          "below_threshold": false,
+          "asset_path": "logs/assets/gujarat-decor-rohit-s-28-sq-ft-diwali-transformation-0-final.png",
+          "asset_type": "image",
+          "thumbnail": null,
+          "warnings": [
+            "All AI image providers failed or are rate limited — used a branded card background instead"
+          ]
+        },
+        {
+          "prompt_type": "educational",
+          "title": "Small Space Festive Styling",
+          "hook": "Limited space? Create a festive 3-minute Diwali corner in just 200 sq ft!",
+          "prompt_text": "Capture a high-quality, bright, static image of a small apartment entryway featuring a single, vibrant Gujarat Decor brass diya stand and a traditional block-print runner. The image should focus on the 'before vs. after' impact of adding just two authentic pieces to a plain console table. In the caption, explain that you don't need a massive bungalow to honor tradition; you just need intentional, high-quality accents. Provide a 3-step guide: 1) Clear the clutter, 2) Place a statement piece like a brass diya, 3) Add a textile element for texture. Emphasize that choosing authentic local craftsmanship keeps your heritage alive even in a modern urban apartment. End by asking: 'Which corner of your home is crying out for a festive glow-up?' Tag a friend who is currently decorating their first apartment. Use this image to prove that 'less is more' when the quality is authentic.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+          "hashtags": [
+            "#Diwali2026",
+            "#SmallSpaceDecor",
+            "#GujaratCrafts"
+          ],
+          "platform_focus": "instagram",
+          "format": "single image",
+          "angle": "Position Gujarat Decor as the solution for young professionals struggling with space constraints.",
+          "audience_segment": "The Aspiring Homeowner",
+          "reel_beats": [],
+          "virality_score": 78,
+          "virality_label": "HIGH",
+          "virality_probability": 0.78,
+          "key_factors": [
+            "High cultural resonance with the 'Aspiring Homeowner' persona",
+            "Addresses the specific pain point of styling small urban spaces",
+            "Strong 'less is more' value proposition that feels attainable",
+            "Effective use of social proof/tagging CTA to drive organic reach"
+          ],
+          "risks": [
+            "Static images often underperform compared to Reels in the current Instagram algorithm",
+            "The 'before vs. after' impact is harder to convey in a single static frame than in a video",
+            "Risk of the image looking too 'catalog-like' rather than 'authentic/relatable'"
+          ],
+          "reasoning": "This prompt hits the sweet spot for the target audience by blending traditional heritage with modern, small-space living. It leverages the 'aspirational yet achievable' psychological trigger, which is highly effective for the 25-40 demographic in urban India.",
+          "improvement_hints": [
+            "Convert this into a 'Reel' format: Start with a 2-second clip of the cluttered table, then a snap-transition to the styled version.",
+            "Add a 'Save for later' CTA in the caption, as educational content with actionable steps is highly saved, which boosts algorithmic ranking.",
+            "Use a warmer, more 'lived-in' lighting style to ensure the image feels like a real home rather than a staged studio shot."
+          ],
+          "generation_attempt": 2,
+          "_combined": 78.0,
+          "threshold": 75,
+          "below_threshold": false,
+          "asset_path": "logs/assets/gujarat-decor-small-space-festive-styling-1-final.png",
+          "asset_type": "image",
+          "thumbnail": null,
+          "warnings": [
+            "All AI image providers failed or are rate limited — used a branded card background instead"
+          ]
+        },
+        {
+          "prompt_type": "storytelling",
+          "title": "The Art of the Artisan",
+          "hook": "The secret to our decor isn't just wood or paint; it's a 200-year-old story.",
+          "prompt_text": "Capture a single, intimate close-up image of an artisan’s hands working on a block-printed textile or wood-carving detail. The lighting must be warm and moody to emphasize the 'lived-in' quality of the craft. Use the caption to tell the story of the origin of your products—connect the heritage of Gujarat to the modern home. Explain the care and time that goes into every piece, contrasting it with mass-produced alternatives. This resonates with the 'Traditional Home Curator' who values cultural longevity. By highlighting the human element, you position Gujarat Decor as a guardian of heritage rather than just a store. This emotional connection is a powerful tool to overcome the 'trust' barrier. End the caption with: 'If you believe in keeping traditions alive, drop a ❤️ below and share this with someone who loves authentic craftsmanship.'\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+          "hashtags": [
+            "#HandloomRevival",
+            "#GujaratArtisans",
+            "#HeritageDecor",
+            "#AuthenticLiving",
+            "#Craftsmanship"
+          ],
+          "platform_focus": "both",
+          "format": "single image",
+          "angle": "Building brand identity through cultural storytelling and heritage.",
+          "audience_segment": "The Traditional Home Curator",
+          "reel_beats": [],
+          "virality_score": 78,
+          "virality_label": "HIGH",
+          "virality_probability": 0.78,
+          "key_factors": [
+            "High emotional resonance with the 'Traditional Home Curator' segment",
+            "Strong trust-building narrative that addresses the 'authenticity' pain point",
+            "Visual storytelling aligns perfectly with Instagram's aesthetic-driven algorithm",
+            "Clear Call-to-Action (CTA) that encourages community engagement"
+          ],
+          "risks": [
+            "Static images often have lower reach than Reels on Instagram's current algorithm",
+            "Risk of being perceived as 'too slow' or 'too serious' for younger, fast-paced audiences",
+            "Lack of a 'hook' in the visual itself if the close-up is too abstract"
+          ],
+          "reasoning": "This prompt leverages the 'Cultural Craftsmanship' theme, which is a high-strength driver for this specific audience. By focusing on the human element, it builds the necessary trust to convert followers into customers, directly addressing the brand's primary barrier to entry.",
+          "improvement_hints": [
+            "Convert the static image into a 7-second 'slow-motion' video loop with ambient workshop sounds to increase dwell time.",
+            "Start the caption with a punchy hook like 'This isn't just fabric; it's a 300-year-old story.' instead of starting with the visual description.",
+            "Add a text overlay on the image: 'Handmade in Gujarat' to immediately signal value to scrollers."
+          ],
+          "generation_attempt": 3,
+          "_combined": 78.0,
+          "threshold": 75,
+          "below_threshold": false
+        }
+      ]
+    }
+  ]
 }
