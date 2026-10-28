@@ -1,0 +1,2 @@
+{"type": "snapshot", "ts": "2026-10-28T21:29:49", "weights": {"aimagix-studio": {"topics": {}, "formats": {}, "audience_segments": {}, "hook_types": {}}}}
+{"type": "update", "ts": "2026-10-28T21:29:49", "business": "aimagix-studio", "feedback": "good", "prompt_type": "storytelling", "format": "single image", "audience_segment": "Startup Founder", "hook_type": "before_after", "source": "unknown"}

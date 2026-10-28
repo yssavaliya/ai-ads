@@ -1,8 +1,32 @@
 {
   "aimagix-studio": {
-    "topics": {},
-    "formats": {},
-    "audience_segments": {},
-    "hook_types": {}
+    "topics": {
+      "storytelling": {
+        "weight": 0.6666666666666666,
+        "trials": 1,
+        "hits": 1
+      }
+    },
+    "formats": {
+      "single image": {
+        "weight": 0.6666666666666666,
+        "trials": 1,
+        "hits": 1
+      }
+    },
+    "audience_segments": {
+      "Startup Founder": {
+        "weight": 0.6666666666666666,
+        "trials": 1,
+        "hits": 1
+      }
+    },
+    "hook_types": {
+      "before_after": {
+        "weight": 0.6666666666666666,
+        "trials": 1,
+        "hits": 1
+      }
+    }
   }
 }
