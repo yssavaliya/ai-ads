@@ -90,6 +90,8 @@ MODES = ("site", "email", "both", "buffer")
 
 def get_delivery(mode: str | None = None) -> Delivery:
     raw_mode = (mode or settings.delivery_mode or "site").strip().lower()
+    if raw_mode not in MODES and not ("," in raw_mode and "buffer" in raw_mode):
+        raise ValueError(f"Unknown DELIVERY_MODE {raw_mode!r}; expected one of {', '.join(MODES)}")
     selected = [m.strip() for m in raw_mode.split(",") if m.strip()]
     for m in selected:
         if m not in MODES:

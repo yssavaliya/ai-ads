@@ -18,14 +18,17 @@ Updated 2026-10-24 during iterative code and workflow review.
 | Repeated regenerate feedback could duplicate weight updates/prompts | Fixed: replacement linkage is persisted and negative feedback is applied once. |
 | Failed replacement delivery could close feedback as if successful | Fixed: issue stays open for retry and the draft prompt is removed. |
 | Generated content could ask for a Reel or carousel instead of one image | Fixed: the forge requests one static image, normalizes every model response and refinement to `single image`, clears Reel beats, and adds a one-frame image requirement. The virality gate applies the same rule to alternate forge implementations. |
+| Trend analysis and setup still advertised or provisioned video output despite the single-image product requirement | Fixed: trend radar now only recommends `single image`, user-facing copy describes one still image, and scheduled/CI workflows no longer install Piper/FFmpeg video dependencies. Added a regression test for hostile trend output and workflow configuration. |
 | Successful scheduled workflows spawned a separate skipped “Alert on Pipeline Failure” run | Fixed: removed the `workflow_run` watcher and moved issue creation into failure-only steps in each scheduled workflow. Successful runs no longer create alert runs. |
 | Four workflows passed the encryption key to `actions/checkout`, which ignored the unsupported input | Fixed: the key is now passed to `setup-agent`; added a workflow check to prevent future miswiring. |
+| Private state cache encryption secret was not configured | Fixed: generated and set repository secret `STATE_ENCRYPTION_KEY`; confirmed it appears in GitHub's secret metadata without reading its value. |
+| Legacy private database caches were stored without encryption | Fixed: removed all 81 `agent-db-*` cache entries; other cache namespaces were retained. The database cache starts fresh under the encrypted cache namespace; committed weights and learning ledger remain available. |
 
 ## Remaining external verification
 
 | Issue | Status |
 | --- | --- |
-| Plaintext cache entries created before encryption may still be available to pull-request workflows | Needs purge in GitHub Actions cache. This environment has an invalid `gh` credential and cannot reach the GitHub API, so existing cache entries could not be enumerated or deleted. |
+| New encrypted state-cache save and restore | Needs an Actions run after the new `STATE_ENCRYPTION_KEY` was set; existing verified runs predate it. |
 | End-to-end daily workflow execution | Verified: [Actions run 40026910360](https://github.com/yssavaliya/ai-ads/actions/runs/40026910360) completed successfully, including pipeline generation, artifact upload, state persistence step, and site publish. The generated artifact contained only still-image files (`.png`/`.jpg`). State persistence warned that neither encryption key was configured, so private state was not cached. |
 | Alert behavior after removing the success-triggered watcher | Verified: no-pending-feedback runs [40028850918](https://github.com/yssavaliya/ai-ads/actions/runs/40028850918) and [40029267748](https://github.com/yssavaliya/ai-ads/actions/runs/40029267748) succeeded with no separate alert run; the latter also had no ignored encryption-key inputs. CI [40029008201](https://github.com/yssavaliya/ai-ads/actions/runs/40029008201) passed after the workflow corrections. Inline alerts run only after a job starts; GitHub runner or job-start failures cannot be reported from inside that job. |
 
@@ -33,8 +36,8 @@ Updated 2026-10-24 during iterative code and workflow review.
 
 | Check | Status |
 | --- | --- |
-| Full local test suite after the single-image change | Blocked in this shell: pytest cannot create its temp directory under the configured Windows profile or workspace (`PermissionError`). A direct hostile-response forge check and Python compilation passed. The full suite passed earlier in this review before this change (507 passed, 3 skipped). |
+| Targeted prompt tests | Passed outside the sandbox: 10 passed. The sandboxed test invocation cannot create pytest's Windows temp directory (`PermissionError`); run full suite outside sandbox before closing. |
 
 ## Current required configuration
 
-Set repository secret `STATE_ENCRYPTION_KEY`; the workflows fall back to `FEEDBACK_SIGNING_KEY` if that secret is absent. Neither key was available in the verified Actions run, so private state was not cached. The secret must be the same across runs so old encrypted state can be restored.
+Repository secret `STATE_ENCRYPTION_KEY` is configured. It must remain stable across runs so encrypted state can be restored. Existing unencrypted database cache entries were purged; the encrypted database state will be rebuilt by subsequent jobs.

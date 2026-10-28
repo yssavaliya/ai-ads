@@ -2,8 +2,7 @@
 
 Analyzes businesses (website + social handles), researches audience & competitors,
 generates **viral-engineered content prompts** (scored 0-100, refined until ≥ threshold),
-**renders them into real ad assets** — feed images with burned-in hooks and 9:16 Reel
-MP4s with voiceover — and publishes them daily to a **static website (the Content Hub)** for a human to review and post
+**renders them into single-image ad assets** with burned-in hooks — and publishes them daily to a **static website (the Content Hub)** for a human to review and post
 (**no auto-posting**). Runs 100% in GitHub Actions with free & open-source tooling only.
 Can also **discover businesses automatically** and generate sample creatives for them.
 
@@ -20,7 +19,7 @@ The platform hunts for businesses that need content help:
    = they need viral content help (score high). Too small, too big (has agency), or
    already high-engagement → excluded
 4. **Generate + render**: for the top N leads, runs the full pipeline (profile → audience
-   → trends → virality gate) and renders finished sample creatives (image inline, Reel MP4 attached)
+   → trends → virality gate) and renders finished single-image sample creatives
 5. **Deliver**: saves `data/leads.json` + publishes the digest page (scores, reasons,
    rendered creatives, "no contact email found" flags where applicable)
 
@@ -39,8 +38,8 @@ follower range, target count, and digest email in `data/lead_config.json`.
   3. Audience Mapper → personas, pain points, themes
   4. Trend Radar → today's topics, hashtags, gaps, viral patterns
   5. Virality Gate: generate → predict → if score < 75, refine with hints → repeat
-  6. Creative Forge → render approved prompts into images/Reels (Pollinations +
-     Pillow overlay; Reels add Piper TTS voiceover + FFmpeg motion assembly)
+  6. Creative Forge → render each approved prompt as one static image (Pollinations +
+     Pillow overlay)
   7. Publish the finished assets to the Content Hub (GitHub Pages) with 👍/👎/🔄/📎 feedback buttons
 
 Sunday 8 AM IST (02:30 UTC) ──▶ weekly.yml
@@ -93,6 +92,7 @@ with `python scripts/run_auto_learn.py`.
 | `HF_TOKEN` | Optional image fallback (Hugging Face FLUX.1-schnell) |
 | `GITHUB_TOKEN` | Feedback issues + degraded-run tracking (built-in) |
 | `FEEDBACK_SIGNING_KEY` | Signs the 👍/👎 links. **Required for feedback to be accepted** (without it links are inert) |
+| `STATE_ENCRYPTION_KEY` | Encrypts the private Actions state cache; generated and configured for this repository |
 | `FEEDBACK_ALLOWED_USERS` (repo *variable*) | Comma-separated GitHub logins whose feedback issues count. **Required**: unset = feedback is ignored (fails closed) |
 | `OWNER_EMAIL`, `DIGEST_EMAIL` | Referenced from `data/*.json` as `env:OWNER_EMAIL` / `env:DIGEST_EMAIL`, so no address is committed |
 | `BELOW_THRESHOLD_POLICY` (repo *variable*) | `flag` (default: publish with a "review" badge) or `block` (publish nothing under the bar) |
@@ -122,7 +122,7 @@ gh workflow run leads.yml -f niches="bakery,home decor" -f target_count=5
 ```
 
 Open `site/index.html` in a browser (or `python -m http.server -d site`) to inspect the actual site;
-images and MP4s land in `logs/assets/`.
+images land in `logs/assets/`.
 
 ## Repo layout
 
@@ -133,7 +133,7 @@ src/fetch/           website scraper (incl. mailto extraction), social scraper
                      (Apify → instaloader), competitor finder, lead finder
                      (jittered search + cooldown cache)
 src/intelligence/    audience mapper, trend radar, virality predictor, lead scorer
-src/generation/      prompt forge (with reel_beats), virality gate, creative forge
+src/generation/      prompt forge, virality gate, creative forge
 src/delivery/        delivery channels (static site publisher; legacy e-mail sender), github feedback links,
                      degraded-run tracker
 src/learning/        bayesian updater, feedback processor (incl. POSTED links), auto-learner
@@ -160,14 +160,14 @@ not counted as a success: the learner scores that post's real engagement later.
 E-mail is replaced by a small static website published to GitHub Pages
 (`https://<owner>.github.io/<repo>/`, or the URLs printed in each run's summary).
 
-- **What you get per business:** every prompt with its finished image or Reel (download
+- **What you get per business:** every prompt with its finished single image (download
   buttons), the copy-paste caption, hashtags, best time to post, first comment, the full
   creative brief, why it should work (strengths/risks), the 👍/👎/🔄/📎 feedback buttons,
   a local "posted" tracker, search and type filters. Plus weekly deep-dives, an
   "about this setup" panel and a banner whenever a day's generation failed.
 - **Leads:** the weekly digest has its own page.
 - **How it is built:** each pipeline restores the `gh-pages` branch into `site/`, adds
-  its entries (images are re-encoded to web JPEGs; Reels are copied if < 25 MB), prunes
+  its entries (images are re-encoded to web JPEGs), prunes
   entries older than `SITE_RETENTION_DAYS` (45) and force-pushes a single orphan commit.
   The JSON manifests in `site/data/` are the source of truth; the HTML is regenerated.
 - **Hosting (pick one; the `gh-pages` branch is just a folder of static files):**
@@ -197,7 +197,7 @@ shortest `Retry-After`.
 |---|---|---|
 | **Text** (`LLM_PROVIDER_ORDER`) | Groq → Gemini → GitHub Models (opt-in) → Cerebras → OpenRouter (`:free` models) → Mistral → Hugging Face → keyless Pollinations | Each is optional: only providers with a key take part. GitHub Models (`GITHUB_MODELS_ENABLED=true`, built-in token, `models: read`) is opt-in: it answered with a plain `OK` from Actions when tried. Set `LLM_KEYLESS_FALLBACK=false` to keep prompts off the public keyless endpoint. |
 | **Images** (`IMAGE_PROVIDER_ORDER`) | Pollinations → Gemini image → Hugging Face FLUX → Together FLUX → Cloudflare FLUX → **local branded card** | The card is rendered locally and cannot fail, so a post always ships with a visual (flagged with a warning). `IMAGE_CARD_FALLBACK=false` disables it. |
-| **Voiceover** | Piper → silent Reel → still image | |
+| **Creative** | One static image for each prompt | |
 
 Model lists are plain env vars (`GROQ_FALLBACK_MODELS`, `OPENROUTER_MODELS`, …): free
 model names rotate, and an unknown one is simply skipped. If a provider answers with
@@ -247,8 +247,7 @@ touches `data/` or `agent.db`. Optional: `pre-commit install` (ruff on commit, p
   (`LLM_CONCURRENCY`, `IMAGE_CONCURRENCY`, `FETCH_CONCURRENCY`; `1` restores sequential behaviour).
   Publishing re-renders only the business that changed.
 - **Budgets:** `LEAD_TIME_BUDGET_SECONDS` caps lead scraping; Apify calls are made once
-  per handle per run. Reels are best-effort: if ffmpeg/Piper fail the post falls back to a
-  still image (the run warns instead of dropping the asset).
+  per handle per run. Each prompt renders as one static image.
 - **Scraping safety:** the website scraper refuses private/loopback/metadata addresses,
   and scraped text is fenced as untrusted data in every LLM prompt.
 
@@ -259,6 +258,5 @@ touches `data/` or `agent.db`. Optional: `pre-commit install` (ruff on commit, p
 | `All LLM providers failed` | Run the *Secrets Verify* workflow; check `GROQ_MODEL` / `GEMINI_MODEL` names are valid (unset secrets fall back to defaults) |
 | Site not updating | *Settings → Pages* must use **Deploy from a branch: `gh-pages` / root**; check the run's *publish-site* step and its summary for the URLs |
 | Emails not arriving | E-mail is off by default; set the repo variable `DELIVERY_MODE=both` and the `SMTP_*` secrets |
-| Reels come out as images | See the run's warnings: usually `piper`/`ffmpeg` missing or the voice model download failed |
 | Feedback buttons do nothing | The clicker needs a GitHub account that can open issues in this repo; the hourly *Process Feedback* job applies them |
 | No new leads | Cooldown caches `data/lead_seen.json` (21 days) / `data/lead_rejected.json` (90 days); raise `target_count` or add niches |

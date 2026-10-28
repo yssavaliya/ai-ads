@@ -223,10 +223,12 @@ class CreativeForge:
                 f"cinematic rim lighting, 35mm lens, f/1.8, shallow depth of field, rich color grading"
             )
 
+        hook = str(prompt.get("hook") or prompt.get("title") or "").strip()
+        hook_ctx = f", {hook}" if hook else ""
         angle = str(prompt.get("angle") or "").strip()
         angle_ctx = f", depicting {angle}" if angle else ""
         return (
-            f"{base_visual}{angle_ctx}, 8k resolution, award-winning composition, tactile textures, photorealistic, no text, no words, no letters"
+            f"{base_visual}{hook_ctx}{angle_ctx}, 8k resolution, award-winning composition, tactile textures, photorealistic, no text, no words, no letters"
         )[:800]
 
     # ------------------------------------------------------------------

@@ -2,16 +2,7 @@
   "aimagix-studio": {
     "topics": {},
     "formats": {},
-    "audience_segments": {}
-  },
-  "mk-decor": {
-    "topics": {},
-    "formats": {},
-    "audience_segments": {}
-  },
-  "gujarat-decor": {
-    "topics": {},
-    "formats": {},
-    "audience_segments": {}
+    "audience_segments": {},
+    "hook_types": {}
   }
 }

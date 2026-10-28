@@ -77,7 +77,6 @@ jobs:
         if: steps.pending.outputs.count != '0'
         with:
           site: "true"
-          piper: "true"   # REGENERATE can render a voiced Reel
           state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 
       - name: Process feedback issues

@@ -33,6 +33,11 @@ def _steps(name: str) -> list[dict]:
     return next(iter(wf["jobs"].values()))["steps"]
 
 
+def _all_steps(name: str) -> list[dict]:
+    wf = _load(GH / "workflows" / f"{name}.yml")
+    return [step for job in wf["jobs"].values() for step in job.get("steps", [])]
+
+
 def _on(wf: dict) -> dict:
     return wf.get("on") or wf.get(True)  # PyYAML parses a bare `on:` key as boolean True
 
@@ -113,9 +118,14 @@ def test_setup_action_restores_state_without_saving_early():
     restore = next(s for s in steps if s.get("uses", "").startswith("actions/cache/restore"))
     assert restore["with"]["path"] == ".agent-state.enc"
     assert any(s.get("name") == "Decrypt private agent state" for s in steps)
-    # Reels are best-effort: a missing piper/ffmpeg may warn but must not kill the job
-    check = next(s for s in steps if "render dependencies" in s.get("name", ""))
-    assert "exit 1" not in check["run"]
+
+
+def test_image_only_workflows_do_not_install_video_dependencies():
+    for name in ("daily", "leads", "feedback", "ci"):
+        setups = [s for s in _all_steps(name) if s.get("uses") == "./.github/actions/setup-agent"]
+        assert all("piper" not in (setup.get("with") or {}) for setup in setups), name
+    smoke = next(s for s in _all_steps("ci") if s.get("name") == "Smoke test the environment the pipelines will run in")
+    assert "ffmpeg" not in smoke["run"]
 
 
 @pytest.mark.parametrize("name", ["leads", "onboard"])

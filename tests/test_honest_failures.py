@@ -53,6 +53,17 @@ def test_trend_radar_raises_instead_of_faking():
             radar.scan({}, {})
 
 
+def test_trend_radar_only_recommends_single_image():
+    radar = TrendRadar()
+    radar.llm = MagicMock()
+    radar.llm.run_json.return_value = {"recommended_formats": ["reel", "carousel", "single image"]}
+
+    result = radar.scan({}, {})
+
+    assert result["recommended_formats"] == ["single image"]
+    assert '"recommended_formats": ["single image"]' in radar.llm.run_json.call_args.args[0]
+
+
 def test_competitor_finder_raises_instead_of_faking():
     finder = CompetitorFinder()
     with patch.object(finder.llm, "run", side_effect=_fail):
