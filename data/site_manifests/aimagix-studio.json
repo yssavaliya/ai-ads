@@ -1664,72 +1664,62 @@
    "report": {
     "top_performing": [
      {
-      "prompt": "High‑stakes campaign pitch storytelling",
+      "prompt": "Midnight Pitch Story",
       "score": 85,
       "feedback": "none",
-      "why": "Compelling narrative with deadline tension resonates with agency founders; visual direction is vivid and aligns with Diwali hype."
+      "why": "High‑stakes, cinematic storytelling combined with a vivid Diwali‑themed visual creates strong emotional pull for Mumbai‑based founders; the midnight‑desk setting resonates with the target audience’s hustle culture."
      },
      {
-      "prompt": "SME visual case study promotional",
-      "score": 81,
+      "prompt": "Before/After Split Social Proof",
+      "score": 85,
       "feedback": "none",
-      "why": "Clear before‑after comparison demonstrates tangible value; targets decision‑makers seeking quick ROI."
-     },
-     {
-      "prompt": "AI‑boosted VC‑ready branding educational",
-      "score": 78,
-      "feedback": "none",
-      "why": "Offers actionable workflow and quantifiable speed/cost benefits, appealing to tech startup founders."
+      "why": "Clear visual contrast (generic vs. polished) instantly demonstrates value; the split‑screen format is proven to boost scroll‑stop rates on Instagram and LinkedIn."
      }
     ],
     "audience_insights": [
-     "Strong interest in fast, AI‑augmented design solutions for tight deadlines.",
-     "High engagement potential for festive (Diwali) themed visuals targeting Indian SMBs and fintech."
+     "The audience responds best to visual before‑after comparisons that quantify impact (e.g., turnaround time, sales lift).",
+     "Storytelling that frames tight deadlines and crisis‑to‑triumph narratives drives higher virality than pure educational posts."
     ],
     "competitor_moves": [
-     "Designify launched a 24‑hour AI‑first branding package targeting fintech startups.",
-     "Creative.ai began promoting carousel before‑after posts highlighting 30% cost savings."
+     "Leading Indian design studios are launching short‑form reels that showcase AI‑generated concepts morphing into hand‑crafted finals.",
+     "Several competitors have begun publishing carousel case studies with embedded micro‑testimonials and KPI snapshots."
     ],
     "content_pillars": [
      {
-      "pillar": "AI‑Human Hybrid Speed",
-      "rationale": "Audience values rapid turnaround without quality loss.",
-      "suggested_frequency": "2x/week"
+      "pillar": "Rapid AI‑Human Design Workflow",
+      "rationale": "Positions Aimagix as the go‑to partner for speed‑critical projects; aligns with high virality scores on AI‑enhanced storytelling.",
+      "suggested_frequency": "2×/week"
      },
      {
-      "pillar": "Festive & Seasonal Case Studies",
-      "rationale": "Diwali and other festivals drive visual demand and showcase cultural relevance.",
-      "suggested_frequency": "1x/week"
+      "pillar": "Before‑After Client Success",
+      "rationale": "Visual proof of transformation drives trust and shares; proven top‑performing format.",
+      "suggested_frequency": "2×/week"
      },
      {
-      "pillar": "Metric‑Driven ROI Stories",
-      "rationale": "Decision‑makers need concrete results to justify spend.",
-      "suggested_frequency": "1x/week"
-     },
-     {
-      "pillar": "Founder & Agency Partnerships",
-      "rationale": "Storytelling builds trust and positions Aimagix as a strategic ally.",
-      "suggested_frequency": "1x/week"
+      "pillar": "Educational Quick‑Tips",
+      "rationale": "Keeps the feed informative and attracts founders looking for actionable AI design hacks; balances promotional content.",
+      "suggested_frequency": "1×/week"
      }
     ],
     "calendar": [
-     "Mon: AI‑Human Hybrid Speed carousel (educational)",
-     "Tue: Festive case study static before‑after (social proof)",
-     "Wed: Founder partnership storytelling reel (storytelling)",
-     "Thu: ROI metric infographic (promotional)",
-     "Fri: Quick tip carousel on AI prompt crafting (educational)",
-     "Sat: Community Q&A sticker on Instagram Stories (engagement)"
+     "Mon: Before‑After carousel – retail brand makeover (static split‑screen + KPI badge).",
+     "Tue: Reel – 15‑sec AI‑to‑hand polish timelapse with voice‑over tip.",
+     "Wed: Storytelling post – 2 AM pitch crisis narrative (single image + caption).",
+     "Thu: Educational graphic – Hybrid AI Design Workflow infographic.",
+     "Fri: Client testimonial video snippet – renewable‑energy case study.",
+     "Sat: Community poll – “Which visual style do you prefer for Diwali campaigns?”"
     ],
     "recommendations": [
-     "Add a clear CTA and limited‑time offer in every promotional post.",
-     "Incorporate localized hashtags (#Diwali2026, #MumbaiDesign) to boost discoverability.",
-     "Test short video reels versus static images for storytelling pieces.",
-     "Use carousel format for detailed before‑after comparisons to increase dwell time."
+     "Add a clear CTA (e.g., “DM for a 48‑hr turnaround quote”) to every storytelling and social‑proof post.",
+     "Incorporate localized Hindi/Marathi copy in captions for Mumbai‑based audiences to boost relevance.",
+     "Test carousel format for before‑after content to increase dwell time.",
+     "Leverage trending hashtags (#Diwali2026, #AIDesign, #CreativeHustle) consistently.",
+     "Rotate between static images, short reels, and carousel posts to avoid algorithm fatigue."
     ],
     "risk_alerts": [
-     "Potential perception of AI‑generated work as low‑authenticity; balance with human‑crafted proof points.",
-     "Copyright concerns if AI models replicate existing assets; maintain a review layer.",
-     "Diwali content saturation may reduce novelty; diversify themes post‑festival."
+     "Over‑promising AI speed may attract regulatory scrutiny; ensure all claims are backed by internal metrics.",
+     "Repeated use of AI‑generated assets without proper licensing could lead to copyright disputes.",
+     "High frequency of high‑intensity storytelling may cause audience fatigue; monitor engagement decay."
     ]
    }
   },
