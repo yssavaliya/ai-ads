@@ -27,8 +27,8 @@ sys.path.insert(0, str(ROOT))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from src.delivery.buffer_publisher import BufferPublisher
-from src.shared.config import settings
+from src.delivery.buffer_publisher import BufferPublisher  # noqa: E402
+from src.shared.config import settings  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("publish_buffer")

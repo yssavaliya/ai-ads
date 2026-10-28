@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from src.shared.config import settings
+from src.shared.config import settings  # noqa: E402
 
 BUFFER_GQL_URL = "https://api.buffer.com"
 

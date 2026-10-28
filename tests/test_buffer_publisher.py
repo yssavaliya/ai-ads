@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
+
 import httpx
+
 from src.delivery.buffer_publisher import BufferPublisher
 
 
