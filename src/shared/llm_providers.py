@@ -20,7 +20,7 @@ from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ORDER = "groq,gemini,github,cerebras,openrouter,mistral,huggingface,pollinations"
+DEFAULT_ORDER = "groq,gemini,cloudflare,github,cerebras,openrouter,mistral,huggingface,pollinations"
 
 
 @dataclass(frozen=True)
@@ -63,6 +63,17 @@ def _catalog() -> dict[str, Callable[[], Provider | None]]:
         return Provider("gemini", "https://generativelanguage.googleapis.com/v1beta/openai/",
                         s.gemini_api_key, tuple(csv(s.gemini_model, s.gemini_fallback_models)))
 
+    def cloudflare() -> Provider | None:
+        # Shares the 10,000 neurons/day free allowance with image generation, so it sits behind Groq and Gemini.
+        if not (s.cloudflare_account_id and s.cloudflare_api_token):
+            return None
+        return Provider(
+            "cloudflare",
+            f"https://api.cloudflare.com/client/v4/accounts/{s.cloudflare_account_id}/ai/v1",
+            s.cloudflare_api_token,
+            tuple(csv(s.cloudflare_model)),
+        )
+
     def github() -> Provider | None:
         # Free in GitHub Actions with the built-in token (needs `models: read`).
         if not (s.github_token and s.github_models_enabled):
@@ -104,7 +115,7 @@ def _catalog() -> dict[str, Callable[[], Provider | None]]:
                         tuple(csv(s.pollinations_model)))
 
     return {
-        "groq": groq, "gemini": gemini, "github": github, "cerebras": cerebras,
+        "groq": groq, "gemini": gemini, "cloudflare": cloudflare, "github": github, "cerebras": cerebras,
         "openrouter": openrouter, "mistral": mistral, "huggingface": huggingface,
         "pollinations": pollinations,
     }

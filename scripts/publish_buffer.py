@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +29,9 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from src.delivery.buffer_publisher import BufferPublisher  # noqa: E402
+from src.delivery.buffer_state import fetch_queue_state, find_duplicate  # noqa: E402
 from src.generation.claims import unsupported_claims  # noqa: E402
+from src.shared.brand_facts import grounding_text, load_brand_facts  # noqa: E402
 from src.shared.config import settings  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -57,12 +60,37 @@ def get_latest_prompts() -> list[dict]:
     return [entry for (date, entry) in all_entries if date == latest_date]
 
 
+PUBLISHED_LOG = ROOT / "data" / "published_log.json"
+MAX_LOG_ENTRIES = 300
+DEFAULT_QUEUE_LIMIT = 8  # Buffer's free plan holds 10 scheduled posts; leave room for the other project
+
+
+def posted_ids() -> set[str]:
+    try:
+        data = json.loads(PUBLISHED_LOG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    return {str(item.get("id")) for item in data.get("posted", []) if isinstance(item, dict) and item.get("id")}
+
+
+def record_posted(entry: dict) -> None:
+    """Remember what was sent so a re-run the same day cannot post the same creative again."""
+    try:
+        data = json.loads(PUBLISHED_LOG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = {}
+    posted = [item for item in data.get("posted", []) if isinstance(item, dict)]
+    posted.append({"id": str(entry.get("id")), "title": entry.get("title"), "at": datetime.now(UTC).isoformat()})
+    PUBLISHED_LOG.parent.mkdir(parents=True, exist_ok=True)
+    PUBLISHED_LOG.write_text(json.dumps({"posted": posted[-MAX_LOG_ENTRIES:]}, indent=2), encoding="utf-8")
+
+
 def is_degraded(entry: dict) -> bool:
     """True when the creative shipped with the flat fallback card because every AI image provider failed."""
     return any("branded card" in str(w).lower() for w in (entry.get("warnings") or []))
 
 
-def pick_prompt(prompts: list[dict]) -> dict | None:
+def pick_prompt(prompts: list[dict], posted: set[str] | frozenset[str] = frozenset(), grounding: str = "") -> dict | None:
     """Highest-scoring creative that has a real AI image and no unverified statistics.
 
     Today's manifest also holds creatives from earlier runs (made before the claims guard, or before the
@@ -71,9 +99,9 @@ def pick_prompt(prompts: list[dict]) -> dict | None:
     """
     usable = []
     for p in prompts:
-        if is_degraded(p):
+        if is_degraded(p) or str(p.get("id")) in posted:
             continue
-        claims = unsupported_claims(p)
+        claims = unsupported_claims(p, grounding)
         if claims:
             logger.warning("Skipping %r: unverified claims %s", p.get("title"), claims)
             continue
@@ -129,7 +157,7 @@ def main() -> None:
             print(f"Error: Prompt ID '{args.prompt_id}' not found in recent prompts.")
             sys.exit(1)
     else:
-        target_prompt = pick_prompt(prompts)
+        target_prompt = pick_prompt(prompts, posted_ids(), grounding_text(load_brand_facts()))
         if target_prompt is None:
             print("::warning::No creative today is safe to post (flat fallback card, or an unverified statistic in the "
                   "copy); nothing was posted.")
@@ -160,9 +188,26 @@ def main() -> None:
     print(f"Profiles  : {publisher.profile_ids}")
     print("----------------------------\n")
 
+    # Other projects feed the same Buffer channel: do not repeat what it already holds or crowd its queue.
+    queue_limit = int(os.getenv("BUFFER_QUEUE_LIMIT") or DEFAULT_QUEUE_LIMIT)
+    try:
+        queue = fetch_queue_state(token, str(publisher.profile_ids[0]))
+    except Exception as exc:  # noqa: BLE001 - the check is a safeguard, not a reason to lose the day's post
+        print(f"::warning::Could not read the Buffer queue ({exc}); posting without the duplicate and queue check.")
+        queue = None
+    if queue is not None:
+        repeated = find_duplicate(caption, queue.texts())
+        if repeated:
+            print(f"::warning::Not posting: Buffer already holds a near-identical post ({repeated[:70]!r}).")
+            sys.exit(0)
+        if not (is_draft or is_now) and queue.scheduled >= queue_limit:
+            print(f"::warning::Not posting: Buffer already has {queue.scheduled} scheduled posts (limit {queue_limit}).")
+            sys.exit(0)
+
     try:
         res = publisher.schedule_post(text=caption, image_url=image_url)
         print("✅ Successfully published to Buffer!")
+        record_posted(target_prompt)
         for post in res.get("posts", []):
             print(f"Post ID   : {post.get('id')}")
             print(f"Status    : {post.get('status')}")

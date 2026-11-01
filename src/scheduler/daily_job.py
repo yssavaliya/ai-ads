@@ -21,6 +21,7 @@ from src.generation.virality_gate import ViralityGate, apply_threshold_policy, r
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
+from src.shared.brand_facts import load_brand_facts, merge_into_profile, warn_if_empty
 from src.shared.concurrency import parallel_map
 from src.shared.config import settings
 from src.shared.utils import load_businesses, utc_now_naive
@@ -60,6 +61,9 @@ class DailyPipeline:
                 db.commit()
 
             profile = profile or {}
+            brand_facts = load_brand_facts()
+            warn_if_empty(brand_facts)
+            profile = merge_into_profile(profile, brand_facts)
             def _competitors() -> Any:
                 return self._cached_intel(
                     business, "competitors", lambda: self.competitors.discover_and_fetch(profile)

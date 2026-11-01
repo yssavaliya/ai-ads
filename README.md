@@ -2,8 +2,10 @@
 
 Analyzes businesses (website + social handles), researches audience & competitors,
 generates **viral-engineered content prompts** (scored 0-100, refined until ≥ threshold),
-**renders them into single-image ad assets** with burned-in hooks — and publishes them daily to a **static website (the Content Hub)** for a human to review and post
-(**no auto-posting**). Runs 100% in GitHub Actions with free & open-source tooling only.
+**renders them into single-image ad assets** with burned-in hooks — and publishes them daily to a **static website (the Content Hub)** for a human to review and post.
+The daily run also sends the best creative to Buffer as a **draft**: nothing reaches Instagram until you approve it in
+Buffer (set the repository variable `BUFFER_DRAFT_MODE=false` to queue posts automatically; before posting it skips
+anything Buffer already holds and stops at `BUFFER_QUEUE_LIMIT` scheduled posts, default 8). Runs 100% in GitHub Actions with free & open-source tooling only.
 Can also **discover businesses automatically** and generate sample creatives for them.
 
 ## Lead discovery (no manual business entry)
@@ -76,6 +78,27 @@ benchmark and a bounded ranking boost (±6 points). It is **not** model training
 
 Manual 👍/👎/🔄 clicks remain as additional signals. Run the auto-learner standalone
 with `python scripts/run_auto_learn.py`.
+
+## Brand facts (fill this in)
+
+The generator only knows what it is told. A website scrape of an Instagram URL returns almost nothing, so without help it
+knows only the business name and invents services, results and turnaround times to fill the gap. `data/brand_facts.json`
+is where you write the **true** facts: `offers`, `audience`, `voice`, `proof_points`, `allowed_claims`, `do_not_say`.
+Everything in it is treated as verified: the generator may state it, and numbers that appear in it pass the claims guard
+(see *Claims guard*). Until `offers` or `proof_points` has content the run logs a warning and posts stay generic.
+
+## Claims guard
+
+Variants whose hook, title or caption contain a percentage, multiplier, money amount, client count, delivery time or
+number of deliverables that is not in the business data are dropped before scoring, and the publish step re-checks every
+candidate. Creatives that fell back to the flat branded card, or were already posted (`data/published_log.json`), are
+never picked. The guard catches numeric claims only; vague comparative wording still needs your review.
+
+## Learning status
+
+The learning loop is real but starved: it updates only from matched, mature posts with measurable engagement. Until a
+meaningful number of posts has been matched (check `data/learning_ledger.jsonl`), the weights are near their prior and
+barely influence ranking. Treat "self-learning" as the mechanism, not as evidence that it has learned anything yet.
 
 ## Requirements (GitHub Secrets)
 
@@ -195,7 +218,7 @@ shortest `Retry-After`.
 
 | | Order (configurable) | Needs |
 |---|---|---|
-| **Text** (`LLM_PROVIDER_ORDER`) | Groq → Gemini → GitHub Models (opt-in) → Cerebras → OpenRouter (`:free` models) → Mistral → Hugging Face → keyless Pollinations | Each is optional: only providers with a key take part. GitHub Models (`GITHUB_MODELS_ENABLED=true`, built-in token, `models: read`) is opt-in: it answered with a plain `OK` from Actions when tried. Set `LLM_KEYLESS_FALLBACK=false` to keep prompts off the public keyless endpoint. |
+| **Text** (`LLM_PROVIDER_ORDER`) | Groq → Gemini → Cloudflare Workers AI → GitHub Models (opt-in) → Cerebras → OpenRouter (`:free` models) → Mistral → Hugging Face → keyless Pollinations | Each is optional: only providers with a key take part. GitHub Models (`GITHUB_MODELS_ENABLED=true`, built-in token, `models: read`) is opt-in: it answered with a plain `OK` from Actions when tried. Set `LLM_KEYLESS_FALLBACK=false` to keep prompts off the public keyless endpoint. |
 | **Images** (`IMAGE_PROVIDER_ORDER`) | Cloudflare FLUX → Gemini image → Hugging Face FLUX → Together FLUX → Pollinations → **local branded card** | The card is rendered locally and cannot fail, so a post always ships with a visual (flagged with a warning). `IMAGE_CARD_FALLBACK=false` disables it. |
 | **Creative** | One static image for each prompt | |
 

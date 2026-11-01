@@ -1,0 +1,11 @@
+{
+  "_instructions": "Fill this in with TRUE facts only. Everything here is treated as verified: the generator may state it, and numbers that appear here are allowed in posts. Leave a field empty rather than guess. Until offers or proof_points are filled in, posts stay generic (no invented services, prices, results or turnaround times).",
+  "name": "Aimagix Studio",
+  "instagram_handle": "aimagix.studio",
+  "offers": [],
+  "audience": "",
+  "voice": "",
+  "proof_points": [],
+  "allowed_claims": [],
+  "do_not_say": []
+}

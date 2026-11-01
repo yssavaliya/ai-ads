@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     # More free providers, tried in LLM_PROVIDER_ORDER when the ones above fail.
     llm_provider_order: str = Field(
-        default="groq,gemini,github,cerebras,openrouter,mistral,huggingface,pollinations"
+        default="groq,gemini,cloudflare,github,cerebras,openrouter,mistral,huggingface,pollinations"
     )
     github_models_enabled: bool = Field(default=False, description="Opt-in: GitHub Models via GITHUB_TOKEN (Actions: models: read)")
     github_models_model: str = Field(default="openai/gpt-4o-mini")
@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     together_image_model: str = Field(default="black-forest-labs/FLUX.1-schnell-Free")
     cloudflare_account_id: str | None = Field(default=None, description="Cloudflare Workers AI account id")
     cloudflare_api_token: str | None = Field(default=None, description="Cloudflare Workers AI token")
+    cloudflare_model: str = Field(default="@cf/meta/llama-3.3-70b-instruct-fp8-fast", description="Workers AI text model")
 
     # Apify (social scraping)
     apify_token: str | None = Field(default=None, description="Apify API token")

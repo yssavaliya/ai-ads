@@ -93,7 +93,28 @@ jobs:
           BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
           BUFFER_PROFILE_IDS: ${{ secrets.BUFFER_PROFILE_IDS || secrets.BUFFER_PROFILE_ID }}
           BUFFER_NOW: ${{ inputs.post_now || vars.BUFFER_NOW || 'false' }}
+          # Drafts by default: nothing reaches Instagram until you approve it in Buffer. Set the repository
+          # variable BUFFER_DRAFT_MODE to false to queue posts automatically.
+          BUFFER_DRAFT_MODE: ${{ vars.BUFFER_DRAFT_MODE || 'true' }}
+          BUFFER_QUEUE_LIMIT: ${{ vars.BUFFER_QUEUE_LIMIT || '8' }}
         run: python scripts/publish_buffer.py
+
+      - name: Commit the published log
+        if: always()
+        run: |
+          # Written after the post is created, so the main persist step (which runs earlier) cannot carry it.
+          [ -e data/published_log.json ] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -- data/published_log.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: published log $(date -u +'%Y-%m-%d %H:%M')"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash -X theirs origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME"; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          echo "::warning::could not push the published log"
 
       - name: Alert on pipeline failure
         if: failure()
