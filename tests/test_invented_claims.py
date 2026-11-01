@@ -6,8 +6,8 @@ from src.generation.virality_gate import ViralityGate
 
 
 def test_detects_percentages_multipliers_money_and_customer_counts():
-    assert claims_in("250% CTR lift in 48h") == ["250%"]
-    assert claims_in("48 hrs. 3× ROI") == ["3×"]
+    assert claims_in("250% CTR lift in 48h") == ["250%", "48h"]
+    assert claims_in("48 hrs. 3× ROI") == ["48 hrs", "3×"]
     assert "2.5x" in claims_in("2.5x results")
     assert "₹75K" in claims_in("A ₹75K budget")
     assert claims_in("30 clients served, 120+ brands") == ["30 clients", "120+ brands"]
@@ -15,12 +15,20 @@ def test_detects_percentages_multipliers_money_and_customer_counts():
 
 
 def test_ordinary_numbers_are_not_claims():
-    for text in ("Ship 5 designs in 2 days", "Top 10 tips", "Version 3x3 grid", "Save 2 hours a week", "Step 1 of 3"):
+    for text in ("Top 10 tips", "Version 3x3 grid", "Step 1 of 3", "The 5-Second Logo Test", "Spot it in the first hour"):
         assert claims_in(text) == [], text
 
 
+def test_delivery_times_and_deliverable_counts_are_service_promises():
+    assert claims_in("Watch a startup brand transform in 48 hours") == ["48 hours"]
+    assert claims_in("48‑Hour Startup Brand Makeover") == ["48-Hour"]  # non-breaking hyphen is normalised
+    assert claims_in("Refine it in under 24 hours") == ["24 hours"]
+    assert claims_in("Generate 10 concepts instantly") == ["10 concepts"]
+    assert claims_in("Get 3 logo options") == ["3 logo options"]
+
+
 def test_only_public_fields_are_checked_and_grounded_numbers_pass():
-    variant = {"hook": "Brand visuals in 48 hrs", "title": "t", "caption": "We cut review time by 40% last year.", "prompt_text": "ignore 99% here"}
+    variant = {"hook": "Brand visuals without the wait", "title": "t", "caption": "We cut review time by 40% last year.", "prompt_text": "ignore 99% here"}
     assert unsupported_claims(variant) == ["40%"]  # prompt_text is an internal brief, not published
     assert unsupported_claims(variant, grounding="Studio fact: review time cut by 40 %") == []
 
@@ -58,13 +66,13 @@ def test_gate_drops_invented_claims_before_scoring_and_tells_the_next_attempt():
     assert [r["title"] for r in results] == ["Honest"]
     assert len(predictor.scored) == 1 and "brief one" not in predictor.scored[0]  # never scored the fabricated one
     assert forge.hints_seen[0] == []
-    assert any("invented statistics" in h and "250%" in h for h in forge.hints_seen[1])
+    assert any("invented figures" in h and "250%" in h for h in forge.hints_seen[1])
 
 
 def test_gate_keeps_a_claim_the_inputs_actually_contain():
     class Grounded(_Forge):
         def generate_variants(self, **kwargs):
-            return [{"prompt_type": "educational", "title": "Real", "hook": "Delivered in 48 hrs",
+            return [{"prompt_type": "educational", "title": "Real", "hook": "Delivered fast",
                      "caption": "Reviews arrive 40% faster.", "prompt_text": "brief", "hashtags": ["#a"]}]
 
     gate = ViralityGate(threshold=70, max_attempts=1, forge=Grounded(), predictor=_Predictor())

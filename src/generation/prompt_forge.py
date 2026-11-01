@@ -116,7 +116,7 @@ Every prompt must choose an explicit "hook_type":
 VISUAL SCENE FOR FLUX.1:
 Provide a photographic, cinematic scene in "visual_scene" describing:
 - Tangible physical subject & environment (e.g. minimalist high-tech studio desk, glowing indigo rim light, 35mm lens, f/1.8).
-- ZERO text, ZERO letters, ZERO words inside the image.
+- ZERO text, ZERO letters, ZERO words inside the image. The image model draws gibberish on anything that carries writing, so do not put computer or phone screens, logos, signs, posters, labels, books or documents in the scene; use objects, materials, hands, light and architecture instead.
 
 CAPTION ARCHITECTURE:
 Provide a complete, ready-to-post "caption" with:
@@ -129,6 +129,7 @@ Deliverable: exactly one static image in one frame. Do not suggest slides, carou
 
 TRUTHFULNESS (strict):
 - Never invent statistics, percentages, multipliers (3x), money amounts, client counts, client names, testimonials or results such as ROI, CTR or conversion lifts. These posts appear on a real business account.
+- Do not promise delivery times ("in 48 hours") or quantities ("10 concepts") either: the studio's real turnaround is not known to you.
 - A number is allowed only if it appears in the business profile, audience map or trend data above.
 - Persuade with what the studio does, how the process works, a clear point of view, and a next step for the viewer.
 

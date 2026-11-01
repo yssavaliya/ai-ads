@@ -36,7 +36,8 @@ VOICE_CACHE_DIR = Path.home() / ".cache" / "piper-voices"
 
 IMAGE_STYLE_SUFFIX = (
     ", professional advertising photography, high quality, vibrant, "
-    "eye-catching composition, instagram aesthetic, no text, no words, no letters"
+    "eye-catching composition, instagram aesthetic, no text, no words, no letters, "
+    "no screens, no logos, no signage"
 )
 
 
@@ -197,7 +198,7 @@ class CreativeForge:
         if visual_scene:
             return (
                 f"{visual_scene}, cinematic studio lighting, 35mm photography, high contrast, tactile textures, "
-                f"hyper-detailed, award-winning composition, 8k resolution, no text, no words, no letters"
+                f"hyper-detailed, award-winning composition, 8k resolution, no text, no words, no letters, no screens, no logos, no signage"
             )[:800]
 
         # Synthesize an editorial photographic scene rather than concatenating text hooks
@@ -228,7 +229,7 @@ class CreativeForge:
         angle = str(prompt.get("angle") or "").strip()
         angle_ctx = f", depicting {angle}" if angle else ""
         return (
-            f"{base_visual}{hook_ctx}{angle_ctx}, 8k resolution, award-winning composition, tactile textures, photorealistic, no text, no words, no letters"
+            f"{base_visual}{hook_ctx}{angle_ctx}, 8k resolution, award-winning composition, tactile textures, photorealistic, no text, no words, no letters, no screens, no logos, no signage"
         )[:800]
 
     # ------------------------------------------------------------------
@@ -266,13 +267,13 @@ class CreativeForge:
         text_block_h = line_height * len(lines)
 
         # Scrim: smooth quadratic gradient over bottom ~44-50%
-        scrim_h = max(int(h * 0.44), min(int(h * 0.58), text_block_h + 360))
+        scrim_h = max(int(h * 0.50), min(int(h * 0.62), text_block_h + 400))
         scrim_top = h - scrim_h
 
         # Render gradient line by line
         for y in range(scrim_top, h):
             prog = (y - scrim_top) / scrim_h
-            alpha = int(235 * (prog ** 1.6))
+            alpha = int(245 * min(1.0, prog * 1.3) ** 1.3)  # dark enough behind the headline on busy photos
             # Deep rich dark tone matching brand subtle warmth/coolness
             r, g, b = brand_color
             scrim_rgb = (max(8, r // 10), max(10, g // 10), max(16, b // 8))
