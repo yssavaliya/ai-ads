@@ -77,3 +77,19 @@ def test_gate_keeps_a_claim_the_inputs_actually_contain():
 
     gate = ViralityGate(threshold=70, max_attempts=1, forge=Grounded(), predictor=_Predictor())
     assert gate.run({"name": "Studio", "fact": "Reviews arrive 40% faster with our workflow"}, {}, {}, ["educational"])[0]["title"] == "Real"
+
+
+def test_proof_phrases_without_numbers_are_unverified_claims():
+    assert claims_in("Link in bio for our latest case study.") == ["case study"]
+    assert "our clients" in [c.lower() for c in claims_in("Our clients love it")]
+    assert "trusted by" in [c.lower() for c in claims_in("Trusted by founders")]
+    assert "award-winning" in [c.lower() for c in claims_in("An award-winning studio")]
+    assert "guarantee" in [c.lower() for c in claims_in("We guarantee results")]
+    assert claims_in("Nobody claps for the silent hours") == []
+    assert claims_in("A study in light and shadow") == []  # 'study' alone is ordinary language
+
+
+def test_a_proof_phrase_the_owner_wrote_themselves_is_allowed():
+    variant = {"hook": "h", "title": "t", "caption": "See our case study on the site."}
+    assert unsupported_claims(variant) == ["case study"]
+    assert unsupported_claims(variant, grounding="We publish a case study on the website") == []

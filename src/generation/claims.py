@@ -38,6 +38,14 @@ def _canon(text: str) -> str:
     return re.sub(r"[\s,]+", "", text).casefold()
 
 
+# Proof the studio may not have: a case study, testimonials, clients, awards, guarantees. No number is involved,
+# so the patterns above cannot see them. They pass only when the owner's brand facts use the same words.
+_PROOF_PHRASES = re.compile(
+    r"\b(?:case[- ]stud(?:y|ies)|testimonials?|our (?:clients?|customers?)|trusted by|as seen (?:in|on)|award[- ]winning|"
+    r"money[- ]back|guarantee[ds]?|certified|years of experience|number one)\b|(?<![\w#])#1\b",
+    re.IGNORECASE,
+)
+
 _HYPHENS = {0x2010: "-", 0x2011: "-", 0x2012: "-", 0x2212: "-", 0x00A0: " ", 0x202F: " "}
 
 
@@ -50,6 +58,10 @@ def claims_in(text: str) -> list[str]:
             claim = " ".join(match.group(0).split())
             if claim not in found:
                 found.append(claim)
+    for match in _PROOF_PHRASES.finditer(text):
+        claim = " ".join(match.group(0).split())
+        if claim not in found:
+            found.append(claim)
     return found
 
 
@@ -69,6 +81,6 @@ def avoid_hint(claims: list[str]) -> str:
     return (
         f"Previous drafts were rejected for invented figures ({shown}). Do not write any percentage, multiplier, "
         "money amount, client count, delivery time (hours or days), number of deliverables, or result such as ROI, CTR "
-        "or conversion lift unless it appears in the business profile above. Persuade with what the studio does, how "
+        "or conversion lift, or proof such as a case study, testimonial, award or guarantee, unless it appears in the business profile above. Persuade with what the studio does, how "
         "it works and what the viewer can do next."
     )

@@ -129,6 +129,7 @@ Deliverable: exactly one static image in one frame. Do not suggest slides, carou
 
 TRUTHFULNESS (strict):
 - Never invent statistics, percentages, multipliers (3x), money amounts, client counts, client names, testimonials or results such as ROI, CTR or conversion lifts. These posts appear on a real business account.
+- Do not refer to case studies, testimonials, awards, guarantees or "our clients": none are supplied. Do not tell viewers to look for proof you cannot show.
 - Do not promise delivery times ("in 48 hours") or quantities ("10 concepts") either: the studio's real turnaround is not known to you.
 - A number is allowed only if it appears in the business profile, audience map or trend data above.
 - The only facts about the business you may state as true are those under "verified_facts" in the business profile. If there are none, write about the craft, the process and a clear point of view without describing specific services, prices, clients or results.

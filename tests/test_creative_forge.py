@@ -144,3 +144,18 @@ def test_image_prompt_uses_visual_scene():
     assert "holographic neon studio" in p
     assert "cinematic studio lighting" in p
 
+
+
+def test_text_bearing_objects_are_removed_from_the_scene_prompt():
+    prompt = {"visual_scene": "A dark desk with a crumpled invoice and an old agency poster, glowing monitors, warm rim light"}
+    p = CreativeForge._image_prompt(prompt, {"name": "Aimagix Studio"})
+    for word in ("invoice", "poster", "monitors"):
+        assert word not in p.lower()
+    assert "dark desk" in p and "warm rim light" in p
+    assert "no text, no words, no letters" in p
+
+
+def test_a_scene_made_only_of_text_objects_falls_back_to_the_studio_scene():
+    p = CreativeForge._image_prompt({"visual_scene": "invoice, receipt", "hook": "Big spend? Wrong."}, {"name": "Aimagix Studio"})
+    assert "invoice" not in p.lower() and "receipt" not in p.lower()
+    assert "premium dark aesthetic" in p  # the Aimagix studio scene

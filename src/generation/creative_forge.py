@@ -191,11 +191,24 @@ class CreativeForge:
             logger.error("HF image inference failed: %s", exc)
             return None
 
+    # Things that carry writing. The image model renders them with garbled text ("EXPON", "uavle agency mod"), so
+    # they are removed from the scene however the language model phrased it.
+    _TEXT_OBJECTS = re.compile(
+        r"\b(?:invoices?|receipts?|documents?|papers?|sheets?|signs?|signage|posters?|billboards?|books?|notebooks?|"
+        r"newspapers?|magazines?|labels?|logos?|screens?|monitors?|dashboards?|interfaces?|websites?|charts?|graphs?)\b",
+        re.IGNORECASE,
+    )
+
+    @classmethod
+    def _strip_text_objects(cls, scene: str) -> str:
+        cleaned = cls._TEXT_OBJECTS.sub("", scene)
+        return re.sub(r"\s+", " ", re.sub(r"\s+([,.;])", r"\1", cleaned)).strip(" ,;")
+
     @staticmethod
     def _image_prompt(prompt: dict[str, Any], business_profile: dict[str, Any]) -> str:
         # Prioritize explicit visual scene instructions engineered for diffusion models
-        visual_scene = str(prompt.get("visual_scene") or "").strip()
-        if visual_scene:
+        visual_scene = CreativeForge._strip_text_objects(str(prompt.get("visual_scene") or "").strip())
+        if len(visual_scene) >= 15:
             return (
                 f"{visual_scene}, cinematic studio lighting, 35mm photography, high contrast, tactile textures, "
                 f"hyper-detailed, award-winning composition, 8k resolution, no text, no words, no letters, no screens, no logos, no signage"
