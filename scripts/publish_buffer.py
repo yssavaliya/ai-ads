@@ -56,6 +56,19 @@ def get_latest_prompts() -> list[dict]:
     return [entry for (date, entry) in all_entries if date == latest_date]
 
 
+def is_degraded(entry: dict) -> bool:
+    """True when the creative shipped with the flat fallback card because every AI image provider failed."""
+    return any("branded card" in str(w).lower() for w in (entry.get("warnings") or []))
+
+
+def pick_prompt(prompts: list[dict]) -> dict | None:
+    """Highest-scoring creative that has a real AI image. None when only flat fallback cards are left."""
+    usable = [p for p in prompts if not is_degraded(p)]
+    if not usable:
+        return None
+    return max(usable, key=lambda x: int(x.get("score") or x.get("virality_score") or 0))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Publish generated creative to Buffer.")
     parser.add_argument("--prompt-id", type=str, help="Specific prompt ID to publish")
@@ -102,8 +115,11 @@ def main() -> None:
             print(f"Error: Prompt ID '{args.prompt_id}' not found in recent prompts.")
             sys.exit(1)
     else:
-        prompts.sort(key=lambda x: int(x.get("score") or x.get("virality_score") or 0), reverse=True)
-        target_prompt = prompts[0]
+        target_prompt = pick_prompt(prompts)
+        if target_prompt is None:
+            print("::warning::Every creative today used the flat fallback card (all AI image providers failed); "
+                  "nothing was posted. Re-run once an image provider is available.")
+            sys.exit(0)
 
     title = target_prompt.get("title", "Ad")
     score = target_prompt.get("score") or target_prompt.get("virality_score") or 0

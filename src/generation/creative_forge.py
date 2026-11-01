@@ -248,6 +248,7 @@ class CreativeForge:
         category badge and brand footer inside Instagram's safe area."""
         from PIL import Image, ImageDraw, ImageFont
 
+        text = self._font_safe(text)
         if not text:
             return image_path
         img = Image.open(image_path).convert("RGBA")
@@ -280,7 +281,7 @@ class CreativeForge:
         # 1. Category Pill Badge (if category given)
         cur_y = scrim_top + max(35, int((scrim_h - text_block_h - 140) * 0.35))
         if category:
-            cat_label = f"✦ {str(category).replace('_', ' ').strip().upper()} ✦"
+            cat_label = f"• {self._font_safe(str(category).replace('_', ' ')).upper()} •"
             cat_w = draw.textlength(cat_label, font=cat_font)
             pill_pad_x = 20
             pill_pad_y = 7
@@ -323,6 +324,23 @@ class CreativeForge:
         combined.save(out, "PNG")
         logger.info("Overlaid hook text on %s -> %s", image_path, out)
         return out
+
+    # Poppins has no glyph for these, so they were drawn as empty boxes ("VC<box>READY", "<box> BEFORE AFTER <box>").
+    _HYPHENS = {0x2010: "-", 0x2011: "-", 0x2012: "-", 0x2212: "-", 0x00A0: " ", 0x202F: " ", 0x2009: " "}
+
+    @classmethod
+    def _font_safe(cls, text: str) -> str:
+        """Replace look-alike characters the bundled font lacks and drop emoji/symbols it cannot draw."""
+        out = []
+        for ch in str(text):
+            code = ord(ch)
+            if code in cls._HYPHENS:
+                out.append(cls._HYPHENS[code])
+            elif code >= 0x1F000 or 0x2600 <= code <= 0x27BF or code in (0x2B50, 0xFE0F, 0x200D):
+                continue
+            else:
+                out.append(ch)
+        return " ".join("".join(out).split())
 
     @staticmethod
     def _load_font(size: int):
