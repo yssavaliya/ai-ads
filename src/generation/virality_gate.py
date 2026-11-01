@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
+from src.generation.claims import avoid_hint, unsupported_claims
 from src.generation.prompt_forge import PromptForge, single_image_variant
 from src.intelligence.virality_predictor import ViralityPredictor
 from src.shared.concurrency import parallel_map
@@ -57,6 +59,8 @@ class ViralityGate:
         best_overall: dict[str, Any] | None = None
         best_score = float("-inf")  # an unscored variant ranks at -100: it must still be able to win when nothing is scored
         hints: list[str] = []
+        claim_hints: list[str] = []
+        grounding = json.dumps([business_profile, audience_map, trend_data], default=str, ensure_ascii=False)
         generation_failures = 0
 
         for attempt in range(1, self.max_attempts + 1):
@@ -67,7 +71,7 @@ class ViralityGate:
                     trend_data=trend_data,
                     prompt_types=prompt_types,
                     weights=weights,
-                    improvement_hints=hints,
+                    improvement_hints=[*claim_hints, *hints],
                     count=5,
                 )
             except Exception as exc:
@@ -85,6 +89,23 @@ class ViralityGate:
             # Keep the contract at the orchestration boundary too, including
             # custom/alternate forges and models that ignore the requested schema.
             variants = [single_image_variant(v) for v in variants]
+
+            # Invented statistics (e.g. "250% CTR lift") would be published as fact: drop those variants
+            # before spending scoring calls on them, and tell the next attempt what to avoid.
+            honest = []
+            rejected_claims: list[str] = []
+            for variant in variants:
+                bad = unsupported_claims(variant, grounding)
+                if bad:
+                    rejected_claims.extend(bad)
+                    logger.warning("::warning::Dropped variant %r: unsupported claims %s", variant.get("title"), bad)
+                else:
+                    honest.append(variant)
+            if rejected_claims:
+                claim_hints = [avoid_hint(rejected_claims)]
+            variants = honest
+            if not variants:
+                continue
 
             scored = []
 
@@ -159,6 +180,9 @@ class ViralityGate:
             )
             if refined:
                 refined = single_image_variant(refined)
+                if unsupported_claims(refined, grounding):
+                    logger.warning("::warning::Discarded refined variant %r: it added unsupported claims", refined.get("title"))
+                    refined = best_variant
             refined_prediction: dict[str, Any] | None = None
             if refined and refined is not best_variant:
                 try:

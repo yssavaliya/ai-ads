@@ -32,7 +32,7 @@ Indian market and evaluate:
 
 - Hook strength (first 3 words)
 - Emotional trigger
-- Specificity (numbers, concrete examples)
+- Specificity (concrete examples and real details from the business profile; numbers the business did not provide are invented and must lower the score)
 - Indian cultural relevance
 - Platform fit (Instagram visual-first, LinkedIn thought-leadership)
 - Scroll-stopping potential

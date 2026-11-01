@@ -44,7 +44,7 @@ def single_image_variant(variant: dict[str, Any]) -> dict[str, Any]:
 PROMPT_TYPE_DESCRIPTIONS = {
     "educational": "Teach one valuable lesson or insight, actionable, with a strong specific hook.",
     "storytelling": "Tell a relatable story with a turning point and a lesson tied to the brand.",
-    "social_proof": "Showcase a real customer result, testimonial, or transformation with specifics.",
+    "social_proof": "Show the work itself: a before/after of the creative process or a sample output. Never invent customers, testimonials or results.",
     "promotional": "Soft promotion with clear value and urgency, never hard-selling.",
     "engagement": "Ask a polarizing or thought-provoking question that invites comments.",
     "behind_scenes": "Reveal how the business works, mistakes, or the human side of the team.",
@@ -107,8 +107,8 @@ Learned weights (dimension::item → weight, higher = more proven with this audi
 
 VIRAL HOOK PSYCHOLOGY:
 Every prompt must choose an explicit "hook_type":
-- "contrarian": Challenge conventional wisdom or reveal a common mistake ("Why 90% of AI Ads Fail").
-- "roi_proof": Specific hard numbers, metrics, or revenue case studies ("₹75K Budget, +35% Conversions in 48h").
+- "contrarian": Challenge conventional wisdom or reveal a common mistake ("Why Most AI Ads Look Generic").
+- "roi_proof": Concrete, checkable value: what the studio delivers and how fast it works, using only facts from the business profile ("Brand visuals without the agency wait").
 - "curiosity_gap": A surprising insight or hidden mechanism ("The 1 Prompt Structure Agencies Hide").
 - "before_after": Dramatic contrast between old manual way vs new automated way ("Agency in 2024 vs Autonomous AI Studio in 2026").
 - "framework": Actionable 3-4 step blueprint or checklist ("The 3-Step AI Creative Engine").
@@ -126,6 +126,11 @@ Provide a complete, ready-to-post "caption" with:
 - Tiered hashtags: 3 hyper-niche, 3 industry, 2 broad discovery
 
 Deliverable: exactly one static image in one frame. Do not suggest slides, carousels, or videos.
+
+TRUTHFULNESS (strict):
+- Never invent statistics, percentages, multipliers (3x), money amounts, client counts, client names, testimonials or results such as ROI, CTR or conversion lifts. These posts appear on a real business account.
+- A number is allowed only if it appears in the business profile, audience map or trend data above.
+- Persuade with what the studio does, how the process works, a clear point of view, and a next step for the viewer.
 
 Respond ONLY with JSON:
 [
