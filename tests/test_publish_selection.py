@@ -34,6 +34,14 @@ def test_nothing_is_picked_when_only_flat_cards_remain():
     assert pb.pick_prompt([]) is None
 
 
+def test_a_creative_with_an_unverified_statistic_is_never_picked_even_with_the_top_score():
+    pb = _publish_module()
+    invented = {"title": "invented", "score": 82, "warnings": [], "hook": "250% CTR in 48h", "caption": "Proof: 3x ROI."}
+    clean = {"title": "clean", "score": 60, "warnings": [], "hook": "Brand visuals without the agency wait", "caption": "See how it works."}
+    assert pb.pick_prompt([invented, clean])["title"] == "clean"
+    assert pb.pick_prompt([invented]) is None
+
+
 def test_highest_score_wins_among_real_images():
     pb = _publish_module()
     picked = pb.pick_prompt([{"title": "a", "score": 40}, {"title": "b", "score": 90}, {"title": "c", "virality_score": 70}])

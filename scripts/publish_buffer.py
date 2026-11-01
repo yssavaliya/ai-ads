@@ -28,6 +28,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from src.delivery.buffer_publisher import BufferPublisher  # noqa: E402
+from src.generation.claims import unsupported_claims  # noqa: E402
 from src.shared.config import settings  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -62,8 +63,21 @@ def is_degraded(entry: dict) -> bool:
 
 
 def pick_prompt(prompts: list[dict]) -> dict | None:
-    """Highest-scoring creative that has a real AI image. None when only flat fallback cards are left."""
-    usable = [p for p in prompts if not is_degraded(p)]
+    """Highest-scoring creative that has a real AI image and no unverified statistics.
+
+    Today's manifest also holds creatives from earlier runs (made before the claims guard, or before the
+    image fix), so the publish step re-checks instead of trusting that everything in it is clean.
+    None when nothing usable is left.
+    """
+    usable = []
+    for p in prompts:
+        if is_degraded(p):
+            continue
+        claims = unsupported_claims(p)
+        if claims:
+            logger.warning("Skipping %r: unverified claims %s", p.get("title"), claims)
+            continue
+        usable.append(p)
     if not usable:
         return None
     return max(usable, key=lambda x: int(x.get("score") or x.get("virality_score") or 0))
@@ -117,8 +131,8 @@ def main() -> None:
     else:
         target_prompt = pick_prompt(prompts)
         if target_prompt is None:
-            print("::warning::Every creative today used the flat fallback card (all AI image providers failed); "
-                  "nothing was posted. Re-run once an image provider is available.")
+            print("::warning::No creative today is safe to post (flat fallback card, or an unverified statistic in the "
+                  "copy); nothing was posted.")
             sys.exit(0)
 
     title = target_prompt.get("title", "Ad")
