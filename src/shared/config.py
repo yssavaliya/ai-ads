@@ -62,7 +62,7 @@ class Settings(BaseSettings):
 
     # Image providers (free tiers), tried in IMAGE_PROVIDER_ORDER; a local branded card
     # is rendered when all of them fail so a post never ships without a visual.
-    image_provider_order: str = Field(default="pollinations,gemini,huggingface,together,cloudflare")
+    image_provider_order: str = Field(default="cloudflare,gemini,huggingface,together,pollinations")
     image_card_fallback: bool = Field(default=True, description="Render a local branded card when every image provider fails")
     gemini_image_model: str = Field(default="gemini-3.1-flash-image,gemini-2.5-flash-image", description="Comma-separated, tried in order")
     together_api_key: str | None = Field(default=None, description="Together AI key (free FLUX.1-schnell)")

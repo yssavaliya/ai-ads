@@ -22,7 +22,10 @@ from src.shared.llm_providers import HEALTH, classify, csv
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ORDER = "pollinations,gemini,huggingface,together,cloudflare"
+# Providers that need a key come first. Keyless Pollinations is last: it allows roughly one image per
+# 45 s per IP, so on shared GitHub runners it is rate limited most of the time and used to push every
+# post onto the flat branded card. Cloudflare FLUX is skipped automatically when its secrets are unset.
+DEFAULT_ORDER = "cloudflare,gemini,huggingface,together,pollinations"
 
 # api-inference.huggingface.co no longer resolves and the hf-inference router answered 410 Gone for
 # FLUX in the first real run. Kept as a list (and overridable) so a new endpoint is a one-line change.

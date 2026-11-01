@@ -95,6 +95,29 @@ def test_cloudflare_response_shape(net, forge, monkeypatch):
     assert Image.open(forge.generate_image("p", 128, 64, "cf")).size == (128, 64)
 
 
+def test_default_order_tries_cloudflare_before_rate_limited_pollinations(net, forge, monkeypatch):
+    monkeypatch.setattr(settings, "image_provider_order", "")  # use the built-in default
+    assert ip.provider_order() == ["cloudflare", "gemini", "huggingface", "together", "pollinations"]
+    monkeypatch.setattr(settings, "cloudflare_account_id", "acct")
+    monkeypatch.setattr(settings, "cloudflare_api_token", "tok")
+    net.routes["api.cloudflare.com"] = httpx.Response(200, json={"result": {"image": base64.b64encode(_png()).decode()}})
+    net.routes["image.pollinations.ai"] = httpx.Response(429, text="rate limit")
+    forge.generate_image("p", 64, 64, "cf-first")
+    assert net.requested == ["api.cloudflare.com"]  # Pollinations never contacted
+    assert forge._take_warnings() == []
+
+
+def test_cloudflare_failure_falls_through_to_pollinations_without_a_card(net, forge, monkeypatch):
+    monkeypatch.setattr(settings, "image_provider_order", "")
+    monkeypatch.setattr(settings, "cloudflare_account_id", "acct")
+    monkeypatch.setattr(settings, "cloudflare_api_token", "tok")
+    net.routes["api.cloudflare.com"] = httpx.Response(429, json={"errors": [{"message": "daily limit"}]})
+    net.routes["image.pollinations.ai"] = httpx.Response(200, content=_png())
+    forge.generate_image("p", 64, 64, "fallthrough")
+    assert net.requested == ["api.cloudflare.com", "image.pollinations.ai"]
+    assert forge._take_warnings() == []
+
+
 def test_unconfigured_providers_are_never_called(net, forge):
     net.routes["image.pollinations.ai"] = httpx.Response(200, content=_png())
     forge.generate_image("p", 64, 64, "x")

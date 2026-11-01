@@ -100,7 +100,7 @@ with `python scripts/run_auto_learn.py`.
 
 LLM chain: every configured provider in `LLM_PROVIDER_ORDER` (see *Free fallback chain*). If all fail the run is
 reported as degraded. The keyless text fallback is **off** unless `LLM_KEYLESS_FALLBACK=true`.
-Images: Pollinations (keyless) → Gemini/HF/Together/Cloudflare → local branded card. No local models run on CPU.
+Images: Cloudflare FLUX → Gemini/HF/Together → Pollinations (keyless, last: it is rate limited on shared runners) → local branded card. No local models run on CPU.
 If any stage fails, a `[pipeline] degraded run — <date>` tracking issue is
 created/updated so green CI never hides a dead run.
 
@@ -196,7 +196,7 @@ shortest `Retry-After`.
 | | Order (configurable) | Needs |
 |---|---|---|
 | **Text** (`LLM_PROVIDER_ORDER`) | Groq → Gemini → GitHub Models (opt-in) → Cerebras → OpenRouter (`:free` models) → Mistral → Hugging Face → keyless Pollinations | Each is optional: only providers with a key take part. GitHub Models (`GITHUB_MODELS_ENABLED=true`, built-in token, `models: read`) is opt-in: it answered with a plain `OK` from Actions when tried. Set `LLM_KEYLESS_FALLBACK=false` to keep prompts off the public keyless endpoint. |
-| **Images** (`IMAGE_PROVIDER_ORDER`) | Pollinations → Gemini image → Hugging Face FLUX → Together FLUX → Cloudflare FLUX → **local branded card** | The card is rendered locally and cannot fail, so a post always ships with a visual (flagged with a warning). `IMAGE_CARD_FALLBACK=false` disables it. |
+| **Images** (`IMAGE_PROVIDER_ORDER`) | Cloudflare FLUX → Gemini image → Hugging Face FLUX → Together FLUX → Pollinations → **local branded card** | The card is rendered locally and cannot fail, so a post always ships with a visual (flagged with a warning). `IMAGE_CARD_FALLBACK=false` disables it. |
 | **Creative** | One static image for each prompt | |
 
 Model lists are plain env vars (`GROQ_FALLBACK_MODELS`, `OPENROUTER_MODELS`, …): free
