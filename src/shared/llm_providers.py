@@ -20,7 +20,7 @@ from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ORDER = "huggingface"
+DEFAULT_ORDER = "groq"
 
 
 @dataclass(frozen=True)

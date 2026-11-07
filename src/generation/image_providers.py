@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Providers that need a key come first. Keyless Pollinations is last: it allows roughly one image per
 # 45 s per IP, so on shared GitHub runners it is rate limited most of the time and used to push every
 # post onto the flat branded card. Cloudflare FLUX is skipped automatically when its secrets are unset.
-DEFAULT_ORDER = "huggingface"
+DEFAULT_ORDER = "cloudflare"
 
 HF_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"
 

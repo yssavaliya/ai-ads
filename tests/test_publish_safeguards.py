@@ -119,10 +119,10 @@ def test_cloudflare_is_a_text_provider_only_when_both_secrets_exist(monkeypatch)
     assert provider.models == ("@cf/meta/llama-3.3-70b-instruct-fp8-fast",)
 
 
-def test_default_provider_order_uses_open_source_huggingface_model(monkeypatch):
+def test_default_provider_order_uses_open_weight_gpt_oss_model(monkeypatch):
     monkeypatch.setattr(settings, "llm_provider_order", "")
     order = provider_order()
-    assert order == ["huggingface"]
+    assert order == ["groq"]
 
 
 @pytest.mark.parametrize("name", ["cloudflare"])

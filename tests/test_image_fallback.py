@@ -110,7 +110,7 @@ def test_cloudflare_response_shape(net, forge, monkeypatch):
 
 def test_default_order_tries_cloudflare_before_rate_limited_pollinations(net, forge, monkeypatch):
     monkeypatch.setattr(settings, "image_provider_order", "")  # use the built-in default
-    assert ip.provider_order() == ["huggingface"]
+    assert ip.provider_order() == ["cloudflare"]
     forge.generate_image("p", 64, 64, "cf-first")
     assert net.requested == []  # only configured providers are invoked
 

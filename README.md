@@ -104,7 +104,8 @@ barely influence ranking. Treat "self-learning" as the mechanism, not as evidenc
 
 | Secret | Purpose |
 |--------|---------|
-| `HF_TOKEN` | Hugging Face Inference Providers access for open-weight Qwen and FLUX models |
+| `GROQ_API_KEY` | Hosted inference for the open-weight GPT-OSS model |
+| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Hosted inference for the open-weight FLUX.1-schnell image model |
 | `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_HOST`, `SMTP_PORT` | Only for the legacy e-mail mode (`DELIVERY_MODE=email\|both`) |
 | `SITE_SECRET` | Optional: makes site URLs unguessable and hides the index (see *Content Hub*) |
 | `DELIVERY_MODE` (repo *variable*) | `site` (default), `email` or `both` |
@@ -214,14 +215,14 @@ shortest `Retry-After`.
 
 | | Order (configurable) | Needs |
 |---|---|---|
-| **Text** (`LLM_PROVIDER_ORDER`) | Hugging Face inference with Qwen2.5-7B-Instruct (Apache-2.0) | Scheduled GitHub Actions use this open-weight model only. Set `HF_TOKEN` to enable hosted inference. |
-| **Images** (`IMAGE_PROVIDER_ORDER`) | Hugging Face inference with FLUX.1-schnell (Apache-2.0), then local Pillow fallback | Scheduled GitHub Actions use this open-weight model only. The local fallback is flagged by automated publication QA and will not be queued. |
+| **Text** (`LLM_PROVIDER_ORDER`) | Groq inference with OpenAI GPT-OSS 120B (Apache-2.0) | Scheduled GitHub Actions use this open-weight model only. |
+| **Images** (`IMAGE_PROVIDER_ORDER`) | Cloudflare Workers AI with FLUX.1-schnell (Apache-2.0), then local Pillow fallback | Scheduled GitHub Actions use this open-weight model only. The local fallback is flagged by automated publication QA and will not be queued. |
 | **Creative** | Static image posts and FFmpeg-rendered vertical MP4 Reels | The prompt generator supports both formats. Reel videos are hosted with the public site assets and scheduled through the configured Buffer channel. |
 
-The workflow restricts generation to Apache-2.0 models and does not use Gemini or other
-closed model providers. Hugging Face is the hosted inference service; the rendering tools
-(FFmpeg, Pillow, and Piper) are open source. The daily *Drift Check* probes configured
-providers and opens an issue when generation services fail.
+The scheduled workflow restricts generation to Apache-2.0 open-weight models and does not
+use Gemini or other closed-model providers. Groq and Cloudflare host inference (usage may
+be billable); the rendering tools (FFmpeg, Pillow, and Piper) are open source. The daily
+*Drift Check* probes configured providers and opens an issue when generation services fail.
 
 ## Keeping personal data out of git
 
