@@ -4644,6 +4644,213 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-84-poster.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-07-85",
+   "date": "2026-11-07",
+   "created_at": "2026-11-07T11:18:11",
+   "prompt_id": 85,
+   "title": "Brand Kit Vault",
+   "prompt_type": "promotional",
+   "score": 78,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "Stop waiting—watch this vault hack",
+   "angle": "Show how to build brand kit and launch campaign quickly",
+   "prompt_text": "This reel demonstrates the end‑to‑end process of creating a brand kit and publishing a social post—exactly what SME marketing managers need. By starting with a physical collage and moving to a digital brand kit, we illustrate the studio’s ability to translate ideas into cohesive assets. The three caption points reflect the reel’s stages, guiding viewers through the workflow. The hook challenges the assumption of long waits, while the CTA invites them to download a free swipe file for immediate use. The hashtags blend niche brand kit discussions with broader design themes, ensuring the content is discoverable across relevant communities.",
+   "caption": "Stop waiting—watch this vault hack\n\n1️⃣ Assemble assets\n2️⃣ Apply consistent style\n3️⃣ Publish ready content\n\nDownload our free swipe file in bio.\n\n#BrandKit #DesignROI #FastDesign #DesignReels #CreativeWorkflow #AIVisuals #Design #Creativity",
+   "hashtags": [
+    "#BrandKit",
+    "#DesignROI",
+    "#FastDesign",
+    "#DesignReels",
+    "#CreativeWorkflow",
+    "#AIVisuals",
+    "#Design",
+    "#Creativity"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "platform_focus": "instagram",
+   "audience_segment": "Marketing Manager (SME)",
+   "reasoning": "The prompt ticks most high‑performing patterns – a contrarian speed hook, a short‑form reel that visualises an end‑to‑end workflow, and a free‑value CTA. It resonates with the primary audience’s need for fast, reliable design partners. However, the hook isn’t front‑loaded and the content feels generic to India, which could limit shareability.",
+   "key_factors": [
+    "Contrarian, speed‑focused hook that challenges long agency cycles",
+    "Reel format showing a clear visual transformation (collage → digital brand kit)",
+    "Strong ROI CTA – free swipe file for immediate implementation",
+    "Alignment with top audience segments (agency decision‑makers & startup founders) and current fast‑design trends"
+   ],
+   "risks": [
+    "Hook is not spelled out in the first three words, risking a weak scroll‑stop",
+    "Lacks explicit Indian cultural references or local brand examples",
+    "No mention of AI‑driven tools, which are a hot topic in the market"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "reel",
+    "video": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-85.mp4",
+    "poster": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-85-poster.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-85-poster.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-07-86",
+   "date": "2026-11-07",
+   "created_at": "2026-11-07T11:18:11",
+   "prompt_id": 86,
+   "title": "From Chaos to Cohesion",
+   "prompt_type": "social_proof",
+   "score": 71,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "Watch the visual noise dissolve into brand identity.",
+   "angle": "Visualizing the abstract concept of brand refinement through a tangible physical contrast between chaos and order.",
+   "prompt_text": "This single-image post leverages the 'before_after' hook to visually demonstrate the core value proposition of Aimagix Studio: transformation from chaos to cohesion. The visual scene uses a split-composition to physically represent the 'before' (chaotic swatches) and 'after' (minimalist geometric object) states without using any text or screens, adhering to the strict constraint of no generated text. The target audience includes 'Startup Founders' and 'Brand Managers' who are seeking a reliable partner to handle their visual identity. By avoiding invented statistics or specific client results, the post focuses on the *process* of refinement, which is a truthful representation of what a design studio does. The caption connects the visual metaphor to the practical benefit of a scalable design system, addressing the pain point of inconsistent quality. The CTA invites users to save the post as a visual reminder of the value of consistency, which is a low-barrier, high-engagement action for this demographic.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Watch the visual noise dissolve into brand identity.\n\n• Every brand passes through a phase of visual 'noise' before finding its voice.\n• This visual represents the transformation from scattered ideas to a cohesive, scalable design system.\n• At Aimagix Studio, we refine the raw creative energy into assets that communicate with precision.\n• The goal isn't just pretty pictures; it's a visual language that scales across every touchpoint.\n\nSave this to remind your team that consistency is the ultimate form of brand confidence.\n\n#BrandMakeover #VisualIdentity #DesignTransformation #BrandConsistency #AimagixStudio #CreativeDesign #BrandStrategy #VisualCohesion",
+   "hashtags": [
+    "#BrandMakeover",
+    "#VisualIdentity",
+    "#DesignTransformation",
+    "#BrandConsistency",
+    "#AimagixStudio",
+    "#CreativeDesign",
+    "#BrandStrategy",
+    "#VisualCohesion"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The before‑after visual is a proven scroll‑stopper that aligns with the audience’s pain of inconsistent design, and the save‑prompt CTA drives algorithmic favor. However, the absence of localized cues and concrete proof points limits its shareability and may not fully capture the ROI‑focused mindset of Indian decision‑makers.",
+   "key_factors": [
+    "Strong visual before‑after hook that instantly signals transformation",
+    "Clear emotional trigger (relief from chaos, desire for cohesion)",
+    "Platform‑appropriate single‑image format that works on both Instagram reels feeds and LinkedIn posts",
+    "CTA to “save” leverages low‑friction engagement common among startup founders and brand managers"
+   ],
+   "risks": [
+    "Lack of Indian cultural cues may reduce resonance with the local market",
+    "No textual overlay or data points can make the value proposition feel abstract",
+    "Targeting two distinct personas (founders vs. brand managers) with a single visual may dilute relevance"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-86.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-86-thumb.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-07-87",
+   "date": "2026-11-07",
+   "created_at": "2026-11-07T11:18:11",
+   "prompt_id": 87,
+   "title": "1‑Prompt AI Blueprint",
+   "prompt_type": "educational",
+   "score": 70,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "The 1 Prompt Structure Agencies Hide",
+   "angle": "Provide a simple, reusable prompt formula that empowers freelancers to generate high‑quality AI visuals quickly.",
+   "prompt_text": "Strategic angle: give freelance designers a concrete, repeatable AI prompt framework that feels exclusive. The hook leverages curiosity, promising a hidden secret, which is perfect for the freelance audience that loves insider tips. The reel starts with a hand writing a single line in a notebook (Step 1), then flips to a stylised 3‑D AI brain model pulsing (Step 2), followed by a quick montage of a color‑rich illustration emerging on a tablet (Step 3), and ends with the designer celebrating with a coffee mug. Each beat is visually distinct yet flows logically, allowing creators to film with simple props. Overlays stay under six words, reinforcing each step. The caption lists the four‑step blueprint, delivering immediate value without any fabricated results. Hashtags blend niche AI‑prompt tags with broader design‑learning tags to attract both specialist and general audiences.",
+   "caption": "The 1 Prompt Structure Agencies Hide\nStep 1: Define the core visual adjective.\nStep 2: Add the desired style reference.\nStep 3: Include a composition direction.\nStep 4: Append a lighting cue.\nSave this checklist for your next AI experiment\n\n#AIprompt #DesignTutorial #ProcreateTips #GraphicDesign #DigitalArt #CreativeTools #LearnDesign #CreativeCommunity",
+   "hashtags": [
+    "#AIprompt",
+    "#DesignTutorial",
+    "#ProcreateTips",
+    "#GraphicDesign",
+    "#DigitalArt",
+    "#CreativeTools",
+    "#LearnDesign",
+    "#CreativeCommunity"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "platform_focus": "instagram",
+   "audience_segment": "Freelance Designer",
+   "reasoning": "The prompt taps into the freelance designer’s appetite for exclusive, actionable AI techniques and uses a visually engaging reel format that fits Instagram’s algorithm. While the hook and structure are solid, the lack of proven results and cultural tailoring could limit reach, especially on LinkedIn. Overall, the combination of curiosity, specificity, and platform fit gives it a high but not guaranteed virality potential.",
+   "key_factors": [
+    "Strong curiosity‑driven hook that promises an exclusive secret",
+    "Clear, repeatable 4‑step framework that delivers immediate value",
+    "Visually distinct, scroll‑stopping beats suitable for Instagram Reels",
+    "Alignment with freelance designer preferences for quick tips and insider knowledge",
+    "Use of concise overlays and relevant hashtags to boost discoverability"
+   ],
+   "risks": [
+    "No proven ROI or case study to back the promise, which may reduce credibility",
+    "High saturation of AI‑prompt reels could dilute impact",
+    "Limited Indian cultural localization may reduce resonance with the target market",
+    "Potential low engagement on LinkedIn where longer, proof‑based content is favored"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "reel",
+    "video": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-87.mp4",
+    "poster": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-87-poster.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-87-poster.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-07-88",
+   "date": "2026-11-07",
+   "created_at": "2026-11-07T11:18:11",
+   "prompt_id": 88,
+   "title": "Agency Wait vs Studio Speed",
+   "prompt_type": "educational",
+   "score": 70,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "Launch a brand in 5 minutes—no agency lag",
+   "angle": "Challenge the myth that high‑quality design always requires weeks of agency work.",
+   "prompt_text": "The goal is to attract Creative Agency Decision‑Makers and Startup Founders who are frustrated by slow agency cycles. Start the single image or post with the bold hook, then visually contrast a cramped agency office (implied by the clean studio and Mumbai skyline) to convey speed and reliability. Emphasize the studio’s ability to deliver polished visuals without the typical back‑and‑forth, positioning Aimagix Studio as the agile alternative. Use a contrarian tone that challenges the belief that great design must take weeks. End with a clear CTA inviting the audience to bookmark and share the post with their VC or pitch teams, reinforcing the ROI cue of faster pitch preparation. The visual scene avoids any text or screens, focusing on tactile objects and the iconic Mumbai backdrop to boost local relevance.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Launch a brand in 5 minutes—no agency lag\n✦ Skip the endless back‑and‑forth with an external agency\n✦ Get consistent, high‑impact visuals from a single trusted partner\n✦ Keep your timeline fluid so you never miss a pitch deadline\n✦ Focus on strategy while we handle the execution\n💬 Tag a founder who needs speed, or comment your biggest design bottleneck\n💾 Save & share with your VC team—let’s crush the pitch!\n#FastDesign #AIVisuals #StartupDesign #CreativeProcess #BrandStrategy #DesignStudio #Design #Marketing #Entrepreneurship",
+   "hashtags": [
+    "#FastDesign",
+    "#AIVisuals",
+    "#StartupDesign",
+    "#CreativeProcess",
+    "#BrandStrategy",
+    "#DesignStudio",
+    "#Design",
+    "#Marketing",
+    "#Entrepreneurship"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "platform_focus": "instagram",
+   "audience_segment": "Creative Agency Decision‑Maker",
+   "reasoning": "The prompt aligns with high‑relevance contrarian and ROI patterns, uses a culturally resonant visual, and targets the right personas. However, the lack of dynamic content and minimal textual reinforcement could dampen engagement, especially on LinkedIn where captions matter. Overall, the concept has strong virality potential but needs fine‑tuning to maximize reach.",
+   "key_factors": [
+    "Strong contrarian hook that challenges the 2‑week agency cycle myth",
+    "Clear ROI cue (faster pitch prep) that resonates with founders and agency leaders",
+    "High Indian cultural relevance via Mumbai skyline and local aesthetic",
+    "Visual contrast (cramped office vs. clean studio) creates instant scroll‑stopper",
+    "Targeted CTA to bookmark/share with VC or pitch teams boosts shareability"
+   ],
+   "risks": [
+    "Static image may not capture attention as effectively as short reels or carousel posts",
+    "Absence of on‑screen text could reduce immediate clarity of the hook",
+    "Audience may need a stronger emotional trigger (e.g., cost savings) to act on the CTA",
+    "Limited use of trending hashtags could reduce discoverability on Instagram/LinkedIn"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-88.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-88-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
