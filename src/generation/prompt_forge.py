@@ -26,6 +26,7 @@ def single_image_variant(variant: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(variant)
     normalized["format"] = "single image"
     normalized["reel_beats"] = []
+    normalized["reel_narration"] = []
     text = str(normalized.get("prompt_text", "")).strip()
     text = _TIMED_VIDEO.sub("Create a single-image post", text)
     text = _SLIDE_COUNT.sub("one static composition", text)
@@ -51,6 +52,10 @@ def normalize_variant(variant: dict[str, Any]) -> dict[str, Any]:
         normalized["reel_beats"] = beats
         overlays = [str(s).strip() for s in (normalized.get("reel_overlays") or []) if str(s).strip()][:5]
         normalized["reel_overlays"] = [" ".join(line.split()[:6]) for line in overlays]
+        narration = [str(s).strip() for s in (normalized.get("reel_narration") or []) if str(s).strip()][:5]
+        # Legacy/malformed Reel briefs can still speak overlay copy, but never
+        # narrate reel_beats: those are scene directions for the image model.
+        normalized["reel_narration"] = narration or list(normalized["reel_overlays"])
         text = str(normalized.get("prompt_text", "")).strip()
         text = _TIMED_VIDEO.sub("Create a short Reel", text)
         text = _SLIDE_COUNT.sub("sequential scenes", text)
@@ -145,7 +150,7 @@ Provide a complete, ready-to-post "caption" with:
 FORMAT RULES:
 - Choose either "single image" or "reel" for each idea. Never choose carousel.
 - For "single image", describe one finished composition.
-- For "reel", provide 3-5 sequential, visually distinct scene descriptions in reel_beats and 3-5 short on-screen lines in reel_overlays (max 6 words each). Start with the finished result or strongest visual in the first beat. Build a simple beginning, middle, and end that can be assembled from stills with gentle motion.
+- For "reel", provide 3-5 sequential, visually distinct scene descriptions in reel_beats, 3-5 short on-screen lines in reel_overlays (max 6 words each), and a separate 3-5 item spoken script in reel_narration with one natural sentence per beat. Start with the finished result or strongest visual in the first beat. Build a simple beginning, middle, and end that can be assembled from stills with gentle motion. reel_beats are visual directions and must never be used as narration.
 - Avoid relying on generated text inside an image. On-screen lines are overlaid by the renderer.
 
 TRUTHFULNESS (strict):
@@ -171,6 +176,7 @@ Respond ONLY with JSON:
     "format": "single image" | "reel",
     "reel_beats": ["scene 1 visual", "scene 2 visual", "scene 3 visual"],
     "reel_overlays": ["short line 1", "short line 2", "short line 3"],
+    "reel_narration": ["spoken sentence for beat 1", "spoken sentence for beat 2", "spoken sentence for beat 3"],
     "angle": "one sentence strategic angle",
     "audience_segment": "persona name from audience map"
   }}
@@ -197,6 +203,7 @@ Respond ONLY with JSON:
                 "audience_segment": str(v.get("audience_segment", "") or ""),
                 "reel_beats": [str(b).strip() for b in v.get("reel_beats", []) if str(b).strip()][:5],
                 "reel_overlays": [str(b).strip() for b in v.get("reel_overlays", []) if str(b).strip()][:5],
+                "reel_narration": [str(b).strip() for b in v.get("reel_narration", []) if str(b).strip()][:5],
             }
             for v in data
             if isinstance(v, dict) and v.get("prompt_text")
@@ -220,7 +227,7 @@ Respond ONLY with JSON:
         prompt = f"""
 You are a viral content strategist. Improve this content prompt to maximize virality.
 Preserve the current format (single image or Reel). Do not change it to a carousel.
-For a Reel, keep 3-5 sequential scene beats and short on-screen overlay lines.
+For a Reel, keep 3-5 sequential visual scene beats, short on-screen overlay lines, and a separate 3-5 line spoken script in reel_narration. Never use visual scene beats as voiceover.
 
 Current prompt:
 {fence(best_variant)}
@@ -251,6 +258,7 @@ Respond ONLY with the improved prompt as JSON with the same fields:
   "format": "{best_variant.get('format', 'single image')}",
   "reel_beats": ["scene 1 visual", "scene 2 visual", "scene 3 visual"],
   "reel_overlays": ["short line 1", "short line 2", "short line 3"],
+  "reel_narration": ["spoken sentence for beat 1", "spoken sentence for beat 2", "spoken sentence for beat 3"],
   "angle": "...",
   "audience_segment": "..."
 }}
@@ -280,6 +288,11 @@ Respond ONLY with the improved prompt as JSON with the same fields:
                 "reel_overlays": [
                     str(b).strip()
                     for b in data.get("reel_overlays", best_variant.get("reel_overlays", []))
+                    if str(b).strip()
+                ][:5],
+                "reel_narration": [
+                    str(b).strip()
+                    for b in data.get("reel_narration", best_variant.get("reel_narration", []))
                     if str(b).strip()
                 ][:5],
             })

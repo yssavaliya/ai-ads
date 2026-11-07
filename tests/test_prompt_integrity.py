@@ -68,6 +68,7 @@ def test_forge_prompts_contain_every_input_and_the_schema():
         assert marker in sent, marker
     assert "Respond ONLY with JSON" in sent and '"format": "single image" | "reel"' in sent
     assert '"reel_beats"' in sent and '"reel_overlays"' in sent
+    assert '"reel_narration"' in sent and "must never be used as narration" in sent
     assert generated[0]["format"] == "single image" and generated[0]["reel_beats"] == []
     assert "exactly one finished static image" in generated[0]["prompt_text"]
     assert llm.answers["prompt-forge"][0]["format"] == "reel"  # deliberately hostile model response
@@ -88,6 +89,11 @@ def test_forge_preserves_well_formed_reels_and_degrades_malformed_reels_to_image
     reel = normalize_variant({"format": "reel", "reel_beats": ["macro", "pour", "pack reveal"],
                               "reel_overlays": ["A warmer opening", "Watch the pour", "Meet the blend"]})
     assert reel["format"] == "reel" and len(reel["reel_beats"]) == 3
+    assert reel["reel_narration"] == reel["reel_overlays"]
+    scripted = normalize_variant({"format": "reel", "reel_beats": ["macro", "pour", "pack reveal"],
+                                  "reel_overlays": ["Leaves", "Pour", "Blend"],
+                                  "reel_narration": ["Fresh leaves begin the ritual.", "A slow pour releases the aroma.", "Enjoy a calming cup."]})
+    assert scripted["reel_narration"][1] == "A slow pour releases the aroma."
     image = normalize_variant({"format": "reel", "reel_beats": ["only two", "beats"]})
     assert image["format"] == "single image" and image["reel_beats"] == []
 

@@ -395,6 +395,15 @@ class CreativeForge:
         stills: list[str] = []
         card_color = self._card_color
         overlays = [str(line).strip() for line in (prompt.get("reel_overlays") or [])]
+        narration = [str(line).strip() for line in (prompt.get("reel_narration") or [])]
+        # Visual beats are image-generation directions, never voiceover copy. Older
+        # prompts without a dedicated script fall back to the visible overlay copy.
+        spoken_lines = [
+            narration[i] if i < len(narration) and narration[i]
+            else overlays[i] if i < len(overlays) and overlays[i]
+            else (str(prompt.get("hook") or "").strip() if i == 0 else "")
+            for i in range(len(beats))
+        ]
 
         def make_still(job: tuple[int, str]) -> tuple[str, list[str]]:
             i, beat = job
@@ -431,7 +440,7 @@ class CreativeForge:
         audio_path: str | None = None
         durations: list[float] = []
         try:
-            audio_path, durations = self._tts_beats(beats, base_name)
+            audio_path, durations = self._tts_beats(spoken_lines, base_name)
         except Exception as exc:  # noqa: BLE001 - voiceover is optional; never kill the reel
             warnings.append(f"Voiceover unavailable this run: {exc}")
             logger.warning("::warning::%s", warnings[-1])

@@ -209,11 +209,12 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
     forge = cf.CreativeForge()
     seen_scenes = []
     seen_overlays = []
+    spoken_lines = []
     monkeypatch.setattr(cf, "parallel_map", lambda fn, items, _limit: [type("Outcome", (), {"ok": True, "value": fn(item)})() for item in items])
     monkeypatch.setattr(forge, "_image_prompt", lambda prompt, _biz: prompt["visual_scene"])
     monkeypatch.setattr(forge, "generate_image", lambda prompt, *_args: seen_scenes.append(prompt) or "still.png")
     monkeypatch.setattr(forge, "overlay_text", lambda path, text, **_kw: seen_overlays.append(text) or path)
-    monkeypatch.setattr(forge, "_tts_beats", lambda *_args: (None, []))
+    monkeypatch.setattr(forge, "_tts_beats", lambda lines, *_args: spoken_lines.extend(lines) or (None, []))
     monkeypatch.setattr(forge, "_assemble_video", lambda *_args: None)
     monkeypatch.setattr(forge, "_extract_thumbnail", lambda *_args: None)
 
@@ -224,6 +225,7 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
             "visual_scene": "cinematic product photography",
             "reel_beats": ["tea leaves macro", "chai pouring", "pack reveal"],
             "reel_overlays": ["Leaf to cup", "A slow pour", "Meet your chai"],
+            "reel_narration": ["Start with fresh tea leaves.", "Let the chai pour slowly.", "Make this your next ritual."],
         },
         {"name": "Aimagix"},
         "chai",
@@ -237,3 +239,9 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
         ]
     )
     assert seen_overlays == ["Leaf to cup", "A slow pour", "Meet your chai"]
+    assert spoken_lines == [
+        "Start with fresh tea leaves.",
+        "Let the chai pour slowly.",
+        "Make this your next ritual.",
+    ]
+    assert not set(spoken_lines) & {"tea leaves macro", "chai pouring", "pack reveal"}
