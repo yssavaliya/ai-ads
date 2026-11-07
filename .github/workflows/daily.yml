@@ -2,7 +2,7 @@ name: Daily Content Intelligence
 
 on:
   schedule:
-    - cron: "29 18 * * *"   # 23:59 IST
+    - cron: "30 12 * * 1,3,5"   # 18:00 IST, Monday/Wednesday/Friday
   workflow_dispatch:
     inputs:
       post_now:
