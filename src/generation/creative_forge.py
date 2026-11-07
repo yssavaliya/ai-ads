@@ -30,7 +30,7 @@ MAX_ZOOM_GAIN = 0.08  # Ken Burns: end at 108% of the frame
 FONT_PATH = Path("assets/fonts/Poppins-Bold.ttf")
 VOICE_MODEL_URL = (
     "https://huggingface.co/rhasspy/piper-voices/resolve/main/"
-    "en/en_US/lessac/medium/en_US-lessac-medium"
+    "en/en_US/lessac/medium/en_US-lessac-medium.onnx"
 )
 VOICE_CACHE_DIR = Path.home() / ".cache" / "piper-voices"
 
@@ -491,8 +491,7 @@ class CreativeForge:
             return onnx
         VOICE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         logger.info("Downloading Piper voice model (~64MB) to %s", VOICE_CACHE_DIR)
-        for suffix in ("", ".json"):
-            target = Path(str(onnx) + suffix)
+        for suffix, target in (("", onnx), (".json", jsonf)):
             resp = httpx.get(VOICE_MODEL_URL + suffix, timeout=300, follow_redirects=True)
             resp.raise_for_status()
             target.write_bytes(resp.content)

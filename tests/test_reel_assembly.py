@@ -181,6 +181,30 @@ def test_wav_duration_needs_no_ffprobe(tmp_path, monkeypatch):
     assert cf.CreativeForge._wav_duration(str(tmp_path / "missing.wav")) == 3.0
 
 
+def test_piper_voice_download_uses_real_onnx_and_json_paths(tmp_path, monkeypatch):
+    requested = []
+
+    class Response:
+        content = b"voice-data"
+
+        @staticmethod
+        def raise_for_status():
+            return None
+
+    def fake_get(url, **_kwargs):
+        requested.append(url)
+        return Response()
+
+    monkeypatch.setattr(cf, "VOICE_CACHE_DIR", tmp_path)
+    monkeypatch.setattr(cf.httpx, "get", fake_get)
+    path = cf.CreativeForge()._ensure_voice_model()
+    assert path.name == "en_US-lessac-medium.onnx"
+    assert requested[0].endswith("en_US-lessac-medium.onnx")
+    assert requested[1].endswith("en_US-lessac-medium.onnx.json")
+    assert path.read_bytes() == b"voice-data"
+    assert path.with_name(path.name + ".json").read_bytes() == b"voice-data"
+
+
 def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
     forge = cf.CreativeForge()
     seen_scenes = []

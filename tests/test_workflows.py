@@ -121,11 +121,16 @@ def test_setup_action_restores_state_without_saving_early():
 
 
 def test_image_only_workflows_do_not_install_video_dependencies():
-    for name in ("daily", "leads", "feedback", "ci"):
+    for name in ("leads", "feedback", "ci"):
         setups = [s for s in _all_steps(name) if s.get("uses") == "./.github/actions/setup-agent"]
         assert all("piper" not in (setup.get("with") or {}) for setup in setups), name
     smoke = next(s for s in _all_steps("ci") if s.get("name") == "Smoke test the environment the pipelines will run in")
     assert "ffmpeg" not in smoke["run"]
+
+
+def test_daily_workflow_installs_reel_rendering_dependencies():
+    setup = next(s for s in _all_steps("daily") if s.get("uses") == "./.github/actions/setup-agent")
+    assert setup["with"].get("piper") == "true"
 
 
 @pytest.mark.parametrize("name", ["leads", "onboard"])
