@@ -202,8 +202,14 @@ def test_pipelines_restore_and_publish_the_site(name):
 @pytest.mark.parametrize("name", SITE_PIPELINES + ["drift_check"])
 def test_llm_workflows_can_use_github_models_and_every_free_provider(name):
     wf = _load(GH / "workflows" / f"{name}.yml")
-    assert wf["permissions"]["models"] == "read"
     env = next(iter(wf["jobs"].values()))["env"]
+    if name == "daily":
+        assert "models" not in wf["permissions"]
+        assert env["LLM_PROVIDER_ORDER"] == "huggingface"
+        assert env["HF_LLM_MODEL"] == "Qwen/Qwen2.5-7B-Instruct"
+        assert "HF_TOKEN" in env
+        return
+    assert wf["permissions"]["models"] == "read"
     for var in ("GROQ_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY", "CEREBRAS_API_KEY", "MISTRAL_API_KEY", "GITHUB_TOKEN"):
         assert var in env, f"{name}: {var} missing"
 
@@ -211,6 +217,10 @@ def test_llm_workflows_can_use_github_models_and_every_free_provider(name):
 @pytest.mark.parametrize("name", ["daily", "leads", "feedback"])
 def test_image_workflows_pass_every_image_provider_secret(name):
     env = next(iter(_load(GH / "workflows" / f"{name}.yml")["jobs"].values()))["env"]
+    if name == "daily":
+        assert env["IMAGE_PROVIDER_ORDER"] == "huggingface"
+        assert "HF_TOKEN" in env
+        return
     for var in ("HF_TOKEN", "TOGETHER_API_KEY", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "GEMINI_API_KEY"):
         assert var in env, f"{name}: {var} missing"
 

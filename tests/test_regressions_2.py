@@ -99,6 +99,7 @@ def test_untrusted_content_is_fenced_and_flagged(monkeypatch):
         return lc.LLMResult("ok", "", 0, 0.0)
 
     monkeypatch.setattr(settings, "groq_api_key", "k")  # unconfigured providers are skipped before dispatch
+    monkeypatch.setattr(settings, "llm_provider_order", "groq")
     monkeypatch.setattr(client, "_try_groq", fake_groq)
     client.run(f"analyse {wrapped}", label="t")
     assert seen["p"].startswith(lc.UNTRUSTED_NOTE)
@@ -209,21 +210,24 @@ def test_utc_now_naive_is_naive_and_current():
     assert abs((datetime.now(UTC).replace(tzinfo=None) - now).total_seconds()) < 5
 
 
-def test_hf_image_uses_the_router_endpoint(monkeypatch):
+def test_hf_image_uses_open_flux_via_inference_client(monkeypatch):
+    import types
+
+    from PIL import Image
+
     from src.generation import creative_forge as cf
 
-    png = b"\x89PNG" + b"0" * 2000
-    urls: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        urls.append(str(request.url))
-        return httpx.Response(200, content=png)
-
-    real_client = httpx.Client
-    monkeypatch.setattr(httpx, "Client", lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw))
+    inference = MagicMock()
+    inference.text_to_image.return_value = Image.new("RGB", (100, 100), "blue")
+    module = types.ModuleType("huggingface_hub")
+    module.InferenceClient = MagicMock(return_value=inference)
+    monkeypatch.setitem(sys.modules, "huggingface_hub", module)
     monkeypatch.setattr(settings, "hf_token", "tok")
-    assert cf.CreativeForge()._hf_image("p", 100, 100) == png
-    assert len(urls) == 1 and "router.huggingface.co" in urls[0]
+    result = cf.CreativeForge()._hf_image("p", 100, 100)
+    assert result is not None and result.startswith(b"\x89PNG")
+    inference.text_to_image.assert_called_once_with(
+        "p", model="black-forest-labs/FLUX.1-schnell", width=100, height=100
+    )
 
 
 def test_package_config_exposes_src_namespace():

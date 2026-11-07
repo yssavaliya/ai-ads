@@ -159,6 +159,7 @@ def test_weekly_prompt_never_contains_the_clients_email_and_fences_everything():
 def test_keyless_public_endpoint_is_off_by_default_and_excluded_from_the_chain(monkeypatch):
     assert Settings().llm_keyless_fallback is False
     monkeypatch.setattr(settings, "llm_keyless_fallback", False)
+    monkeypatch.setattr(settings, "llm_provider_order", "pollinations,groq")
     monkeypatch.setattr(settings, "groq_api_key", "g")
     assert "pollinations" not in [p.name for p in lp.configured_providers()]
     monkeypatch.setattr(settings, "llm_keyless_fallback", True)  # explicit opt-in still works
