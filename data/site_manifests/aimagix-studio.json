@@ -4616,6 +4616,10 @@
  ],
  "notices": [
   {
+   "date": "2026-11-07",
+   "message": "No prompts could be generated today (the AI providers were unavailable). The next scheduled run will try again."
+  },
+  {
    "date": "2026-10-22",
    "message": "No prompts could be generated today (the AI providers were unavailable). The next scheduled run will try again."
   }
