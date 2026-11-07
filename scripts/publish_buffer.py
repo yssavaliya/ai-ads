@@ -124,7 +124,12 @@ def auto_publish_block_reason(prompt: dict) -> str | None:
     return None
 
 
-def pick_prompt(prompts: list[dict], posted: set[str] | frozenset[str] = frozenset(), grounding: str = "") -> dict | None:
+def pick_prompt(
+    prompts: list[dict],
+    posted: set[str] | frozenset[str] = frozenset(),
+    grounding: str = "",
+    require_publishable_asset: bool = False,
+) -> dict | None:
     """Highest-scoring creative that has a real AI image and no unverified statistics.
 
     Today's manifest also holds creatives from earlier runs (made before the claims guard, or before the
@@ -133,7 +138,9 @@ def pick_prompt(prompts: list[dict], posted: set[str] | frozenset[str] = frozens
     """
     usable = []
     for p in prompts:
-        if is_degraded(p) or auto_publish_block_reason(p) or str(p.get("id")) in posted:
+        if is_degraded(p) or str(p.get("id")) in posted:
+            continue
+        if require_publishable_asset and auto_publish_block_reason(p):
             continue
         claims = unsupported_claims(p, grounding)
         if claims:
@@ -191,7 +198,12 @@ def main() -> None:
             print(f"Error: Prompt ID '{args.prompt_id}' not found in recent prompts.")
             sys.exit(1)
     else:
-        target_prompt = pick_prompt(prompts, posted_ids(), grounding_text(load_brand_facts()))
+        target_prompt = pick_prompt(
+            prompts,
+            posted_ids(),
+            grounding_text(load_brand_facts()),
+            require_publishable_asset=True,
+        )
         if target_prompt is None:
             print("::warning::No creative today is safe to post (flat fallback card, or an unverified statistic in the "
                   "copy); nothing was posted.")

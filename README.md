@@ -1,11 +1,12 @@
 # Self-Learning Business Content Intelligence Platform
 
-Analyzes businesses (website + social handles), researches audience & competitors,
-generates **viral-engineered content prompts** (scored 0-100, refined until ≥ threshold),
-**renders them into single-image ad assets** with burned-in hooks — and publishes them daily to a **static website (the Content Hub)** for a human to review and post.
-The daily run also sends the best creative to Buffer as a **draft**: nothing reaches Instagram until you approve it in
-Buffer (set the repository variable `BUFFER_DRAFT_MODE=false` to queue posts automatically; before posting it skips
-anything Buffer already holds and stops at `BUFFER_QUEUE_LIMIT` scheduled posts, default 8). Runs 100% in GitHub Actions with free & open-source tooling only.
+Analyzes businesses (website + social handles), researches audiences and competitors,
+generates product-focused content prompts (scored 0-100), and renders static ads or vertical MP4 Reels.
+Each run publishes previews to the **Content Hub** and queues the strongest passing creative through the existing
+Buffer channel after automated media, claims, and duplicate checks (set the
+repository variable `BUFFER_DRAFT_MODE=true` to force drafts; before queueing it skips known degraded assets and
+unverified claims, checks for near-duplicates, and respects `BUFFER_QUEUE_LIMIT`, default 8). Runs 100% in GitHub
+Actions with free & open-source tooling only.
 Can also **discover businesses automatically** and generate sample creatives for them.
 
 ## Lead discovery (no manual business entry)
