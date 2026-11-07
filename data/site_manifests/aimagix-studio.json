@@ -4323,6 +4323,168 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-78-thumb.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-07-79",
+   "date": "2026-11-07",
+   "created_at": "2026-11-07T10:49:31",
+   "prompt_id": 79,
+   "title": "Agency‑Level Prompt Blueprint",
+   "prompt_type": "educational",
+   "score": 82,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "The hidden prompt that powers agency‑level visuals",
+   "angle": "Teach freelancers a proven prompt framework that boosts their output quality and speed.",
+   "prompt_text": "Strategy: Appeal to freelance designers seeking skill‑building content by revealing a repeatable prompt framework that unlocks professional‑grade results from AI tools. The reel starts with a hand writing a prompt on a notebook page, establishing a tactile, human‑first approach. Beat two shows abstract, glowing shapes emerging from a stylized AI interface (no UI text), visualizing the generation phase. Beat three reveals a printed, high‑resolution illustration on a clean sheet, emphasizing the final quality. Each beat is overlaid with a single‑word cue—Prompt, Generate, Polish—to keep the narrative tight and easy to follow. The hook frames the information as a “hidden” secret, leveraging curiosity while delivering actionable knowledge. The caption repeats the hook, outlines the three‑part structure, and encourages community interaction. Hashtags mix prompt‑specific and broader design tags to attract both niche and discovery audiences.",
+   "caption": "The hidden prompt that powers agency‑level visuals\nLearn the three‑part structure that guides AI generators\nApply it to any project for consistent style\nSave hours by starting with a solid prompt\nKeep your portfolio fresh with AI‑enhanced drafts\nComment the tool you use for AI art\n\n#DesignTips #AIVisuals #CreativeHacks #DesignReels #CreativeWorkflow #VisualMarketing #Design #InstaArt",
+   "hashtags": [
+    "#DesignTips",
+    "#AIVisuals",
+    "#CreativeHacks",
+    "#DesignReels",
+    "#CreativeWorkflow",
+    "#VisualMarketing",
+    "#Design",
+    "#InstaArt"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "platform_focus": "instagram",
+   "audience_segment": "Freelance Designer",
+   "reasoning": "The prompt taps into the current AI‑visuals trend and offers a repeatable, actionable framework that resonates with freelance designers. Its visual storytelling and curiosity hook are proven virality drivers, while the lack of historical data means we rely on trend alignment and content gaps. The main risk is saturation, but the specificity of the framework and the promise of a prompt library mitigate that.",
+   "key_factors": [
+    "Strong alignment with high‑relevance AI‑generated brand assets trend",
+    "Clear, actionable 3‑step framework that satisfies the freelance designer’s need for skill‑building content",
+    "Visual, scroll‑stopping reel format with a curiosity‑driven hook",
+    "Use of popular design and AI hashtags for discovery",
+    "Fills the content gap of a curated AI prompt library"
+   ],
+   "risks": [
+    "Market saturation of AI‑design reels could dilute impact",
+    "Hook relies on “hidden secret” which may feel generic if not paired with a strong hook formula",
+    "Lack of explicit ROI or measurable benefit may reduce shareability among decision‑makers",
+    "Potential mismatch with Indian cultural nuances if the content feels too generic"
+   ],
+   "warnings": [
+    "Reel render failed (ffmpeg assembly failed: [Errno 2] No such file or directory: 'ffmpeg'); falling back to single image"
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-79.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-79-thumb.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-07-80",
+   "date": "2026-11-07",
+   "created_at": "2026-11-07T10:49:31",
+   "prompt_id": 80,
+   "title": "Design Without Breaking the Bank",
+   "prompt_type": "promotional",
+   "score": 75,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "Professional‑grade visuals without breaking the bank",
+   "angle": "Show that Aimagix Studio can deliver agency‑level visuals at a price point that feels affordable for SMEs, reinforcing ROI without exaggeration.",
+   "prompt_text": "The ROI‑proof hook promises high quality at a cost‑effective level, directly addressing SME marketers’ budget concerns. The reel starts with a striking final visual (a bold campaign poster on a matte board) to prove the studio’s output, then cuts to a behind‑the‑scenes glimpse of the designer’s workspace—brushes, tablet, color swatches—illustrating craftsmanship without showing any price tags. The final beat shows the same visual being placed on a mock social ad, reinforcing applicability. Overlays (“High impact”, “Low cost”, “Studio quality”) keep the message concise. The caption lists four concrete benefits, ending with a simple CTA to comment for a pricing snapshot, encouraging interaction while staying truthful. Hashtags combine niche #DesignROI, #CreativeHacks, #FastDesign with industry #DesignReels, #Design, #Marketing and broad #Design, #Business. The post is optimized for Instagram where reels drive engagement, and the tone stays professional yet vibrant.",
+   "caption": "Professional‑grade visuals without breaking the bank\n✅ High‑impact graphics that feel agency‑level\n✅ Flexible pricing that fits tight budgets\n✅ Quick iteration cycles keep projects moving\n✅ Aimagix Studio’s craft delivers value you can see\n🗨️ Comment ‘info’ if you want a pricing snapshot\n\n#DesignROI #CreativeHacks #FastDesign #DesignReels #Design #Marketing #Business #Branding",
+   "hashtags": [
+    "#DesignROI",
+    "#CreativeHacks",
+    "#FastDesign",
+    "#DesignReels",
+    "#Design",
+    "#Marketing",
+    "#Business",
+    "#Branding"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "platform_focus": "instagram",
+   "audience_segment": "Marketing Manager (SME)",
+   "reasoning": "The prompt leverages ROI and visual proof—key drivers for the target personas—while using Instagram Reels, which is the dominant format. However, the opening hook lacks the high‑impact, curiosity‑gap style seen in top performers, and it misses the current trend of speed/AI solutions. These gaps reduce the potential for rapid virality, but the overall structure and CTA still position it well for medium‑to‑high engagement.",
+   "key_factors": [
+    "ROI‑proof hook that directly addresses budget concerns",
+    "Strong visual proof (final poster + behind‑the‑scenes) for credibility",
+    "Clear, concise overlays and CTA that drive interaction",
+    "Optimized for Instagram Reels, the high‑engagement format",
+    "Alignment with audience pain points (quality, cost, speed)"
+   ],
+   "risks": [
+    "Hook is not as punchy as trending contrarian or 5‑minute AI hooks",
+    "Missing explicit speed/AI angle that dominates current trends",
+    "No Indian‑specific cultural references or local hashtags",
+    "CTA relies on comments; could be less effective than a link or DM"
+   ],
+   "warnings": [
+    "Reel render failed (ffmpeg assembly failed: [Errno 2] No such file or directory: 'ffmpeg'); falling back to single image"
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-80.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-80-thumb.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-07-81",
+   "date": "2026-11-07",
+   "created_at": "2026-11-07T10:49:31",
+   "prompt_id": 81,
+   "title": "Fast‑Turnaround Concept Reel",
+   "prompt_type": "social_proof",
+   "score": 70,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "Stop waiting weeks—watch a concept become final art instantly",
+   "angle": "Showcase speed and quality to convince agency decision‑makers that a studio partner can eliminate long wait times.",
+   "prompt_text": "Strategy: Position Aimagix Studio as the antidote to the sluggish agency cycle that frustrates decision‑makers at boutique creative firms. The reel opens with a tactile, analog sketch to immediately signal authenticity, then transitions to a rapid, seamless digital polish that demonstrates the studio’s ability to move from concept to final visual without the usual lag. The visual language is clean, high‑contrast, and shot with a 35mm lens at f/1.8 to give a cinematic shallow depth of field that isolates the hand and the work surface, reinforcing speed and precision. The three beats—Idea, Sketch, Polish—are each overlaid with a single word (max six characters) to create a clear narrative arc that can be understood even without sound. The opening hook directly challenges the expectation of a two‑week turnaround, appealing to the contrarian mindset of agency leaders who are hungry for proof of speed. The caption reiterates the hook, lists four concrete benefits, and ends with a strong call‑to‑action encouraging users to bookmark the reel for future pitches. Hashtags blend hyper‑niche community tags with broader discovery tags to widen reach while staying relevant to the target audience.",
+   "caption": "Stop waiting weeks—watch a concept become final art instantly\nWe sketch ideas live and refine them on the spot\nOur studio keeps every detail consistent from draft to delivery\nYou stay in the loop with real‑time previews\nSave this reel for your next pitch\n\n#DesignReels #FastDesign #CreativeWorkflow #BrandDesign #CreativeAgency #VisualMarketing #Design #InstaArt",
+   "hashtags": [
+    "#DesignReels",
+    "#FastDesign",
+    "#CreativeWorkflow",
+    "#BrandDesign",
+    "#CreativeAgency",
+    "#VisualMarketing",
+    "#Design",
+    "#InstaArt"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "platform_focus": "instagram",
+   "audience_segment": "Creative Agency Decision‑Maker",
+   "reasoning": "The prompt leverages a proven contrarian pattern and fast‑turnaround trend, offering a clear, visual proof of speed that appeals to agency leaders. Its cinematic style and text overlays fit Instagram Reels, and the hook directly addresses a pain point. However, the lack of a unique metric, audio cue, or local flavor introduces risks that could dampen shareability.",
+   "key_factors": [
+    "Contrarian hook that directly challenges the 2‑week agency cycle",
+    "Clear, fast‑paced narrative (Idea → Sketch → Polish) that aligns with trending fast‑turnaround reels",
+    "High platform fit – short, cinematic reel with text overlays works well on Instagram Reels",
+    "Strong alignment with target personas (agency decision‑makers, startup founders, brand managers)",
+    "Use of niche and broad hashtags to maximize discovery"
+   ],
+   "risks": [
+    "Claim of speed may be perceived as generic; many reels promise quick turnaround",
+    "No audio cue could reduce engagement for viewers who watch muted",
+    "Lack of explicit Indian cultural references may limit resonance with the local audience",
+    "Potential for the reel to be overlooked if the visual transition isn’t immediately eye‑catching"
+   ],
+   "warnings": [
+    "Reel render failed (ffmpeg assembly failed: [Errno 2] No such file or directory: 'ffmpeg'); falling back to single image"
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-81.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-07/2026-11-07-81-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
