@@ -13,6 +13,13 @@ def test_empty_env_vars_fall_back_to_defaults(monkeypatch):
     assert s.dry_run is False
 
 
+def test_generation_defaults_use_open_source_model_providers():
+    s = Settings(_env_file=None)
+    assert s.llm_provider_order == "huggingface"
+    assert s.hf_llm_model == "Qwen/Qwen2.5-7B-Instruct"
+    assert s.image_provider_order == "huggingface"
+
+
 def test_real_values_parsed(monkeypatch):
     monkeypatch.setenv("SMTP_PORT", "465")
     monkeypatch.setenv("SMTP_TLS", "false")

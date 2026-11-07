@@ -5,7 +5,7 @@ import logging
 from typing import Any
 
 from src.generation.claims import avoid_hint, unsupported_claims
-from src.generation.prompt_forge import PromptForge, single_image_variant
+from src.generation.prompt_forge import PromptForge, normalize_variant
 from src.intelligence.virality_predictor import ViralityPredictor
 from src.shared.concurrency import parallel_map
 from src.shared.config import settings
@@ -88,7 +88,7 @@ class ViralityGate:
 
             # Keep the contract at the orchestration boundary too, including
             # custom/alternate forges and models that ignore the requested schema.
-            variants = [single_image_variant(v) for v in variants]
+            variants = [normalize_variant(v) for v in variants]
 
             # Invented statistics (e.g. "250% CTR lift") would be published as fact: drop those variants
             # before spending scoring calls on them, and tell the next attempt what to avoid.
@@ -179,7 +179,7 @@ class ViralityGate:
                 best_variant, hints, business_profile, audience_map, trend_data
             )
             if refined:
-                refined = single_image_variant(refined)
+                refined = normalize_variant(refined)
                 if unsupported_claims(refined, grounding):
                     logger.warning("::warning::Discarded refined variant %r: it added unsupported claims", refined.get("title"))
                     refined = best_variant

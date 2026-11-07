@@ -1,4 +1,4 @@
-"""Free-tier LLM providers (all speak the OpenAI chat-completions protocol) plus a
+"""LLM providers (all speak the OpenAI chat-completions protocol) plus a
 small health tracker that lets the client skip providers/models that are rate
 limited, out of quota, unauthorised or retired instead of waiting on them.
 
@@ -20,7 +20,7 @@ from src.shared.config import settings
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ORDER = "groq,gemini,cloudflare,github,cerebras,openrouter,mistral,huggingface,pollinations"
+DEFAULT_ORDER = "huggingface"
 
 
 @dataclass(frozen=True)

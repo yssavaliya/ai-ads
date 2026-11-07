@@ -66,8 +66,8 @@ def test_forge_prompts_contain_every_input_and_the_schema():
     sent = llm.prompts["prompt-forge"]
     for marker in ("PROFILE-MARK", "AUDIENCE-MARK", "TREND-MARK", "WEIGHT-MARK", "HINT-MARK", "educational"):
         assert marker in sent, marker
-    assert "Respond ONLY with JSON" in sent and '"format": "single image"' in sent
-    assert "exactly one static image" in sent
+    assert "Respond ONLY with JSON" in sent and '"format": "single image" | "reel"' in sent
+    assert '"reel_beats"' in sent and '"reel_overlays"' in sent
     assert generated[0]["format"] == "single image" and generated[0]["reel_beats"] == []
     assert "exactly one finished static image" in generated[0]["prompt_text"]
     assert llm.answers["prompt-forge"][0]["format"] == "reel"  # deliberately hostile model response
@@ -78,8 +78,18 @@ def test_forge_prompts_contain_every_input_and_the_schema():
     for marker in ("BEST-MARK", "CRITIQUE-MARK", "PROFILE-MARK", "AUDIENCE-MARK", "TREND-MARK"):
         assert marker in refined, marker
     assert "Respond ONLY with the improved prompt as JSON" in refined
-    assert '"format": "single image"' in refined
+    assert '"format": "reel"' in refined
     assert forge.refine_with_hints({**VARIANT}, ["HINT"], {}, {}, {})["format"] == "single image"
+
+
+def test_forge_preserves_well_formed_reels_and_degrades_malformed_reels_to_images():
+    from src.generation.prompt_forge import normalize_variant
+
+    reel = normalize_variant({"format": "reel", "reel_beats": ["macro", "pour", "pack reveal"],
+                              "reel_overlays": ["A warmer opening", "Watch the pour", "Meet the blend"]})
+    assert reel["format"] == "reel" and len(reel["reel_beats"]) == 3
+    image = normalize_variant({"format": "reel", "reel_beats": ["only two", "beats"]})
+    assert image["format"] == "single image" and image["reel_beats"] == []
 
 
 def test_audience_trend_and_competitor_prompts_contain_their_inputs():

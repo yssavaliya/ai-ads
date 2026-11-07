@@ -53,15 +53,15 @@ def test_trend_radar_raises_instead_of_faking():
             radar.scan({}, {})
 
 
-def test_trend_radar_only_recommends_single_image():
+def test_trend_radar_recommends_supported_image_and_reel_formats():
     radar = TrendRadar()
     radar.llm = MagicMock()
     radar.llm.run_json.return_value = {"recommended_formats": ["reel", "carousel", "single image"]}
 
     result = radar.scan({}, {})
 
-    assert result["recommended_formats"] == ["single image"]
-    assert '"recommended_formats": ["single image"]' in radar.llm.run_json.call_args.args[0]
+    assert result["recommended_formats"] == ["single image", "reel"]
+    assert '"recommended_formats": ["single image", "reel"]' in radar.llm.run_json.call_args.args[0]
 
 
 def test_competitor_finder_raises_instead_of_faking():
@@ -71,7 +71,7 @@ def test_competitor_finder_raises_instead_of_faking():
             finder.discover({})
 
 
-def test_forge_variants_enforce_one_image_and_keep_segment():
+def test_forge_variants_keep_valid_reels_and_keep_segment():
     forge = PromptForge()
     payload = [
         {
@@ -83,7 +83,8 @@ def test_forge_variants_enforce_one_image_and_keep_segment():
             "format": "reel",
             "angle": "A",
             "audience_segment": "young couples",
-            "reel_beats": ["beat one", "beat two", "", "beat three"],
+            "reel_beats": ["tea leaves in close-up", "tea pours into a cup", "finished chai pack reveal"],
+            "reel_overlays": ["Leaves meet warm light", "A slow pour", "Your next chai ritual"],
         }
     ]
 
@@ -94,16 +95,18 @@ def test_forge_variants_enforce_one_image_and_keep_segment():
         variants = forge.generate_variants({}, {}, {}, ["educational"])
     v = variants[0]
     assert v["audience_segment"] == "young couples"
-    assert v["format"] == "single image" and v["reel_beats"] == []
+    assert v["format"] == "reel" and len(v["reel_beats"]) == 3
+    assert len(v["reel_overlays"]) == 3
     text = v["prompt_text"].lower()
-    assert "create a single-image post" in text
-    assert not any(word in text for word in ("reel", "video", "carousel", "slides", "text beats"))
+    assert "reel" in text
+    assert "carousel" not in text
 
 def test_groq_path_executes_without_nameerror(monkeypatch):
     """Regression: the Groq call referenced an undefined `max_retries` name
     and crashed before ever reaching the API — even with a valid key set."""
     from src.shared.config import settings
 
+    monkeypatch.setattr(settings, "llm_provider_order", "groq")
     monkeypatch.setattr(settings, "groq_api_key", "test-key")
     monkeypatch.setattr(settings, "gemini_api_key", "")
 

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Database
     database_path: Path = Field(default=Path("agent.db"), description="SQLite database path")
 
-    # LLM Providers (free tiers: Groq -> Gemini)
+    # Optional provider credentials; the default action order uses Hugging Face only.
     groq_api_key: str | None = Field(default=None, description="Groq API key")
     groq_model: str = Field(default="openai/gpt-oss-120b", description="Groq model")
 
@@ -42,10 +42,8 @@ class Settings(BaseSettings):
     groq_fallback_models: str = Field(default="openai/gpt-oss-20b,qwen/qwen3.8-27b")
     gemini_fallback_models: str = Field(default="gemini-3.5-flash,gemini-3.1-flash-lite,gemini-flash-latest")
 
-    # More free providers, tried in LLM_PROVIDER_ORDER when the ones above fail.
-    llm_provider_order: str = Field(
-        default="groq,gemini,cloudflare,github,cerebras,openrouter,mistral,huggingface,pollinations"
-    )
+    # Providers tried in LLM_PROVIDER_ORDER; the scheduled workflow sets this to huggingface only.
+    llm_provider_order: str = Field(default="huggingface")
     github_models_enabled: bool = Field(default=False, description="Opt-in: GitHub Models via GITHUB_TOKEN (Actions: models: read)")
     github_models_model: str = Field(default="openai/gpt-4o-mini")
     cerebras_api_key: str | None = Field(default=None, description="Cerebras free tier key")
@@ -56,13 +54,13 @@ class Settings(BaseSettings):
     )
     mistral_api_key: str | None = Field(default=None, description="Mistral free 'experiment' tier key")
     mistral_model: str = Field(default="mistral-small-latest")
-    hf_llm_model: str = Field(default="meta-llama/Llama-3.3-70B-Instruct", description="Used with HF_TOKEN")
+    hf_llm_model: str = Field(default="Qwen/Qwen2.5-7B-Instruct", description="Apache-2.0 model used with HF_TOKEN")
     llm_keyless_fallback: bool = Field(default=False, description="Opt-in: let the keyless public Pollinations text endpoint see prompts as a last resort")
     pollinations_model: str = Field(default="openai")
 
-    # Image providers (free tiers), tried in IMAGE_PROVIDER_ORDER; a local branded card
+    # Image providers tried in IMAGE_PROVIDER_ORDER; a local branded card
     # is rendered when all of them fail so a post never ships without a visual.
-    image_provider_order: str = Field(default="cloudflare,gemini,huggingface,together,pollinations")
+    image_provider_order: str = Field(default="huggingface")
     image_card_fallback: bool = Field(default=True, description="Render a local branded card when every image provider fails")
     gemini_image_model: str = Field(default="gemini-3.1-flash-image,gemini-2.5-flash-image", description="Comma-separated, tried in order")
     together_api_key: str | None = Field(default=None, description="Together AI key (free FLUX.1-schnell)")

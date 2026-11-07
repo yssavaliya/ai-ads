@@ -61,15 +61,14 @@ Respond ONLY with JSON:
     {{"pattern": "hook archetype (contrarian|roi_proof|curiosity_gap|before_after|framework)", "example": "concrete example", "strength": "high|medium|low"}}
   ],
   "seasonal_events": ["relevant upcoming event/occasion/milestone in the next 7-14 days"],
-  "recommended_formats": ["single image"]
+  "recommended_formats": ["single image", "reel"]
 }}
 """
         data = self.llm.run_json(prompt, label="trend-radar", temperature=0.5, expect=(dict,))
         if not isinstance(data, dict):
             raise ValueError("trend scan must be a JSON object")
-        # Format recommendations are consumed downstream. Keep legacy or hostile
-        # model output from reintroducing video/carousel concepts into the flow.
-        data["recommended_formats"] = ["single image"]
+        # Keep the supported formats explicit; carousel generation is not implemented.
+        data["recommended_formats"] = ["single image", "reel"]
         return data
 
     @staticmethod

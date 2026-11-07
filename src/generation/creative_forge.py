@@ -394,16 +394,23 @@ class CreativeForge:
         warnings: list[str] = []
         stills: list[str] = []
         card_color = self._card_color
+        overlays = [str(line).strip() for line in (prompt.get("reel_overlays") or [])]
 
         def make_still(job: tuple[int, str]) -> tuple[str, list[str]]:
             i, beat = job
             self._card_color = card_color  # this worker thread's own copy
             self._take_warnings()
+            scene_prompt = {
+                **prompt,
+                "hook": "",
+                "visual_scene": f"{prompt.get('visual_scene', '')}. Scene: {beat}".strip(),
+            }
             raw = self.generate_image(
-                self._image_prompt({**prompt, "hook": beat}, business_profile),
+                self._image_prompt(scene_prompt, business_profile),
                 REEL_W, REEL_H, f"{base_name}-beat{i}",
             )
-            return self.overlay_text(raw, beat, brand_color=self._brand_color(business_profile)), self._take_warnings()
+            overlay = overlays[i] if i < len(overlays) else (prompt.get("hook", "") if i == 0 else "")
+            return self.overlay_text(raw, overlay, brand_color=self._brand_color(business_profile)), self._take_warnings()
 
         # The beat images are independent network calls: generate them concurrently (capped by
         # IMAGE_CONCURRENCY, order preserved). A failed beat is skipped exactly as before.

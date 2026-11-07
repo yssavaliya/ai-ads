@@ -4,6 +4,9 @@ from __future__ import annotations
 import base64
 import io
 import os
+import sys
+import types
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
@@ -19,6 +22,13 @@ def _png(size=(64, 64)) -> bytes:
     out = io.BytesIO()
     img.save(out, "PNG")
     return out.getvalue()
+
+
+def _mock_hf_client(monkeypatch, client):
+    module = types.ModuleType("huggingface_hub")
+    module.InferenceClient = MagicMock(return_value=client)
+    monkeypatch.setitem(sys.modules, "huggingface_hub", module)
+    return module.InferenceClient
 
 
 @pytest.fixture
@@ -66,11 +76,14 @@ def test_rate_limited_pollinations_falls_through_to_gemini_and_is_cropped(net, f
 def test_limited_provider_is_skipped_on_the_next_image(net, forge, monkeypatch):
     monkeypatch.setattr(settings, "hf_token", "t")
     net.routes["image.pollinations.ai"] = httpx.Response(429, text="rate limit")
-    net.routes["router.huggingface.co"] = httpx.Response(200, content=_png())
+    client = MagicMock()
+    client.text_to_image.return_value = Image.open(io.BytesIO(_png()))
+    _mock_hf_client(monkeypatch, client)
     forge.generate_image("one", 64, 64, "a")
     net.requested.clear()
     forge.generate_image("two", 64, 64, "b")
-    assert net.requested == ["router.huggingface.co"]  # circuit breaker skipped pollinations
+    assert net.requested == []  # circuit breaker skipped pollinations on the second image
+    assert client.text_to_image.call_count == 2
 
 
 def test_unauthorised_provider_is_skipped_for_the_rest_of_the_run(net, forge, monkeypatch):
@@ -97,18 +110,13 @@ def test_cloudflare_response_shape(net, forge, monkeypatch):
 
 def test_default_order_tries_cloudflare_before_rate_limited_pollinations(net, forge, monkeypatch):
     monkeypatch.setattr(settings, "image_provider_order", "")  # use the built-in default
-    assert ip.provider_order() == ["cloudflare", "gemini", "huggingface", "together", "pollinations"]
-    monkeypatch.setattr(settings, "cloudflare_account_id", "acct")
-    monkeypatch.setattr(settings, "cloudflare_api_token", "tok")
-    net.routes["api.cloudflare.com"] = httpx.Response(200, json={"result": {"image": base64.b64encode(_png()).decode()}})
-    net.routes["image.pollinations.ai"] = httpx.Response(429, text="rate limit")
+    assert ip.provider_order() == ["huggingface"]
     forge.generate_image("p", 64, 64, "cf-first")
-    assert net.requested == ["api.cloudflare.com"]  # Pollinations never contacted
-    assert forge._take_warnings() == []
+    assert net.requested == []  # only configured providers are invoked
 
 
 def test_cloudflare_failure_falls_through_to_pollinations_without_a_card(net, forge, monkeypatch):
-    monkeypatch.setattr(settings, "image_provider_order", "")
+    monkeypatch.setattr(settings, "image_provider_order", "cloudflare,pollinations")
     monkeypatch.setattr(settings, "cloudflare_account_id", "acct")
     monkeypatch.setattr(settings, "cloudflare_api_token", "tok")
     net.routes["api.cloudflare.com"] = httpx.Response(429, json={"errors": [{"message": "daily limit"}]})
@@ -153,12 +161,20 @@ def test_branded_card_is_deterministic_and_varies_by_seed():
     assert Image.open(io.BytesIO(a)).size == (120, 160)
 
 
-def test_provider_order_is_configurable(net, forge, monkeypatch):
+def test_huggingface_inference_client_is_used_for_open_flux(net, forge, monkeypatch):
     monkeypatch.setattr(settings, "image_provider_order", "huggingface,pollinations")
     monkeypatch.setattr(settings, "hf_token", "t")
-    net.routes["router.huggingface.co"] = httpx.Response(200, content=_png())
-    forge.generate_image("p", 64, 64, "x")
-    assert net.requested == ["router.huggingface.co"]
+    from PIL import Image
+    image = Image.new("RGB", (64, 64), "red")
+    client = MagicMock()
+    client.text_to_image.return_value = image
+    inference_client = _mock_hf_client(monkeypatch, client)
+    result = forge.generate_image("p", 64, 64, "x")
+    assert Image.open(result).size == (64, 64)
+    client.text_to_image.assert_called_once_with(
+        "p", model="black-forest-labs/FLUX.1-schnell", width=64, height=64
+    )
+    inference_client.assert_called_once_with(provider="auto", api_key="t", timeout=180)
 
 
 def test_gemini_image_tries_the_next_configured_model(net, forge, monkeypatch):
@@ -177,14 +193,11 @@ def test_gemini_image_tries_the_next_configured_model(net, forge, monkeypatch):
     assert net.requested == ["generativelanguage.googleapis.com"] * 2
 
 
-def test_dead_hugging_face_endpoints_are_gone_and_410_is_permanent(net, forge, monkeypatch):
-    """First real run: router 410 Gone and api-inference.huggingface.co did not even resolve."""
-    assert ip.HF_IMAGE_URLS and not any("api-inference" in u for u in ip.HF_IMAGE_URLS)
-    monkeypatch.setattr(settings, "image_provider_order", "huggingface,pollinations")
+def test_huggingface_inference_failure_uses_local_branded_card(forge, monkeypatch):
+    monkeypatch.setattr(settings, "image_provider_order", "huggingface")
     monkeypatch.setattr(settings, "hf_token", "t")
-    net.routes["router.huggingface.co"] = httpx.Response(410, text="Gone")
-    net.routes["image.pollinations.ai"] = httpx.Response(200, content=_png())
-    forge.generate_image("one", 64, 64, "a")
-    net.requested.clear()
-    forge.generate_image("two", 64, 64, "b")
-    assert "router.huggingface.co" not in net.requested  # 410 is not retried every image
+    module = types.ModuleType("huggingface_hub")
+    module.InferenceClient = MagicMock(side_effect=RuntimeError("provider unavailable"))
+    monkeypatch.setitem(sys.modules, "huggingface_hub", module)
+    result = forge.generate_image("p", 64, 64, "fallback")
+    assert Image.open(result).size == (64, 64)

@@ -1,4 +1,4 @@
-"""Free image generators tried in order, plus a local branded-card renderer that
+"""Image generators tried in order, plus a local branded-card renderer that
 can never fail. Each provider returns image bytes or None; transport errors are
 classified and fed into the shared health tracker so a rate-limited or
 unauthorised provider is skipped for a while instead of being hammered.
@@ -25,13 +25,9 @@ logger = logging.getLogger(__name__)
 # Providers that need a key come first. Keyless Pollinations is last: it allows roughly one image per
 # 45 s per IP, so on shared GitHub runners it is rate limited most of the time and used to push every
 # post onto the flat branded card. Cloudflare FLUX is skipped automatically when its secrets are unset.
-DEFAULT_ORDER = "cloudflare,gemini,huggingface,together,pollinations"
+DEFAULT_ORDER = "huggingface"
 
-# api-inference.huggingface.co no longer resolves and the hf-inference router answered 410 Gone for
-# FLUX in the first real run. Kept as a list (and overridable) so a new endpoint is a one-line change.
-HF_IMAGE_URLS = (
-    "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
-)
+HF_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"
 
 
 def is_image(data: bytes | None) -> bool:
@@ -83,26 +79,13 @@ def pollinations(prompt: str, width: int, height: int) -> bytes | None:
 def huggingface(prompt: str, width: int, height: int) -> bytes | None:
     if not settings.hf_token:
         return None
-    last: Exception | None = None
-    for url in HF_IMAGE_URLS:
-        try:
-            with httpx.Client(timeout=180) as client:
-                resp = client.post(
-                    url,
-                    headers={"Authorization": f"Bearer {settings.hf_token}", "Content-Type": "application/json"},
-                    json={"inputs": prompt, "parameters": {"width": width, "height": height}},
-                )
-                resp.raise_for_status()
-                data = resp.content
-            if is_image(data):
-                return data
-            logger.error("HF inference (%s) returned a non-image payload (%d bytes)", url, len(data))
-        except Exception as exc:  # noqa: BLE001 - try the legacy URL, then report
-            last = exc
-            logger.error("HF image inference failed at %s: %s", url, exc)
-    if last is not None:
-        raise last
-    return None
+    from huggingface_hub import InferenceClient
+
+    client = InferenceClient(provider="auto", api_key=settings.hf_token, timeout=180)
+    image = client.text_to_image(prompt, model=HF_IMAGE_MODEL, width=width, height=height)
+    out = io.BytesIO()
+    image.save(out, format="PNG")
+    return out.getvalue()
 
 
 def gemini_image(prompt: str, width: int, height: int) -> bytes | None:

@@ -6,7 +6,7 @@ Each run publishes previews to the **Content Hub** and queues the strongest pass
 Buffer channel after automated media, claims, and duplicate checks (set the
 repository variable `BUFFER_DRAFT_MODE=true` to force drafts; before queueing it skips known degraded assets and
 unverified claims, checks for near-duplicates, and respects `BUFFER_QUEUE_LIMIT`, default 8). Runs 100% in GitHub
-Actions with free & open-source tooling only.
+Actions with open-weight generation models and open-source rendering tools; Hugging Face hosts model inference and Buffer handles publishing.
 Can also **discover businesses automatically** and generate sample creatives for them.
 
 ## Lead discovery (no manual business entry)
@@ -22,7 +22,7 @@ The platform hunts for businesses that need content help:
    = they need viral content help (score high). Too small, too big (has agency), or
    already high-engagement → excluded
 4. **Generate + render**: for the top N leads, runs the full pipeline (profile → audience
-   → trends → virality gate) and renders finished single-image sample creatives
+   → trends → virality gate) and renders finished image or Reel sample creatives
 5. **Deliver**: saves `data/leads.json` + publishes the digest page (scores, reasons,
    rendered creatives, "no contact email found" flags where applicable)
 
@@ -41,8 +41,7 @@ follower range, target count, and digest email in `data/lead_config.json`.
   3. Audience Mapper → personas, pain points, themes
   4. Trend Radar → today's topics, hashtags, gaps, viral patterns
   5. Virality Gate: generate → predict → if score < 75, refine with hints → repeat
-  6. Creative Forge → render each approved prompt as one static image (Pollinations +
-     Pillow overlay)
+  6. Creative Forge → render single images or assemble vertical MP4 Reels from scene beats with FFmpeg
   7. Publish the finished assets to the Content Hub (GitHub Pages) with 👍/👎/🔄/📎 feedback buttons
 
 Sunday 8 AM IST (02:30 UTC) ──▶ weekly.yml
@@ -105,15 +104,11 @@ barely influence ranking. Treat "self-learning" as the mechanism, not as evidenc
 
 | Secret | Purpose |
 |--------|---------|
-| `GROQ_API_KEY`, `GROQ_MODEL` | Primary LLM, free tier (console.groq.com) |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Fallback LLM, free tier (aistudio.google.com) |
+| `HF_TOKEN` | Hugging Face Inference Providers access for open-weight Qwen and FLUX models |
 | `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_HOST`, `SMTP_PORT` | Only for the legacy e-mail mode (`DELIVERY_MODE=email\|both`) |
-| `OPENROUTER_API_KEY`, `CEREBRAS_API_KEY`, `MISTRAL_API_KEY` | Optional extra free LLM fallbacks |
-| `TOGETHER_API_KEY`, `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` | Optional extra free image fallbacks |
 | `SITE_SECRET` | Optional: makes site URLs unguessable and hides the index (see *Content Hub*) |
 | `DELIVERY_MODE` (repo *variable*) | `site` (default), `email` or `both` |
 | `APIFY_TOKEN` | Free tier social scraping (console.apify.com) |
-| `HF_TOKEN` | Optional image fallback (Hugging Face FLUX.1-schnell) |
 | `GITHUB_TOKEN` | Feedback issues + degraded-run tracking (built-in) |
 | `FEEDBACK_SIGNING_KEY` | Signs the 👍/👎 links. **Required for feedback to be accepted** (without it links are inert) |
 | `STATE_ENCRYPTION_KEY` | Encrypts the private Actions state cache; generated and configured for this repository |
@@ -219,14 +214,14 @@ shortest `Retry-After`.
 
 | | Order (configurable) | Needs |
 |---|---|---|
-| **Text** (`LLM_PROVIDER_ORDER`) | Groq → Gemini → Cloudflare Workers AI → GitHub Models (opt-in) → Cerebras → OpenRouter (`:free` models) → Mistral → Hugging Face → keyless Pollinations | Each is optional: only providers with a key take part. GitHub Models (`GITHUB_MODELS_ENABLED=true`, built-in token, `models: read`) is opt-in: it answered with a plain `OK` from Actions when tried. Set `LLM_KEYLESS_FALLBACK=false` to keep prompts off the public keyless endpoint. |
-| **Images** (`IMAGE_PROVIDER_ORDER`) | Cloudflare FLUX → Gemini image → Hugging Face FLUX → Together FLUX → Pollinations → **local branded card** | The card is rendered locally and cannot fail, so a post always ships with a visual (flagged with a warning). `IMAGE_CARD_FALLBACK=false` disables it. |
-| **Creative** | Static image posts and FFmpeg-rendered vertical MP4 Reels | Reel videos are hosted with the public site assets and scheduled through the configured Buffer channel. |
+| **Text** (`LLM_PROVIDER_ORDER`) | Hugging Face inference with Qwen2.5-7B-Instruct (Apache-2.0) | Scheduled GitHub Actions use this open-weight model only. Set `HF_TOKEN` to enable hosted inference. |
+| **Images** (`IMAGE_PROVIDER_ORDER`) | Hugging Face inference with FLUX.1-schnell (Apache-2.0), then local Pillow fallback | Scheduled GitHub Actions use this open-weight model only. The local fallback is flagged by automated publication QA and will not be queued. |
+| **Creative** | Static image posts and FFmpeg-rendered vertical MP4 Reels | The prompt generator supports both formats. Reel videos are hosted with the public site assets and scheduled through the configured Buffer channel. |
 
-Model lists are plain env vars (`GROQ_FALLBACK_MODELS`, `OPENROUTER_MODELS`, …): free
-model names rotate, and an unknown one is simply skipped. If a provider answers with
-invalid JSON the next provider is asked (`run_json`). The daily *Drift Check* probes every
-configured provider and opens an issue only if **all** of them fail.
+The workflow restricts generation to Apache-2.0 models and does not use Gemini or other
+closed model providers. Hugging Face is the hosted inference service; the rendering tools
+(FFmpeg, Pillow, and Piper) are open source. The daily *Drift Check* probes configured
+providers and opens an issue when generation services fail.
 
 ## Keeping personal data out of git
 
@@ -271,7 +266,7 @@ touches `data/` or `agent.db`. Optional: `pre-commit install` (ruff on commit, p
   (`LLM_CONCURRENCY`, `IMAGE_CONCURRENCY`, `FETCH_CONCURRENCY`; `1` restores sequential behaviour).
   Publishing re-renders only the business that changed.
 - **Budgets:** `LEAD_TIME_BUDGET_SECONDS` caps lead scraping; Apify calls are made once
-  per handle per run. Each prompt renders as one static image.
+  per handle per run. Each prompt renders according to its normalized image or Reel format.
 - **Scraping safety:** the website scraper refuses private/loopback/metadata addresses,
   and scraped text is fenced as untrusted data in every LLM prompt.
 

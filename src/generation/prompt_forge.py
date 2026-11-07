@@ -41,6 +41,24 @@ def single_image_variant(variant: dict[str, Any]) -> dict[str, Any]:
         normalized["prompt_text"] = f"{text}\n\n{requirement}"
     return normalized
 
+
+def normalize_variant(variant: dict[str, Any]) -> dict[str, Any]:
+    """Keep valid single-image and Reel briefs; degrade malformed Reel briefs to a still."""
+    normalized = dict(variant)
+    beats = [str(b).strip() for b in (normalized.get("reel_beats") or []) if str(b).strip()][:5]
+    if str(normalized.get("format", "")).strip().lower() in {"reel", "video"} and len(beats) >= 3:
+        normalized["format"] = "reel"
+        normalized["reel_beats"] = beats
+        overlays = [str(s).strip() for s in (normalized.get("reel_overlays") or []) if str(s).strip()][:5]
+        normalized["reel_overlays"] = [" ".join(line.split()[:6]) for line in overlays]
+        text = str(normalized.get("prompt_text", "")).strip()
+        text = _TIMED_VIDEO.sub("Create a short Reel", text)
+        text = _SLIDE_COUNT.sub("sequential scenes", text)
+        text = _CAROUSEL.sub("Reel", text)
+        normalized["prompt_text"] = text
+        return normalized
+    return single_image_variant(normalized)
+
 PROMPT_TYPE_DESCRIPTIONS = {
     "educational": "Teach one valuable lesson or insight, actionable, with a strong specific hook.",
     "storytelling": "Tell a relatable story with a turning point and a lesson tied to the brand.",
@@ -54,9 +72,7 @@ PROMPT_TYPE_DESCRIPTIONS = {
 
 
 class PromptForge:
-    """Generates content prompts per business. Each prompt instructs a human
-    creator (or AI assistant) how to produce one post — the PROMPT itself is
-    the deliverable, not an auto-posted caption."""
+    """Generate creator briefs for either a single image or an assembled Reel."""
 
     def __init__(self) -> None:
         self.llm = LLMClient()
@@ -86,7 +102,8 @@ class PromptForge:
 
         prompt = f"""
 You are a top-tier viral content strategist specializing in explosive social media growth (Instagram & LinkedIn).
-Generate {count} distinct, scroll-stopping content prompts engineered to maximize saves, shares, and watch time.
+Generate {count} distinct content prompts. Use a mix of single images and short Reels where suitable.
+When count is 5, include at least 2 single images and 2 Reels so both render paths stay exercised. When count is smaller, choose the format that best fits the idea.
 
 Business profile:
 {fence(business_profile, 6000)}
@@ -125,7 +142,11 @@ Provide a complete, ready-to-post "caption" with:
 - Strong CTA to save or comment ("Bookmark this before your next campaign")
 - Tiered hashtags: 3 hyper-niche, 3 industry, 2 broad discovery
 
-Deliverable: exactly one static image in one frame. Do not suggest slides, carousels, or videos.
+FORMAT RULES:
+- Choose either "single image" or "reel" for each idea. Never choose carousel.
+- For "single image", describe one finished composition.
+- For "reel", provide 3-5 sequential, visually distinct scene descriptions in reel_beats and 3-5 short on-screen lines in reel_overlays (max 6 words each). Start with the finished result or strongest visual in the first beat. Build a simple beginning, middle, and end that can be assembled from stills with gentle motion.
+- Avoid relying on generated text inside an image. On-screen lines are overlaid by the renderer.
 
 TRUTHFULNESS (strict):
 - Never invent statistics, percentages, multipliers (3x), money amounts, client counts, client names, testimonials or results such as ROI, CTR or conversion lifts. These posts appear on a real business account.
@@ -147,7 +168,9 @@ Respond ONLY with JSON:
     "prompt_text": "complete creator brief detailing strategy, execution, and audience psychology (150-350 words)",
     "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5", "#tag6", "#tag7", "#tag8"],
     "platform_focus": "instagram" | "linkedin" | "both",
-    "format": "single image",
+    "format": "single image" | "reel",
+    "reel_beats": ["scene 1 visual", "scene 2 visual", "scene 3 visual"],
+    "reel_overlays": ["short line 1", "short line 2", "short line 3"],
     "angle": "one sentence strategic angle",
     "audience_segment": "persona name from audience map"
   }}
@@ -169,17 +192,18 @@ Respond ONLY with JSON:
                 "prompt_text": str(v.get("prompt_text", "")),
                 "hashtags": [str(h) for h in v.get("hashtags", []) if str(h).startswith("#")],
                 "platform_focus": str(v.get("platform_focus", "both")),
-                "format": "single image",
+                "format": str(v.get("format", "single image")),
                 "angle": str(v.get("angle", "")),
                 "audience_segment": str(v.get("audience_segment", "") or ""),
                 "reel_beats": [str(b).strip() for b in v.get("reel_beats", []) if str(b).strip()][:5],
+                "reel_overlays": [str(b).strip() for b in v.get("reel_overlays", []) if str(b).strip()][:5],
             }
             for v in data
             if isinstance(v, dict) and v.get("prompt_text")
         ]
         if not variants:
             raise ValueError("prompt forge produced no usable variants")
-        variants = [single_image_variant(v) for v in variants]
+        variants = [normalize_variant(v) for v in variants]
         logger.info("Generated %d prompt variants", len(variants))
         return variants[:count]
 
@@ -195,8 +219,8 @@ Respond ONLY with JSON:
         hints = "\n".join(f"- {h}" for h in improvement_hints)
         prompt = f"""
 You are a viral content strategist. Improve this content prompt to maximize virality.
-Keep the deliverable to exactly one static image in one frame. Do not suggest slides,
-a carousel, a Reel, video, animation, or a sequence of frames.
+Preserve the current format (single image or Reel). Do not change it to a carousel.
+For a Reel, keep 3-5 sequential scene beats and short on-screen overlay lines.
 
 Current prompt:
 {fence(best_variant)}
@@ -224,7 +248,9 @@ Respond ONLY with the improved prompt as JSON with the same fields:
   "prompt_text": "...",
   "hashtags": ["..."],
   "platform_focus": "...",
-  "format": "single image",
+  "format": "{best_variant.get('format', 'single image')}",
+  "reel_beats": ["scene 1 visual", "scene 2 visual", "scene 3 visual"],
+  "reel_overlays": ["short line 1", "short line 2", "short line 3"],
   "angle": "...",
   "audience_segment": "..."
 }}
@@ -233,7 +259,7 @@ Respond ONLY with the improved prompt as JSON with the same fields:
             data = self.llm.run_json(prompt, label="prompt-forge-refine", temperature=0.6, expect=(dict,))
             if not isinstance(data, dict) or not data.get("prompt_text"):
                 raise ValueError("refined prompt invalid")
-            return single_image_variant({
+            return normalize_variant({
                 "prompt_type": str(data.get("prompt_type", best_variant.get("prompt_type", "educational"))),
                 "hook_type": str(data.get("hook_type", best_variant.get("hook_type", "contrarian"))),
                 "title": str(data.get("title", best_variant.get("title", ""))),
@@ -243,12 +269,17 @@ Respond ONLY with the improved prompt as JSON with the same fields:
                 "prompt_text": str(data.get("prompt_text", "")),
                 "hashtags": [str(h) for h in data.get("hashtags", best_variant.get("hashtags", []))],
                 "platform_focus": str(data.get("platform_focus", best_variant.get("platform_focus", "both"))),
-                "format": "single image",
+                "format": str(best_variant.get("format", data.get("format", "single image"))),
                 "angle": str(data.get("angle", best_variant.get("angle", ""))),
                 "audience_segment": str(data.get("audience_segment", "") or best_variant.get("audience_segment", "")),
                 "reel_beats": [
                     str(b).strip()
                     for b in data.get("reel_beats", best_variant.get("reel_beats", []))
+                    if str(b).strip()
+                ][:5],
+                "reel_overlays": [
+                    str(b).strip()
+                    for b in data.get("reel_overlays", best_variant.get("reel_overlays", []))
                     if str(b).strip()
                 ][:5],
             })

@@ -159,7 +159,7 @@ class DailyPipeline:
             # Attach a ready-to-post brief (caption + best time) to every prompt.
             self._attach_posting_brief(business, prompts, social_data, audience_map)
 
-            # Render one static image for each approved prompt.
+            # Render each approved prompt using its selected image or Reel format.
             from src.generation.creative_forge import CreativeForge
 
             creative = CreativeForge()
