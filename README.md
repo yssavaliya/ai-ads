@@ -220,7 +220,7 @@ shortest `Retry-After`.
 |---|---|---|
 | **Text** (`LLM_PROVIDER_ORDER`) | Groq → Gemini → Cloudflare Workers AI → GitHub Models (opt-in) → Cerebras → OpenRouter (`:free` models) → Mistral → Hugging Face → keyless Pollinations | Each is optional: only providers with a key take part. GitHub Models (`GITHUB_MODELS_ENABLED=true`, built-in token, `models: read`) is opt-in: it answered with a plain `OK` from Actions when tried. Set `LLM_KEYLESS_FALLBACK=false` to keep prompts off the public keyless endpoint. |
 | **Images** (`IMAGE_PROVIDER_ORDER`) | Cloudflare FLUX → Gemini image → Hugging Face FLUX → Together FLUX → Pollinations → **local branded card** | The card is rendered locally and cannot fail, so a post always ships with a visual (flagged with a warning). `IMAGE_CARD_FALLBACK=false` disables it. |
-| **Creative** | One static image for each prompt | |
+| **Creative** | Static image posts and FFmpeg-rendered vertical MP4 Reels | Reel videos are hosted with the public site assets and scheduled through the configured Buffer channel. |
 
 Model lists are plain env vars (`GROQ_FALLBACK_MODELS`, `OPENROUTER_MODELS`, …): free
 model names rotate, and an unknown one is simply skipped. If a provider answers with

@@ -103,6 +103,7 @@ class BufferPublisher:
         profile_ids: list[str] | None = None,
         draft: bool | None = None,
         now: bool | None = None,
+        video_url: str | None = None,
     ) -> dict[str, Any]:
         """Post or schedule a single update via Buffer GraphQL API."""
         if not self.access_token:
@@ -115,6 +116,17 @@ class BufferPublisher:
         is_draft = self.draft_mode if draft is None else draft
         is_now = self.now if now is None else now
 
+        if image_url and video_url:
+            raise ValueError("Buffer posts must contain either an image or a video, not both.")
+
+        asset: dict[str, Any] = {}
+        instagram_type = "post"
+        if video_url:
+            asset = {"video": {"url": video_url}}
+            instagram_type = "reel"
+        elif image_url:
+            asset = {"image": {"url": image_url}}
+
         results = []
         for channel_id in targets:
             variables: dict[str, Any] = {
@@ -125,10 +137,10 @@ class BufferPublisher:
                     "mode": "shareNow" if is_now else "addToQueue",
                     "needsApproval": False,
                     "saveToDraft": is_draft,
-                    "assets": [{"image": {"url": image_url}}] if image_url else [],
+                    "assets": [asset] if asset else [],
                     "metadata": {
                         "instagram": {
-                            "type": "post",
+                            "type": instagram_type,
                             "shouldShareToFeed": True,
                             "isAiGenerated": True,
                         }
@@ -137,8 +149,8 @@ class BufferPublisher:
             }
 
             logger.info(
-                "Posting to Buffer channel %s (image=%s, draft=%s, now=%s)",
-                channel_id, image_url, is_draft, is_now,
+                "Posting to Buffer channel %s (asset=%s, draft=%s, now=%s)",
+                channel_id, "video" if video_url else ("image" if image_url else "none"), is_draft, is_now,
             )
 
             with httpx.Client(timeout=45) as client:
@@ -203,22 +215,28 @@ class BufferPublisher:
             caption = f"{caption.strip()}\n\n{' '.join(hashtags)}"
 
         asset_info = top_prompt.get("asset") or {}
-        asset_path = (
+        asset_type = str(top_prompt.get("asset_type") or asset_info.get("type") or "").lower()
+        prompt_asset_path = top_prompt.get("asset_path")
+        is_video = asset_type in {"reel", "video"} or str(prompt_asset_path or "").lower().endswith(".mp4")
+        video_path = asset_info.get("video") or (prompt_asset_path if is_video else None)
+        image_path = (
             top_prompt.get("asset_path")
-            or asset_info.get("image")
-            or asset_info.get("thumb")
-        )
+            if not video_path
+            else None
+        ) or asset_info.get("image") or asset_info.get("thumb")
 
-        image_url = None
-        if asset_path:
+        def public_url(asset_path: str | None) -> str | None:
+            if not asset_path:
+                return None
             if "assets/" in asset_path:
-                rel = asset_path[asset_path.index("assets/"):]
-                image_url = self.get_public_asset_url(rel)
-            else:
-                image_url = self.get_public_asset_url(asset_path)
+                asset_path = asset_path[asset_path.index("assets/"):]
+            return self.get_public_asset_url(asset_path)
+
+        video_url = public_url(video_path)
+        image_url = public_url(image_path) if not video_url else None
 
         try:
-            self.schedule_post(text=caption, image_url=image_url)
+            self.schedule_post(text=caption, image_url=image_url, video_url=video_url)
             return True
         except Exception as exc:
             logger.error("Failed to schedule prompt to Buffer: %s", exc)

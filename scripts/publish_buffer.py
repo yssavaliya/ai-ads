@@ -90,6 +90,40 @@ def is_degraded(entry: dict) -> bool:
     return any("branded card" in str(w).lower() for w in (entry.get("warnings") or []))
 
 
+def auto_publish_block_reason(prompt: dict) -> str | None:
+    """Fail closed on missing, malformed, or known-degraded assets before Buffer scheduling."""
+    asset = prompt.get("asset") or {}
+    asset_type = str(prompt.get("asset_type") or asset.get("type") or "").lower()
+    prompt_asset_path = prompt.get("asset_path")
+    is_video = asset_type in {"reel", "video"} or str(prompt_asset_path or "").lower().endswith(".mp4")
+    video_path = asset.get("video") or (prompt_asset_path if is_video else None)
+    image_path = (prompt_asset_path if not video_path else None) or asset.get("image") or asset.get("thumb")
+    asset_path = video_path or image_path
+    if not asset_path:
+        return "no rendered media asset"
+
+    path_lower = str(asset_path).lower()
+    is_video = bool(video_path) or asset_type in {"reel", "video"} or path_lower.endswith(".mp4")
+    if is_video and not path_lower.endswith(".mp4"):
+        return "Buffer Reel publishing requires a rendered MP4 asset"
+
+    warnings = prompt.get("warnings") or []
+    if isinstance(warnings, str):
+        warnings = [warnings]
+    warning_text = " ".join(str(item).lower() for item in warnings)
+    for fragment in (
+        "all ai image providers failed",
+        "used a branded card background",
+        "reel render failed",
+        "falling back to single image",
+        "asset render failed",
+        "watermark",
+    ):
+        if fragment in warning_text:
+            return f"render QA failed: {fragment}"
+    return None
+
+
 def pick_prompt(prompts: list[dict], posted: set[str] | frozenset[str] = frozenset(), grounding: str = "") -> dict | None:
     """Highest-scoring creative that has a real AI image and no unverified statistics.
 
@@ -99,7 +133,7 @@ def pick_prompt(prompts: list[dict], posted: set[str] | frozenset[str] = frozens
     """
     usable = []
     for p in prompts:
-        if is_degraded(p) or str(p.get("id")) in posted:
+        if is_degraded(p) or auto_publish_block_reason(p) or str(p.get("id")) in posted:
             continue
         claims = unsupported_claims(p, grounding)
         if claims:
@@ -163,6 +197,11 @@ def main() -> None:
                   "copy); nothing was posted.")
             sys.exit(0)
 
+    block_reason = auto_publish_block_reason(target_prompt)
+    if block_reason:
+        print(f"Automated render QA blocked publication: {block_reason}. Skipping Buffer publication.")
+        sys.exit(0)
+
     title = target_prompt.get("title", "Ad")
     score = target_prompt.get("score") or target_prompt.get("virality_score") or 0
     caption = target_prompt.get("caption") or target_prompt.get("prompt_text", "")
@@ -171,19 +210,25 @@ def main() -> None:
         caption = f"{caption.strip()}\n\n{' '.join(hashtags)}"
 
     asset_info = target_prompt.get("asset") or {}
-    asset_path = target_prompt.get("asset_path") or asset_info.get("image") or asset_info.get("thumb")
+    asset_type = str(target_prompt.get("asset_type") or asset_info.get("type") or "").lower()
+    prompt_asset_path = target_prompt.get("asset_path")
+    is_video = asset_type in {"reel", "video"} or str(prompt_asset_path or "").lower().endswith(".mp4")
+    video_path = asset_info.get("video") or (prompt_asset_path if is_video else None)
+    image_path = (prompt_asset_path if not video_path else None) or asset_info.get("image") or asset_info.get("thumb")
 
-    image_url = None
-    if asset_path:
+    def public_url(asset_path: str | None) -> str | None:
+        if not asset_path:
+            return None
         if "assets/" in asset_path:
-            rel = asset_path[asset_path.index("assets/"):]
-            image_url = publisher.get_public_asset_url(rel)
-        else:
-            image_url = publisher.get_public_asset_url(asset_path)
+            asset_path = asset_path[asset_path.index("assets/"):]
+        return publisher.get_public_asset_url(asset_path)
+
+    video_url = public_url(video_path)
+    image_url = public_url(image_path) if not video_url else None
 
     print("\n--- Publishing to Buffer ---")
     print(f"Title     : {title} (Virality Score: {score})")
-    print(f"Image URL : {image_url}")
+    print(f"Media URL : {video_url or image_url}")
     print(f"Mode      : {'Immediate Post' if args.now else ('Draft' if args.draft else 'Scheduled Queue')}")
     print(f"Profiles  : {publisher.profile_ids}")
     print("----------------------------\n")
@@ -205,7 +250,7 @@ def main() -> None:
             sys.exit(0)
 
     try:
-        res = publisher.schedule_post(text=caption, image_url=image_url)
+        res = publisher.schedule_post(text=caption, image_url=image_url, video_url=video_url)
         print("✅ Successfully published to Buffer!")
         record_posted(target_prompt)
         for post in res.get("posts", []):
