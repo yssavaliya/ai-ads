@@ -278,7 +278,7 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
             "visual_scene": "cinematic product photography",
             "reel_beats": ["tea leaves macro", "chai pouring", "pack reveal", "warm color", "cup and pack", "tabletop final frame"],
             "hook": "Start with fresh tea leaves.",
-            "reel_overlays": ["Not the hook", "A slow pour", "Meet your chai", "Notice the color", "One simple frame", "A concept for you"],
+            "reel_overlays": ["Start with fresh tea", "A slow pour", "Meet your chai", "Notice the color", "One simple frame", "A concept for you"],
             "reel_narration": [
                 "Start with fresh tea leaves. Then show the finished cup, so viewers can see the product idea before we explain the choices behind it. Let that first image do some work.",
                 "Let the chai pour slowly while you explain how warm light, texture, and color shape the feeling of this small everyday ritual. Keep the voice friendly and easy to follow.",
@@ -302,13 +302,13 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
             "cinematic product photography. Scene: tabletop final frame",
         ]
     )
-    assert seen_overlays == ["Start with fresh tea leaves.", "A slow pour", "Meet your chai", "Notice the color", "One simple frame", "A concept for you"]
+    assert seen_overlays == ["Start with fresh tea", "A slow pour", "Meet your chai", "Notice the color", "One simple frame", "A concept for you"]
     assert spoken_lines == [
-        "Start with fresh tea leaves. Then show the finished cup to give viewers a reason to stay.",
-        "Let the chai pour slowly while you explain how aroma and color shape the ritual.",
-        "Move from the cup to the pack. That transition connects the finished drink with the product, while keeping the frame clean and easy to follow.",
-        "Notice the color in the next shot. It creates a consistent mood across the scenes and keeps the viewer focused on the tea itself.",
-        "Bring the pack and cup together. This final composition shows how a product ad can tell a complete story with a few clear visual decisions.",
-        "If you want a concept for your product, DM the studio AD with what you sell and the audience you want to reach.",
+        "Start with fresh tea leaves. Then show the finished cup, so viewers can see the product idea before we explain the choices behind it. Let that first image do some work.",
+        "Let the chai pour slowly while you explain how warm light, texture, and color shape the feeling of this small everyday ritual. Keep the voice friendly and easy to follow.",
+        "Move from the cup to the pack. That transition connects the finished drink with the product, while keeping the frame clean and easy to follow. Give the viewer time to notice it.",
+        "Notice the color in the next shot. It creates a consistent mood across the scenes and keeps the viewer focused on the tea itself. Avoid details that compete with the product.",
+        "Bring the pack and cup together. This final composition shows how a product ad can tell a complete story with a few clear visual decisions. That is the takeaway viewers can reuse.",
+        "If you want a concept for your product, DM the studio AD with what you sell and the audience you want to reach. We can make the first step simple.",
     ]
     assert not set(spoken_lines) & {"tea leaves macro", "chai pouring", "pack reveal", "warm color", "cup and pack", "tabletop final frame"}

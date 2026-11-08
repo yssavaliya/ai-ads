@@ -168,7 +168,7 @@ class CreativeForge:
         generated = image_providers.generate(image_prompt, width, height)
         if generated is not None:
             data, provider = generated
-        elif re.search(r"-beat\d+$", name):
+        elif re.search(r"-beat\d+$", name) and settings.image_card_fallback:
             beat = int(re.search(r"-beat(\d+)$", name).group(1))  # type: ignore[union-attr]
             data = self._local_reel_scene(width, height, beat)
             provider = "local-open-source-scene"

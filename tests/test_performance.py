@@ -252,7 +252,7 @@ def test_a_failed_beat_prevents_short_incomplete_narration_from_becoming_a_reel(
          "reel_beats": ["beat-one", "beat-two", "beat-three", "beat-four", "beat-five", "beat-six"],
          "reel_overlays": ["H", "Step two", "Step three", "Step four", "Step five", "Try it today"],
          "reel_narration": [
-             "H. Open with the final idea, then explain one useful detail viewers can apply to a product ad without needing a large team.",
+                 "H. Open with the final idea, then explain one useful detail viewers can apply to a product ad without needing a large team. Show the result immediately and make each visual choice easy to understand.",
              "Explain the creative choices one by one. Keep each point clear, and show how color, framing, and movement help the product feel easy to understand.",
              "Use the third scene to make the problem visible. Give viewers a concrete example, then connect it to the design decision they can see.",
              "Show the next step in the process. A focused background and readable composition can make the product story feel more deliberate.",
