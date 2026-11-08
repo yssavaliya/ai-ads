@@ -5576,6 +5576,112 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-102-poster.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-08-103",
+   "date": "2026-11-08",
+   "created_at": "2026-11-08T07:52:30",
+   "prompt_id": 103,
+   "hook_type": "before_after",
+   "title": "Smart Speaker AI Ad Spec",
+   "prompt_type": "social_proof",
+   "score": 70,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "From bland to buzz: AI ad for a smart speaker",
+   "angle": "Showcase a fast AI‑powered visual upgrade for a recognizable product.",
+   "prompt_text": "This post serves the spec‑concept pillar and targets Startup Founders who need a quick visual proof of concept. The hook is a before‑after transformation that instantly shows the value of AI‑generated single image ads. The visual scene is a cinematic studio shot that feels premium and technology‑forward, reinforcing the brand’s positioning as an AI advertising studio. The caption breaks down the three creative decisions, giving the audience a concrete takeaway they can apply to their own product visuals. The CTA asks a specific question about audio challenges, prompting DMs that feed the studio’s lead pipeline. The angle is to demonstrate speed and quality of AI single image ads without any vague promises.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "From bland to buzz: AI ad for a smart speaker\n\nWe took a plain product photo and added three AI‑driven choices:\n1️⃣ A hook that highlights “voice‑first convenience” in the first three seconds.\n2️⃣ Visual contrast – the speaker glows against a dark, reflective surface to suggest premium tech.\n3️⃣ A clear call‑to‑action that invites users to “Ask Anything”.\n\nWhat’s the biggest audio‑related challenge your product faces? DM AD with your product and advertising goal.\n\n#AIAdSpec #SmartSpeakerAd #SpecConcept #AIAds #ProductVisuals #SocialCreatives #Marketing #Design",
+   "hashtags": [
+    "#AIAdSpec",
+    "#SmartSpeakerAd",
+    "#SpecConcept",
+    "#AIAds",
+    "#ProductVisuals",
+    "#SocialCreatives",
+    "#Marketing",
+    "#Design"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The concept leverages a proven spec‑concept pattern—before‑after transformation with a clear AI angle—while offering actionable insights that resonate with startup founders. The hook is concise and visually arresting, and the CTA is designed to generate direct inquiries. However, without explicit spec labeling, a unique visual twist, or localized hashtags, the post risks blending into the noise, keeping the virality potential in the medium range.",
+   "key_factors": [
+    "Strong before‑after hook that instantly signals transformation",
+    "Clear demonstration of AI‑generated single image ad, aligning with studio’s core offer",
+    "Caption provides actionable creative decisions, adding value for startup founders",
+    "Targeted CTA that invites DMs, feeding the lead pipeline",
+    "Format (static image) fits Instagram’s visual consumption habits"
+   ],
+   "risks": [
+    "If the post isn’t explicitly labeled as a spec concept, it may be mis‑categorized by the audience",
+    "Generic before‑after visuals can get lost in a sea of similar content",
+    "CTA about audio challenges feels tangential to a single‑image ad, potentially confusing viewers",
+    "Missing Indian‑specific cultural cues or trending hashtags could limit reach among the target demographic"
+   ],
+   "warnings": [
+    "All AI image providers failed or are rate limited — used a branded card background instead"
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-103.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-103-thumb.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-08-104",
+   "date": "2026-11-08",
+   "created_at": "2026-11-08T07:52:30",
+   "prompt_id": 104,
+   "hook_type": "",
+   "title": "A Product Ad Starts With One Clear Idea",
+   "prompt_type": "educational",
+   "score": null,
+   "below_threshold": false,
+   "threshold": null,
+   "label": "UNSCORED",
+   "hook": "Your product doesn't need a huge set to stop the scroll.",
+   "angle": "Show how one product benefit becomes a polished, clearly labeled spec ad concept.",
+   "prompt_text": "A six-scene vertical spec product-ad concept for a reusable bottle. Show the hook, brief, product detail, in-context use, final composition, and one DM CTA. This is a demonstration concept, not client work or a performance claim.",
+   "caption": "A clearly labeled spec concept: one product, one useful idea, and visual choices that support it. Have a product in mind? DM AD with the product and your advertising goal.\n\n#ProductAd #CreativeStudio #AIAdvertising #AimagixStudio",
+   "hashtags": [
+    "#ProductAd",
+    "#CreativeStudio",
+    "#AIAdvertising",
+    "#AimagixStudio"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "video_duration_seconds": 66.98956916099773,
+   "platform_focus": "instagram",
+   "audience_segment": "Founders and marketing teams at small product businesses",
+   "reasoning": "Reviewed deterministic fallback; not scored because the LLM provider chain was unavailable.",
+   "key_factors": [],
+   "risks": [
+    "Fallback concept is unscored; compare retention and saves after posting."
+   ],
+   "warnings": [
+    "LLM outage fallback; unscored spec concept.",
+    "AI image unavailable; locally illustrated Reel scene 1 was used",
+    "AI image unavailable; locally illustrated Reel scene 2 was used",
+    "AI image unavailable; locally illustrated Reel scene 3 was used",
+    "AI image unavailable; locally illustrated Reel scene 4 was used",
+    "AI image unavailable; locally illustrated Reel scene 5 was used",
+    "AI image unavailable; locally illustrated Reel scene 6 was used"
+   ],
+   "asset": {
+    "type": "reel",
+    "video": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-104.mp4",
+    "poster": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-104-poster.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-104-poster.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
