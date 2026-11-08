@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
+      FORCE_REEL_ONLY: ${{ inputs.reel_only || 'false' }}
       LOG_LEVEL: INFO
       DATABASE_PATH: agent.db
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}

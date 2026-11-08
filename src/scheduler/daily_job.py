@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import random
 import sys
 import time
@@ -121,6 +122,27 @@ class DailyPipeline:
                 history=history,
                 threshold=threshold,
             )
+
+            # If the text-model chain is temporarily unavailable, keep the
+            # studio's Reel workflow alive with a carefully bounded, unscored
+            # spec concept. It uses only the verified offer and never invents
+            # client results, pricing, or performance claims. Other businesses
+            # continue to fail closed instead of receiving generic copy.
+            if not prompts and name.casefold().replace(" ", "") == "aimagixstudio":
+                prompts = [self._aimagix_fallback_reel()]
+                logger.warning(
+                    "::warning::LLM outage: using the reviewed Aimagix spec-Reel fallback; "
+                    "it remains unscored and must pass the same media and claims checks."
+                )
+            elif (
+                os.getenv("FORCE_REEL_ONLY", "").lower() in ("1", "true", "yes")
+                and name.casefold().replace(" ", "") == "aimagixstudio"
+            ):
+                # The explicitly requested Reel-only run gets a reviewed
+                # renderable candidate in addition to model ideas. If the
+                # model's Reel has invalid narration or its render degrades,
+                # Buffer can still choose this one-minute candidate.
+                prompts.append(self._aimagix_fallback_reel())
 
             # NOVELTY (#2): don't re-send a prompt we already sent in the last
             # 14 days — replace near-duplicates so the feed stays fresh.
@@ -621,6 +643,63 @@ class DailyPipeline:
             return PromptType(value)
         except ValueError:
             return PromptType.EDUCATIONAL
+
+    @staticmethod
+    def _aimagix_fallback_reel() -> dict[str, Any]:
+        """Reviewed, claim-safe one-minute Reel used only during a total LLM outage."""
+        narration = [
+            "Your product doesn't need a huge set to stop the scroll. Start with one customer benefit and make it the first image. This is a clearly labeled spec concept for a reusable bottle.",
+            "Keep the bottle recognizable. Use a fresh color story, and let condensation and light suggest a cold sip. The product stays the hero.",
+            "Move closer: crisp edges, a clean silhouette, and a bright highlight make the product feel tangible. This is an AI-made visual concept.",
+            "Now show it in context. A work bag or morning desk helps people picture where it belongs. The scene supports the product; it doesn't distract.",
+            "Bring the product and brand style together. Keep the words short, leave room for the image, and make the next step clear. A simple layout keeps the product easy to read on a phone.",
+            "That's the idea: one clear product benefit, visual choices with a reason, and a simple invitation. Have a product in mind? DM AD with your product and advertising goal."
+        ]
+        return {
+            "title": "A Product Ad Starts With One Clear Idea",
+            "hook": "Your product doesn't need a huge set to stop the scroll.",
+            "angle": "Show how one product benefit becomes a polished, clearly labeled spec ad concept.",
+            "prompt_text": (
+                "A six-scene vertical spec product-ad concept for a reusable bottle. Show the hook, "
+                "brief, product detail, in-context use, final composition, and one DM CTA. This is a "
+                "demonstration concept, not client work or a performance claim."
+            ),
+            "visual_scene": "A reusable bottle shown as a clearly speculative premium product advertisement, vertical 9:16, editorial product photography, crisp details, indigo and cyan studio lighting, no text, no logo",
+            "reel_beats": [
+                "A plain reusable bottle appears alone against a dark studio background; a fast light sweep reveals its silhouette.",
+                "A simple moodboard of color swatches and lighting references surrounds the same bottle, conveying a focused creative brief.",
+                "Macro product shot: condensation, clean edges, tactile surface, and a bright cyan highlight; keep the bottle shape consistent.",
+                "The same bottle sits beside a work bag and notebook on a morning desk, suggesting a believable everyday use scene.",
+                "Three polished product angles resolve into one cohesive premium advertising composition with clear negative space.",
+                "The final spec-concept frame shows the bottle centered in the brand's indigo-cyan visual world, with generous clean space for a short CTA overlay."
+            ],
+            "reel_overlays": [
+                "NO HUGE SET NEEDED",
+                "START WITH ONE BENEFIT",
+                "MAKE IT FEEL TANGIBLE",
+                "SHOW IT IN CONTEXT",
+                "ONE IDEA, CLEARLY SHOWN",
+                "DM AD WITH YOUR PRODUCT"
+            ],
+            "reel_narration": narration,
+            "caption": (
+                "A clearly labeled spec concept: one product, one useful idea, and visual choices that support it. "
+                "Have a product in mind? DM AD with the product and your advertising goal."
+            ),
+            "hashtags": ["#ProductAd", "#CreativeStudio", "#AIAdvertising", "#AimagixStudio"],
+            "prompt_type": "educational",
+            "format": "reel",
+            "platform_focus": "instagram",
+            "audience_segment": "Founders and marketing teams at small product businesses",
+            "virality_score": None,
+            "virality_label": "UNSCORED",
+            "virality_probability": None,
+            "reasoning": "Reviewed deterministic fallback; not scored because the LLM provider chain was unavailable.",
+            "key_factors": [],
+            "risks": ["Fallback concept is unscored; compare retention and saves after posting."],
+            "warnings": ["LLM outage fallback; unscored spec concept."],
+            "generation_attempt": 0,
+        }
 
 
 def main() -> None:
