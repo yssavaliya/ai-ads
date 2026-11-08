@@ -5469,6 +5469,113 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-100-thumb.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-08-101",
+   "date": "2026-11-08",
+   "created_at": "2026-11-08T07:44:49",
+   "prompt_id": 101,
+   "hook_type": "before_after",
+   "title": "Stop Shooting Flat: The AI Product Hero Shift",
+   "prompt_type": "educational",
+   "score": 65,
+   "below_threshold": true,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "Stop shooting flat: AI turns basic photos into hero ads",
+   "angle": "Demonstrate the cost-effective transformation of basic product photos into high-impact ad creatives using AI, targeting SMEs with limited design budgets.",
+   "prompt_text": "This single image leverages a 'before_after' hook to address the pain point of limited design resources and high production costs for SMEs. It visually demonstrates the transformation from a flat, unengaging photo to a cinematic, AI-enhanced product hero shot, aligning with the 'Spec product ad' and 'Process' pillars. The content avoids generic motivation and focuses strictly on the practical utility of AI in creative advertising. The visual scene uses a split-screen to explicitly show the contrast, addressing the risk of the transformation not being visible. The audio narration is conversational and concise, guiding the viewer through the value proposition without inventing client results. The CTA is a specific invitation to DM 'AD' to generate a spec concept for their own product.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Stop shooting flat. 🛑\n\nMost SMEs think they need a $5k studio shoot to make their product look premium. They don’t. They just need a better visual direction.\n\nWe took a standard, flat photo of earbuds and used a single AI prompt to transform it into a cinematic hero shot. No new camera gear. No studio rental. Just a clear brief fed into our AI visual generator.\n\nThis is how we build ad creatives that actually stop the scroll. It’s not magic; it’s a specific workflow that turns basic product shots into high-impact social assets.\n\nWant to see your product in a cinematic light? DM AD with your product name and the vibe you want. We’ll show you the concept.\n\n#ProductVisuals #AIAdCreative #SMEGrowth #DesignSprintAI #BrandMakeover #MarketingTips #CreativeStudio #AimagixStudio",
+   "hashtags": [
+    "#ProductVisuals",
+    "#AIAdCreative",
+    "#SMEGrowth",
+    "#DesignSprintAI",
+    "#BrandMakeover",
+    "#MarketingTips",
+    "#CreativeStudio",
+    "#AimagixStudio"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Marketing Manager (SME)",
+   "reasoning": "The prompt delivers a relevant, audience‑specific spec concept with a clear before‑after hook, but its static format and generic hook reduce scroll‑stopping power compared to trending Reels or more dynamic content. The CTA is strong, yet the lack of Indian cultural or hashtag optimization may limit reach.",
+   "key_factors": [
+    "Clear before‑after visual contrast that instantly communicates value",
+    "Direct alignment with the studio’s core offer (AI‑enhanced product hero shots)",
+    "Targeted hook that speaks to SMEs’ pain points (limited resources, high costs)",
+    "Specific CTA to DM for a custom spec concept, driving inquiry traffic",
+    "Use of a split‑screen format that is easily scannable on Instagram feed"
+   ],
+   "risks": [
+    "Hook is generic and may not stand out against other before‑after posts",
+    "Static image format misses the higher engagement rates of Reels or short video demos",
+    "Limited use of trending hashtags or Indian‑specific cultural cues could reduce discoverability",
+    "Potential for low shareability if the image lacks a memorable text overlay or brand watermark"
+   ],
+   "warnings": [
+    "Below your quality bar (65/100, bar 70) - review before posting.",
+    "All AI image providers failed or are rate limited — used a branded card background instead"
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-101.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-101-thumb.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-08-102",
+   "date": "2026-11-08",
+   "created_at": "2026-11-08T07:44:49",
+   "prompt_id": 102,
+   "hook_type": "",
+   "title": "A Product Ad Starts With One Clear Idea",
+   "prompt_type": "educational",
+   "score": null,
+   "below_threshold": false,
+   "threshold": null,
+   "label": "UNSCORED",
+   "hook": "Your product doesn't need a huge set to stop the scroll.",
+   "angle": "Show how one product benefit becomes a polished, clearly labeled spec ad concept.",
+   "prompt_text": "A six-scene vertical spec product-ad concept for a reusable bottle. Show the hook, brief, product detail, in-context use, final composition, and one DM CTA. This is a demonstration concept, not client work or a performance claim.",
+   "caption": "A clearly labeled spec concept: one product, one useful idea, and visual choices that support it. Have a product in mind? DM AD with the product and your advertising goal.\n\n#ProductAd #CreativeStudio #AIAdvertising #AimagixStudio",
+   "hashtags": [
+    "#ProductAd",
+    "#CreativeStudio",
+    "#AIAdvertising",
+    "#AimagixStudio"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "video_duration_seconds": 65.2712925170068,
+   "platform_focus": "instagram",
+   "audience_segment": "Founders and marketing teams at small product businesses",
+   "reasoning": "Reviewed deterministic fallback; not scored because the LLM provider chain was unavailable.",
+   "key_factors": [],
+   "risks": [
+    "Fallback concept is unscored; compare retention and saves after posting."
+   ],
+   "warnings": [
+    "LLM outage fallback; unscored spec concept.",
+    "All AI image providers failed or are rate limited — used a branded card background instead",
+    "All AI image providers failed or are rate limited — used a branded card background instead",
+    "All AI image providers failed or are rate limited — used a branded card background instead",
+    "All AI image providers failed or are rate limited — used a branded card background instead",
+    "All AI image providers failed or are rate limited — used a branded card background instead",
+    "All AI image providers failed or are rate limited — used a branded card background instead"
+   ],
+   "asset": {
+    "type": "reel",
+    "video": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-102.mp4",
+    "poster": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-102-poster.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-102-poster.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
