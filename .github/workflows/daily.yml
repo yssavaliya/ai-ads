@@ -13,6 +13,10 @@ on:
         description: "Only queue a rendered Reel with at least 60 seconds of narration"
         type: boolean
         default: false
+      replace_buffer_post_id:
+        description: "Replace this existing Buffer post with the generated Reel, preserving its queue slot"
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -99,8 +103,11 @@ jobs:
           BUFFER_DRAFT_MODE: ${{ vars.BUFFER_DRAFT_MODE || 'false' }}
           BUFFER_QUEUE_LIMIT: ${{ vars.BUFFER_QUEUE_LIMIT || '8' }}
           BUFFER_REEL_ONLY: ${{ inputs.reel_only || 'false' }}
+          BUFFER_REPLACE_POST_ID: ${{ inputs.replace_buffer_post_id }}
         run: |
-          if [ "$BUFFER_REEL_ONLY" = "true" ]; then
+          if [ -n "$BUFFER_REPLACE_POST_ID" ]; then
+            python scripts/publish_buffer.py --reel-only --replace-post-id "$BUFFER_REPLACE_POST_ID"
+          elif [ "$BUFFER_REEL_ONLY" = "true" ]; then
             python scripts/publish_buffer.py --reel-only
           else
             python scripts/publish_buffer.py

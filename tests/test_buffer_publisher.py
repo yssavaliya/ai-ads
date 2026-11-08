@@ -75,6 +75,28 @@ def test_buffer_publisher_rejects_image_and_video_in_same_post():
         raise AssertionError("Expected mixed media to be rejected")
 
 
+def test_buffer_publisher_replaces_reel_without_changing_schedule():
+    fake_response = MagicMock(spec=httpx.Response)
+    fake_response.status_code = 200
+    fake_response.json.return_value = {"data": {"editPost": {
+        "__typename": "PostActionSuccess",
+        "post": {"id": "existing1", "status": "scheduled", "dueAt": "2026-11-18T13:23:00Z"},
+    }}}
+    mock_post = MagicMock(return_value=fake_response)
+    with patch("httpx.Client.post", mock_post):
+        pub = BufferPublisher(access_token="test_token", profile_ids=["pid1"])
+        result = pub.replace_scheduled_reel("existing1", "Updated caption", "https://example.com/new.mp4")
+
+    payload = mock_post.call_args.kwargs["json"]
+    edit_input = payload["variables"]["input"]
+    assert "editPost" in payload["query"]
+    assert edit_input["id"] == "existing1"
+    assert edit_input["assets"] == [{"video": {"url": "https://example.com/new.mp4"}}]
+    assert edit_input["text"] == "Updated caption"
+    assert "dueAt" not in edit_input and "mode" not in edit_input
+    assert result["post"]["dueAt"] == "2026-11-18T13:23:00Z"
+
+
 def test_buffer_publisher_send_daily_prompts():
     fake_response = MagicMock(spec=httpx.Response)
     fake_response.status_code = 200

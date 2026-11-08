@@ -45,6 +45,21 @@ mutation CreatePost($input: CreatePostInput!) {
 }
 """
 
+EDIT_POST_MUTATION = """
+mutation EditPost($input: EditPostInput!) {
+  editPost(input: $input) {
+    __typename
+    ... on PostActionSuccess {
+      post { id channelId status dueAt }
+    }
+    ... on UnauthorizedError { message }
+    ... on InvalidInputError { message }
+    ... on LimitReachedError { message }
+    ... on UnexpectedError { message }
+  }
+}
+"""
+
 
 class BufferPublisher:
     name = "buffer"
@@ -181,6 +196,37 @@ class BufferPublisher:
                 results.append(post_info)
 
         return {"success": True, "posts": results}
+
+    def replace_scheduled_reel(self, post_id: str, text: str, video_url: str) -> dict[str, Any]:
+        """Replace media and caption on an existing scheduled Instagram Reel.
+
+        The schedule is intentionally omitted from EditPostInput so Buffer keeps
+        the existing queue slot and due time.
+        """
+        if not self.access_token:
+            raise ValueError("Buffer access token not configured.")
+        if not post_id or not video_url:
+            raise ValueError("A Buffer post ID and Reel video URL are required.")
+        variables = {"input": {
+            "id": post_id,
+            "text": text,
+            "assets": [{"video": {"url": video_url}}],
+            "metadata": {"instagram": {"type": "reel", "shouldShareToFeed": True, "isAiGenerated": True}},
+        }}
+        with httpx.Client(timeout=45) as client:
+            resp = client.post(
+                BUFFER_GQL_URL,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+                json={"query": EDIT_POST_MUTATION, "variables": variables},
+            )
+            if resp.status_code >= 400:
+                logger.error("Buffer API HTTP %s: %s", resp.status_code, resp.text)
+                resp.raise_for_status()
+            payload = resp.json()
+        data = payload.get("data", {}).get("editPost", {})
+        if data.get("__typename") != "PostActionSuccess":
+            raise RuntimeError(f"Buffer GraphQL Error: {data.get('message') or data}")
+        return {"success": True, "post": data.get("post", {})}
 
     def send_daily_prompts(
         self,

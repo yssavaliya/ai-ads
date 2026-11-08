@@ -538,7 +538,9 @@ class CreativeForge:
             raise CreativeForgeError(
                 f"Reel needs a spoken hook, {MAX_REEL_SCENES} aligned beats, and at least {MIN_REEL_NARRATION_WORDS} narration words"
             )
-        overlays[0] = " ".join(hook.split()[:6])
+        # Keep the designed, concise on-screen hook when supplied. The spoken hook
+        # can be longer and would otherwise be clipped by the poster layout.
+        overlays[0] = " ".join((overlays[0] or hook).split()[:6])
 
         def make_still(job: tuple[int, str]) -> tuple[str, list[str]]:
             i, beat = job

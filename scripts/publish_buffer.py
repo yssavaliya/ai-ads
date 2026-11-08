@@ -198,6 +198,7 @@ def main() -> None:
     parser.add_argument("--token", type=str, help="Override Buffer Access Token")
     parser.add_argument("--profile-id", type=str, help="Override Buffer Profile ID")
     parser.add_argument("--reel-only", action="store_true", help="Publish only a verified Reel with at least 60 seconds of narration")
+    parser.add_argument("--replace-post-id", help="Replace the media and caption on this existing Buffer post, preserving its schedule")
 
     args = parser.parse_args()
 
@@ -295,7 +296,7 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001 - the check is a safeguard, not a reason to lose the day's post
         print(f"::warning::Could not read the Buffer queue ({exc}); posting without the duplicate and queue check.")
         queue = None
-    if queue is not None:
+    if queue is not None and not args.replace_post_id:
         repeated = find_duplicate(caption, queue.texts())
         if repeated:
             print(f"::warning::Not posting: Buffer already holds a near-identical post ({repeated[:70]!r}).")
@@ -305,14 +306,25 @@ def main() -> None:
             sys.exit(0)
 
     try:
-        res = publisher.schedule_post(text=caption, image_url=image_url, video_url=video_url)
-        print("✅ Successfully published to Buffer!")
-        buffer_posts = res.get("posts", [])
-        record_posted(target_prompt, buffer_posts)
-        for post in buffer_posts:
+        if args.replace_post_id:
+            if not video_url or not is_verified_minute_reel(target_prompt):
+                raise ValueError("Replacing an existing Buffer post requires a verified Reel of at least 60 seconds.")
+            res = publisher.replace_scheduled_reel(args.replace_post_id, caption, video_url)
+            post = res.get("post", {})
+            print("✅ Replaced the existing Buffer Reel; its schedule was preserved.")
+            record_posted(target_prompt, [post])
             print(f"Post ID   : {post.get('id')}")
             print(f"Status    : {post.get('status')}")
-            print(f"Due At    : {post.get('dueAt') or 'Auto Queue'}")
+            print(f"Due At    : {post.get('dueAt') or 'Existing Buffer queue slot'}")
+        else:
+            res = publisher.schedule_post(text=caption, image_url=image_url, video_url=video_url)
+            print("✅ Successfully published to Buffer!")
+            buffer_posts = res.get("posts", [])
+            record_posted(target_prompt, buffer_posts)
+            for post in buffer_posts:
+                print(f"Post ID   : {post.get('id')}")
+                print(f"Status    : {post.get('status')}")
+                print(f"Due At    : {post.get('dueAt') or 'Auto Queue'}")
     except Exception as exc:
         print(f"❌ Failed to publish to Buffer: {exc}")
         sys.exit(1)
