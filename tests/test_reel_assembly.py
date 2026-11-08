@@ -182,12 +182,15 @@ def test_real_render_prompt_falls_back_to_image_when_voiceover_fails(tmp_path, m
     result = forge.render_prompt(
         {
             "format": "reel", "title": "T", "hook": "H",
-            "reel_beats": ["one", "two", "three"],
-            "reel_overlays": ["H", "Step two", "Try it today"],
+            "reel_beats": ["one", "two", "three", "four", "five", "six"],
+            "reel_overlays": ["H", "Step two", "Step three", "Step four", "Step five", "Try it today"],
             "reel_narration": [
-                "H. Start with the useful result, then tell viewers what detail they will learn today.",
-                "Explain the process with specific visual choices and a clear point anyone can follow.",
-                "Close with a practical thought and invite viewers to save or share this idea today too.",
+                "H. Start with the useful result, then tell viewers what detail they will learn today and why that first frame matters to this product story.",
+                "Explain the process with specific visual choices. Keep each sentence conversational, and give the audience enough detail to follow the decision.",
+                "Connect the product problem to its audience. Show the visual change clearly, without inventing customer results or promising a performance lift.",
+                "Add one scene that explains the craft behind the concept. Keep the image focused, and let the spoken words add context rather than describe the overlay.",
+                "Return to the finished composition. Summarize the practical lesson and make it feel like a useful example, not an unsupported case study.",
+                "Close with one clear CTA. If you want an ad concept for your product, send the studio a DM with AD and your advertising goal.",
             ],
         },
         {"name": "Reel Biz"},
@@ -204,18 +207,21 @@ def test_short_voiceover_fails_closed_instead_of_trimming_the_reel(forge, monkey
     result = forge.render_prompt(
         {
             "format": "reel", "title": "short audio", "hook": "Start with the result",
-            "reel_beats": ["first", "second", "third"],
-            "reel_overlays": ["Start with result", "Show the process", "Save this idea"],
+            "reel_beats": ["first", "second", "third", "fourth", "fifth", "sixth"],
+            "reel_overlays": ["Start with result", "Show the process", "One clear choice", "Keep it focused", "Show the payoff", "DM AD"],
             "reel_narration": [
-                "Start with the result. Show the final creative first, then explain why its opening works for this audience and what makes the message memorable.",
-                "Walk through the choices clearly and show how each detail supports the central message, from the colors and framing to the product benefit.",
-                "Close with a useful takeaway and invite viewers to save the Reel for later reference, then try this approach in their next campaign.",
+                "Start with the result. Show the final creative first, then explain why its opening works for this audience and what makes the message memorable in a busy feed. Make the product clear.",
+                "Walk through the choices clearly and show how each detail supports the central message, from the colors and framing to the product benefit viewers need to notice. Keep every choice connected.",
+                "Make the audience problem visible in this scene. Keep the example grounded, then explain how the product idea answers that problem without promising an unverified result. Show what the viewer can change.",
+                "Show one useful production choice. A clean frame and readable composition can help viewers understand the product, even when they are watching on a small phone screen. Let the visual breathe.",
+                "Bring the finished concept back into view. Explain what changed, and give viewers a practical idea they can borrow for their next creative brief. The lesson should stay specific.",
+                "Close with a friendly next step. If you want an ad concept for your product, DM the studio AD and tell us what you are working on today. We will take it from there.",
             ],
         },
         {"name": "Reel Biz"},
     )
     assert result["asset_type"] == "image"
-    assert any("only 6.0s" in warning for warning in result["warnings"])
+    assert any("only 12.0s" in warning for warning in result["warnings"])
 
 
 def test_wav_duration_needs_no_ffprobe(tmp_path, monkeypatch):
@@ -261,7 +267,7 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
     monkeypatch.setattr(forge, "_image_prompt", lambda prompt, _biz: prompt["visual_scene"])
     monkeypatch.setattr(forge, "generate_image", lambda prompt, *_args: seen_scenes.append(prompt) or "still.png")
     monkeypatch.setattr(forge, "overlay_text", lambda path, text, **_kw: seen_overlays.append(text) or path)
-    monkeypatch.setattr(forge, "_tts_beats", lambda lines, *_args: spoken_lines.extend(lines) or ("voice.wav", [5.2] * len(lines)))
+    monkeypatch.setattr(forge, "_tts_beats", lambda lines, *_args: spoken_lines.extend(lines) or ("voice.wav", [10.2] * len(lines)))
     monkeypatch.setattr(forge, "_assemble_video", lambda *_args: None)
     monkeypatch.setattr(forge, "_extract_thumbnail", lambda *_args: None)
 
@@ -270,13 +276,16 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
             "format": "reel",
             "title": "Chai",
             "visual_scene": "cinematic product photography",
-            "reel_beats": ["tea leaves macro", "chai pouring", "pack reveal"],
+            "reel_beats": ["tea leaves macro", "chai pouring", "pack reveal", "warm color", "cup and pack", "tabletop final frame"],
             "hook": "Start with fresh tea leaves.",
-            "reel_overlays": ["Not the hook", "A slow pour", "Meet your chai"],
+            "reel_overlays": ["Not the hook", "A slow pour", "Meet your chai", "Notice the color", "One simple frame", "A concept for you"],
             "reel_narration": [
-                "Start with fresh tea leaves. Then show the finished cup to give viewers a reason to stay.",
-                "Let the chai pour slowly while you explain how aroma and color shape the ritual.",
-                "Make this your next ritual. Save the idea and tell us how you take your chai.",
+                "Start with fresh tea leaves. Then show the finished cup, so viewers can see the product idea before we explain the choices behind it. Let that first image do some work.",
+                "Let the chai pour slowly while you explain how warm light, texture, and color shape the feeling of this small everyday ritual. Keep the voice friendly and easy to follow.",
+                "Move from the cup to the pack. That transition connects the finished drink with the product, while keeping the frame clean and easy to follow. Give the viewer time to notice it.",
+                "Notice the color in the next shot. It creates a consistent mood across the scenes and keeps the viewer focused on the tea itself. Avoid details that compete with the product.",
+                "Bring the pack and cup together. This final composition shows how a product ad can tell a complete story with a few clear visual decisions. That is the takeaway viewers can reuse.",
+                "If you want a concept for your product, DM the studio AD with what you sell and the audience you want to reach. We can make the first step simple.",
             ],
         },
         {"name": "Aimagix"},
@@ -288,12 +297,18 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
             "cinematic product photography. Scene: tea leaves macro",
             "cinematic product photography. Scene: chai pouring",
             "cinematic product photography. Scene: pack reveal",
+            "cinematic product photography. Scene: warm color",
+            "cinematic product photography. Scene: cup and pack",
+            "cinematic product photography. Scene: tabletop final frame",
         ]
     )
-    assert seen_overlays == ["Start with fresh tea leaves.", "A slow pour", "Meet your chai"]
+    assert seen_overlays == ["Start with fresh tea leaves.", "A slow pour", "Meet your chai", "Notice the color", "One simple frame", "A concept for you"]
     assert spoken_lines == [
         "Start with fresh tea leaves. Then show the finished cup to give viewers a reason to stay.",
         "Let the chai pour slowly while you explain how aroma and color shape the ritual.",
-        "Make this your next ritual. Save the idea and tell us how you take your chai.",
+        "Move from the cup to the pack. That transition connects the finished drink with the product, while keeping the frame clean and easy to follow.",
+        "Notice the color in the next shot. It creates a consistent mood across the scenes and keeps the viewer focused on the tea itself.",
+        "Bring the pack and cup together. This final composition shows how a product ad can tell a complete story with a few clear visual decisions.",
+        "If you want a concept for your product, DM the studio AD with what you sell and the audience you want to reach.",
     ]
-    assert not set(spoken_lines) & {"tea leaves macro", "chai pouring", "pack reveal"}
+    assert not set(spoken_lines) & {"tea leaves macro", "chai pouring", "pack reveal", "warm color", "cup and pack", "tabletop final frame"}

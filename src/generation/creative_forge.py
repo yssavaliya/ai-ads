@@ -27,8 +27,9 @@ FPS = 25
 DEFAULT_BRAND = (31, 111, 104)
 MAX_ZOOM_GAIN = 0.08  # Ken Burns: end at 108% of the frame
 XFADE_SECONDS = 0.35
-MIN_REEL_SECONDS = 15.0
-MIN_REEL_NARRATION_WORDS = 45
+MIN_REEL_SECONDS = 60.0
+MIN_REEL_NARRATION_WORDS = 150
+MAX_REEL_SCENES = 6
 
 FONT_PATH = Path("assets/fonts/Poppins-Bold.ttf")
 VOICE_MODEL_URL = (
@@ -390,9 +391,9 @@ class CreativeForge:
     def _render_reel(
         self, prompt: dict[str, Any], business_profile: dict[str, Any], base_name: str
     ) -> dict[str, Any]:
-        beats: list[str] = [b for b in (prompt.get("reel_beats") or []) if b][:5]
-        if len(beats) < 3:
-            raise CreativeForgeError("a Reel needs at least three visual beats")
+        beats: list[str] = [b for b in (prompt.get("reel_beats") or []) if b][:MAX_REEL_SCENES]
+        if len(beats) != MAX_REEL_SCENES:
+            raise CreativeForgeError(f"a Reel needs exactly {MAX_REEL_SCENES} visual beats")
 
         warnings: list[str] = []
         stills: list[str] = []
@@ -408,7 +409,9 @@ class CreativeForge:
             or sum(len(line.split()) for line in narration) < MIN_REEL_NARRATION_WORDS
             or not narration[0].casefold().startswith(hook.casefold())
         ):
-            raise CreativeForgeError("Reel needs a spoken hook and at least 45 words of per-beat narration")
+            raise CreativeForgeError(
+                f"Reel needs a spoken hook, {MAX_REEL_SCENES} aligned beats, and at least {MIN_REEL_NARRATION_WORDS} narration words"
+            )
         overlays[0] = " ".join(hook.split()[:6])
 
         def make_still(job: tuple[int, str]) -> tuple[str, list[str]]:
@@ -444,7 +447,9 @@ class CreativeForge:
         if not stills:
             raise CreativeForgeError("every beat image failed")
         if sum(len(line.split()) for line in rendered_narration) < MIN_REEL_NARRATION_WORDS:
-            raise CreativeForgeError("remaining Reel narration is too short after image generation")
+            raise CreativeForgeError(
+                f"remaining Reel narration is under {MIN_REEL_NARRATION_WORDS} words after image generation"
+            )
 
         try:
             audio_path, durations = self._tts_beats(rendered_narration, base_name)

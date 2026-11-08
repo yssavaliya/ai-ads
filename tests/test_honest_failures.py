@@ -83,12 +83,15 @@ def test_forge_variants_keep_valid_reels_and_keep_segment():
             "format": "reel",
             "angle": "A",
             "audience_segment": "young couples",
-            "reel_beats": ["tea leaves in close-up", "tea pours into a cup", "finished chai pack reveal"],
-            "reel_overlays": ["Leaves meet warm light", "A slow pour", "Your next chai ritual"],
+            "reel_beats": ["finished chai first", "tea leaves close-up", "water meets leaves", "chai pours into a cup", "pack and cup reveal", "tabletop final frame"],
+            "reel_overlays": ["Finished blend first", "Start with the leaves", "Watch the color", "Small choices matter", "See the full concept", "DM AD with your brief"],
             "reel_narration": [
-                "Show the finished blend. Start with the final cup, then trace the small choices that make it inviting.",
-                "Follow the tea leaves into warm water and notice how texture and color build the story.",
-                "End on the ritual, and invite viewers to save this idea for their next quiet break.",
+                "Show the finished blend. We start with the cup, because people should see the idea before hearing how we made it. The warm color gives the story an inviting first impression.",
+                "Then we move closer to the tea leaves. Their texture gives this concept something real to focus on, instead of filling the frame with decoration that distracts from the product.",
+                "Watch how the water changes the scene. That simple movement creates a natural transition, and the changing color gives the viewer a reason to stay with the story.",
+                "The pour becomes the center of the shot. We keep the background calm, use warm light, and let the product remain the most important thing on screen.",
+                "Now the pack joins the cup, so the viewer can connect the finished drink with the product concept. The layout stays clear, with space around each detail.",
+                "That is the whole creative idea: lead with the result, then show the choices behind it. If you want an ad concept for your product, DM us ‘AD’ with your brief.",
             ],
         }
     ]
@@ -100,8 +103,8 @@ def test_forge_variants_keep_valid_reels_and_keep_segment():
         variants = forge.generate_variants({}, {}, {}, ["educational"])
     v = variants[0]
     assert v["audience_segment"] == "young couples"
-    assert v["format"] == "reel" and len(v["reel_beats"]) == 3
-    assert len(v["reel_overlays"]) == 3
+    assert v["format"] == "reel" and len(v["reel_beats"]) == 6
+    assert len(v["reel_overlays"]) == 6
     text = v["prompt_text"].lower()
     assert "reel" in text
     assert "carousel" not in text

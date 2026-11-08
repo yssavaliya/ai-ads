@@ -90,12 +90,15 @@ def test_forge_preserves_well_formed_reels_and_degrades_malformed_reels_to_image
                                "reel_overlays": ["A warmer opening", "Watch the pour", "Meet the blend"]})
     assert short["format"] == "single image"  # overlay copy can never stand in for narration
     narration = [
-        "A warmer opening. Start by showing the final visual, then reveal how the idea takes shape.",
-        "Move through the design choices one at a time, using clear details viewers can follow.",
-        "Explain how a strong visual hook makes a brand easier to remember and share.",
+        "A warmer opening. Start by showing the finished product concept, then explain the visual choice that makes the idea feel relevant to its audience.",
+        "Move closer to the first detail. Use clear, everyday language so viewers can follow the story without needing design experience or industry jargon.",
+        "Explain how the product problem shaped the color and framing. Each choice should support one message, instead of competing for attention on screen.",
+        "Show the creative process in a few visible steps. Let the audience see what changed and why that decision helps the product story feel clearer.",
+        "Bring the finished concept back into view. Connect the opening idea to the final composition, and give people one practical takeaway they can use.",
+        "Keep the ending simple and conversational. If you want a concept for your product, send the studio a DM with the word AD and tell us your goal this week. We can start there.",
     ]
-    scripted = normalize_variant({"format": "reel", "hook": "A warmer opening", "reel_beats": ["macro", "pour", "pack reveal"],
-                                  "reel_overlays": ["A warmer opening", "Watch the pour", "Meet the blend"],
+    scripted = normalize_variant({"format": "reel", "hook": "A warmer opening", "reel_beats": ["macro", "pour", "pack reveal", "color", "framing", "final concept"],
+                                  "reel_overlays": ["A warmer opening", "Watch the pour", "Meet the blend", "One clear idea", "See the choices", "DM AD"],
                                   "reel_narration": narration})
     assert scripted["format"] == "reel" and scripted["reel_narration"] == narration
     image = normalize_variant({"format": "reel", "reel_beats": ["only two", "beats"]})

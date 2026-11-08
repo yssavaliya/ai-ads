@@ -182,7 +182,7 @@ def forge(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "logs_dir", tmp_path / "logs")
     monkeypatch.setattr(cf, "FONT_PATH", Path(__file__).resolve().parents[1] / "assets" / "fonts" / "Poppins-Bold.ttf")
     f = cf.CreativeForge()
-    monkeypatch.setattr(f, "_tts_beats", lambda lines, name: ("voice.wav", [5.0] * len(lines)))
+    monkeypatch.setattr(f, "_tts_beats", lambda lines, name: ("voice.wav", [10.5] * len(lines)))
     monkeypatch.setattr(f, "_assemble_video", lambda stills, durations, audio, out: Path(out).write_bytes(b"mp4"))
     monkeypatch.setattr(f, "_extract_thumbnail", lambda video, name: None)
     return f
@@ -205,14 +205,15 @@ def _fake_generate(latency, gauge=None, fail_for=()):
 
 REEL = {
     "format": "reel", "title": "Reel", "hook": "H",
-    "reel_beats": ["one", "two", "three", "four", "five"],
-    "reel_overlays": ["H", "Step two", "Step three", "Step four", "Try it today"],
+    "reel_beats": ["one", "two", "three", "four", "five", "six"],
+    "reel_overlays": ["H", "Step two", "Step three", "Step four", "Step five", "Try it today"],
     "reel_narration": [
-        "H. Open with the finished idea, then promise one useful detail viewers can use.",
-        "Show the creative choices clearly, so people can follow how the first concept develops.",
-        "Explain why simple visual decisions help a message feel focused and easy to remember.",
-        "Give viewers one practical takeaway they can apply to their next creative project.",
-        "Close by inviting people to save this Reel or message the studio with an idea.",
+        "H. Open with the finished idea, then explain why the first frame helps the right audience understand what this product concept is about. Keep the product visible.",
+        "Show the creative choices clearly. Use one visual detail at a time, so people can follow how the first concept develops without getting lost or overwhelmed.",
+        "Explain why the color and framing support the product message. Keep the language natural, and connect every choice to something the viewer can see on screen.",
+        "Give viewers one practical takeaway they can use in their next creative project. Make the lesson specific, useful, and easy to remember later this week.",
+        "Bring the finished concept back on screen. Point out what changed from the opening, and why the final design gives the product a clearer story for its audience.",
+        "Close in a warm, direct voice. If you want an ad concept for your product, DM the studio ‘AD’ and tell us what you are trying to promote today.",
     ],
 }
 
@@ -247,12 +248,16 @@ def test_a_failed_beat_prevents_short_incomplete_narration_from_becoming_a_reel(
     monkeypatch.setattr(ip, "generate", track_scenes)
     monkeypatch.setattr(forge, "_assemble_video", lambda *_args: pytest.fail("short Reel must not be assembled"))
     result = forge.render_prompt(
-        {**REEL, "reel_beats": ["beat-one", "beat-two", "beat-three"],
-         "reel_overlays": ["H", "Step two", "Try it today"],
+        {**REEL,
+         "reel_beats": ["beat-one", "beat-two", "beat-three", "beat-four", "beat-five", "beat-six"],
+         "reel_overlays": ["H", "Step two", "Step three", "Step four", "Step five", "Try it today"],
          "reel_narration": [
-             "H. Open with the final idea and promise a useful detail viewers can apply today.",
-             "Explain the creative choices one by one with clear examples anyone can follow today.",
-             "End by inviting viewers to save this Reel or message us with their idea this week.",
+             "H. Open with the final idea, then explain one useful detail viewers can apply to a product ad without needing a large team.",
+             "Explain the creative choices one by one. Keep each point clear, and show how color, framing, and movement help the product feel easy to understand.",
+             "Use the third scene to make the problem visible. Give viewers a concrete example, then connect it to the design decision they can see.",
+             "Show the next step in the process. A focused background and readable composition can make the product story feel more deliberate.",
+             "Return to the finished concept and explain what changed. Each choice should serve the same message, not add effects for their own sake.",
+             "End with one clear next step. If you want an ad concept for your product, DM us AD and tell us what you are promoting today. Keep it simple and specific.",
          ]},
         {"name": "Order Biz"},
     )
@@ -261,7 +266,7 @@ def test_a_failed_beat_prevents_short_incomplete_narration_from_becoming_a_reel(
     assert any("Scene: beat-three" in prompt for prompt in generated_scenes)
     assert not any("Scene: beat-two" in prompt for prompt in generated_scenes)
     assert "Beat 1 image skipped" in caplog.text
-    assert any("remaining Reel narration is too short" in w for w in result["warnings"])
+    assert any("remaining Reel narration is under" in w for w in result["warnings"])
 
 
 def test_warnings_and_brand_colour_do_not_leak_between_concurrent_renders(forge, monkeypatch):
