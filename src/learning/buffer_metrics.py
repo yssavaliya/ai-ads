@@ -35,7 +35,7 @@ REFRESH_AFTER_HOURS = 20
 
 POST_METRICS_QUERY = """
 query GetPostMetrics {
-  post(input: { id: \"{post_id}\" }) {
+  post(input: { id: {post_id} }) {
     id
     status
     sentAt
