@@ -5265,6 +5265,103 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-96-thumb.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-08-97",
+   "date": "2026-11-08",
+   "created_at": "2026-11-08T07:28:32",
+   "prompt_id": 97,
+   "hook_type": "contrarian",
+   "title": "3‑Step Visual Formula That Sells Any Kitchen Gadget",
+   "prompt_type": "educational",
+   "score": 72,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "Cut design time 70% with a 3‑step visual formula that sells kitchen gadgets",
+   "angle": "Teach a reusable visual framework that founders can apply instantly.",
+   "prompt_text": "Create a single‑image spec concept that demonstrates the 3‑step visual formula for selling a kitchen gadget. The image must follow the photographic scene described above, contain no textual overlays, and include a discreet \"SPEC AD\" badge to signal it’s a concept. Caption should repeat the hook, outline the three steps, and end with a concrete CTA asking viewers to DM \"AD\" with the visual challenge their product faces. Use Aimagix Studio’s clear, practical, and visually specific voice. Label the work as a spec concept only in the caption. Include eight hashtags (3 hyper‑niche, 3 industry, 2 broad).\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Cut design time 70% with a 3‑step visual formula that sells kitchen gadgets\n\n1️⃣ Isolate the product on a clean surface – the eye goes straight to the design.\n2️⃣ Add a lifestyle cue (fresh herbs, a hint of Indian spice) to show the gadget in use.\n3️⃣ Finish with a subtle action cue – a hand reaching for the gadget or a highlighted button.\n\n💬 What visual hurdle is stopping your kitchen product from converting? DM \"AD\" with that detail and we’ll turn it into a high‑impact spec concept.\n\n#SpecConcept #AIAdSprint #CreativeProcess #ProductDesign #DigitalMarketing #SocialCreatives #Design #Instagram",
+   "hashtags": [
+    "#SpecConcept",
+    "#AIAdSprint",
+    "#CreativeProcess",
+    "#ProductDesign",
+    "#DigitalMarketing",
+    "#SocialCreatives",
+    "#Design",
+    "#Instagram"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt aligns tightly with the studio’s positioning and audience hypothesis, offering a concise, actionable visual that invites direct contact. The 3‑step formula and DM CTA create a clear conversion path, while Indian cultural relevance of kitchen gadgets enhances relevance. However, the lack of textual overlay and potential perception of the work as purely speculative introduce modest risk, keeping the score solid but not maximal.",
+   "key_factors": [
+    "Clear showcase of Aimagix Studio’s product‑visual offering in a spec format that resonates with founders and marketing teams.",
+    "Targeted 3‑step visual formula provides actionable creative insight, aligning with the audience’s need for rapid, ROI‑driven solutions.",
+    "Strong CTA (DM “AD”) directly funnels interested prospects into the studio’s sales pipeline.",
+    "Indian relevance of kitchen gadgets and the use of hyper‑niche hashtags boost discoverability among the target demographic."
+   ],
+   "risks": [
+    "Spec concept may be perceived as hypothetical rather than proven work, potentially reducing trust.",
+    "Absence of textual overlays in the image could limit immediate clarity of the 3‑step message.",
+    "Hook strength is uncertain without a specific hook phrase; a weak hook could blunt scroll‑stopping power.",
+    "High saturation of spec‑ad posts on Instagram could dilute reach if not differentiated."
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-97.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-97-thumb.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-08-98",
+   "date": "2026-11-08",
+   "created_at": "2026-11-08T07:28:32",
+   "prompt_id": 98,
+   "hook_type": "",
+   "title": "A Product Ad Starts With One Clear Idea",
+   "prompt_type": "educational",
+   "score": null,
+   "below_threshold": false,
+   "threshold": null,
+   "label": "UNSCORED",
+   "hook": "Your product doesn't need a huge set to stop the scroll.",
+   "angle": "Show how one product benefit becomes a polished, clearly labeled spec ad concept.",
+   "prompt_text": "A six-scene vertical spec product-ad concept for a reusable bottle. Show the hook, brief, product detail, in-context use, final composition, and one DM CTA. This is a demonstration concept, not client work or a performance claim.",
+   "caption": "A clearly labeled spec concept: one product, one useful idea, and visual choices that support it. Have a product in mind? DM AD with the product and your advertising goal.\n\n#ProductAd #CreativeStudio #AIAdvertising #AimagixStudio",
+   "hashtags": [
+    "#ProductAd",
+    "#CreativeStudio",
+    "#AIAdvertising",
+    "#AimagixStudio"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Founders and marketing teams at small product businesses",
+   "reasoning": "Reviewed deterministic fallback; not scored because the LLM provider chain was unavailable.",
+   "key_factors": [],
+   "risks": [
+    "Fallback concept is unscored; compare retention and saves after posting."
+   ],
+   "warnings": [
+    "LLM outage fallback; unscored spec concept.",
+    "Reel render failed (Reel narration is only 54.7s; at least 60s is required); falling back to single image"
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-98.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-98-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
