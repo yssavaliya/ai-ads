@@ -2,10 +2,41 @@
   "_instructions": "Fill this in with TRUE facts only. Everything here is treated as verified: the generator may state it, and numbers that appear here are allowed in posts. Leave a field empty rather than guess. Until offers or proof_points are filled in, posts stay generic (no invented services, prices, results or turnaround times).",
   "name": "Aimagix Studio",
   "instagram_handle": "aimagix.studio",
-  "offers": [],
-  "audience": "",
-  "voice": "",
+  "offers": [
+    "AI video ads",
+    "Product visuals",
+    "Social creatives",
+    "Idea-to-ad creative work"
+  ],
+  "audience": "Founders and marketing teams at small product businesses who need advertising creative. This is the studio's target audience hypothesis and should be validated against post and inquiry results.",
+  "voice": "Clear, practical, visually specific, and approachable. Show the creative work and explain the decisions behind it.",
   "proof_points": [],
-  "allowed_claims": [],
-  "do_not_say": []
+  "allowed_claims": [
+    "AI video ads",
+    "Product visuals",
+    "Social creatives",
+    "Idea-to-ad creative work",
+    "Invite viewers to DM AD with their product and advertising goal"
+  ],
+  "do_not_say": [
+    "Do not invent client work, testimonials, results, prices, guarantees, delivery times, or performance statistics.",
+    "Label speculative concepts as spec concepts; never imply the depicted product or brand is a client."
+  ],
+  "content_strategy": {
+    "positioning": "An AI advertising and creative studio: AI video ads, product visuals, and social creatives; idea to ad.",
+    "primary_audience": "Founders and marketing teams at small product businesses that need ad creative. Treat this as an audience hypothesis, not a verified customer list.",
+    "pillars": [
+      "Spec product ad: a finished, clearly labeled concept demonstrating an ad idea for a recognizable product category.",
+      "Creative breakdown: explain the hook, product benefit, visual choice, and call to action in a useful example.",
+      "Process: show how a rough product brief becomes a hook, script, and finished ad concept.",
+      "Offer: explain AI video ads, product visuals, or social creatives and invite a specific brief by DMing AD."
+    ],
+    "mix": "Across each batch, target about 60% spec ads and product transformations, 30% practical creative breakdowns or process, and 10% direct offer posts. Prefer Reels for visual demonstrations while keeping some stills for comparison and portfolio proof.",
+    "exclude": [
+      "Unrelated anime or fandom art",
+      "Generic landscapes or nature imagery without an ad concept",
+      "Generic motivation, finance advice, or random trend posts unrelated to creative advertising"
+    ],
+    "cta": "Ask one concrete question about the viewer's product or invite them to DM AD with the product and advertising goal."
+  }
 }

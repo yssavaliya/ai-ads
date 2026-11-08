@@ -81,12 +81,12 @@ def normalize_variant(variant: dict[str, Any]) -> dict[str, Any]:
     return single_image_variant(normalized)
 
 PROMPT_TYPE_DESCRIPTIONS = {
-    "educational": "Teach one valuable lesson or insight, actionable, with a strong specific hook.",
-    "storytelling": "Tell a relatable story with a turning point and a lesson tied to the brand.",
-    "social_proof": "Show the work itself: a before/after of the creative process or a sample output. Never invent customers, testimonials or results.",
-    "promotional": "Soft promotion with clear value and urgency, never hard-selling.",
-    "engagement": "Ask a polarizing or thought-provoking question that invites comments.",
-    "behind_scenes": "Reveal how the business works, mistakes, or the human side of the team.",
+    "educational": "Teach one useful product-ad or creative lesson and demonstrate it on a concrete spec concept.",
+    "storytelling": "Show a product brief becoming an ad concept, with a clear creative decision and lesson.",
+    "social_proof": "Show the creative work itself as a clearly labeled spec concept. Never invent customers, testimonials or results.",
+    "promotional": "Explain one verified studio offer and invite a relevant product brief; never invent urgency.",
+    "engagement": "Ask a focused product-ad question founders or marketers can answer from experience.",
+    "behind_scenes": "Show a real creative decision or process step that turns a product brief into an ad concept.",
     "user_generated": "Spotlight a customer's content or experience, encouraging UGC.",
     "trend_jacking": "Ride a current trend/event with a brand-relevant twist.",
 }
@@ -122,9 +122,9 @@ class PromptForge:
         )
 
         prompt = f"""
-You are a top-tier viral content strategist specializing in explosive social media growth (Instagram & LinkedIn).
-Generate {count} distinct content prompts. Use a mix of single images and short Reels where suitable.
-When count is 5, include at least 2 single images and 2 Reels so both render paths stay exercised. When count is smaller, choose the format that best fits the idea.
+You are a practical Instagram growth strategist for a small creative studio. Optimize for qualified non-follower reach, saves, shares, profile visits, and inquiries, not vague "virality" claims.
+Generate {count} distinct content prompts that all belong to the business's positioning and content strategy. Use a mix of single images and Reels.
+When count is 5, include at least 3 Reels and 2 single images so the batch tests discovery and portfolio formats. When count is smaller, prefer a Reel unless a still image is clearly the better demonstration.
 
 Business profile:
 {fence(business_profile, 6000)}
@@ -134,6 +134,9 @@ Audience map:
 
 Today's trends & competitor insights:
 {fence(trend_data, 6000)}
+
+Editorial strategy (a targeting hypothesis and content mandate, NOT evidence for customer, performance, or product claims):
+{fence(business_profile.get("content_strategy", {}), 3000)}
 
 Allowed prompt types:
 {type_descriptions}
@@ -146,10 +149,10 @@ Learned weights (dimension::item → weight, higher = more proven with this audi
 VIRAL HOOK PSYCHOLOGY:
 Every prompt must choose an explicit "hook_type":
 - "contrarian": Challenge conventional wisdom or reveal a common mistake ("Why Most AI Ads Look Generic").
-- "roi_proof": Concrete, checkable value: what the studio delivers and how fast it works, using only facts from the business profile ("Brand visuals without the agency wait").
+- "roi_proof": A concrete product benefit or creative value, using only verified facts and no promised performance ("One clear product benefit makes a stronger opening").
 - "curiosity_gap": A surprising insight or hidden mechanism ("The 1 Prompt Structure Agencies Hide").
-- "before_after": Dramatic contrast between old manual way vs new automated way ("Agency in 2024 vs Autonomous AI Studio in 2026").
-- "framework": Actionable 3-4 step blueprint or checklist ("The 3-Step AI Creative Engine").
+- "before_after": Show the transformation from a plain product brief to a finished spec ad concept.
+- "framework": A short actionable breakdown of the decisions in this specific ad concept.
 
 VISUAL SCENE FOR FLUX.1:
 Provide a photographic, cinematic scene in "visual_scene" describing:
@@ -159,9 +162,18 @@ Provide a photographic, cinematic scene in "visual_scene" describing:
 CAPTION ARCHITECTURE:
 Provide a complete, ready-to-post "caption" with:
 - Opening line repeating the hook
-- 3-4 clear value points / insights separated by newlines
-- Strong CTA to save or comment ("Bookmark this before your next campaign")
+- One useful, concrete explanation of the ad or creative decision, with clear line breaks
+- A specific CTA that invites a product category, marketing goal, or brief by DMing "AD"; vary the CTA naturally
 - Tiered hashtags: 3 hyper-niche, 3 industry, 2 broad discovery
+
+ACCOUNT RELEVANCE (mandatory):
+- Every post must clearly demonstrate AI video ads, product visuals, social creatives, or the process of turning a product brief into an ad.
+- Use the editorial strategy's audience and pillars as constraints. Keep the feed recognizable as one studio account.
+- For concept art, label the idea "spec concept" in caption/on-screen text; do not imitate a real brand's identity or imply a client relationship.
+- Reject unrelated anime/fandom art, generic sunsets/nature, generic motivation, generic finance advice, and trend posts without an advertising-creative connection.
+- Avoid vague engagement bait. Ask one focused question a product founder could answer, or invite a DM with their product and goal.
+- The opening hook must be specific to a product advertising problem or show the finished ad concept immediately. Avoid generic hooks such as "You won't believe this", "This changes everything", and unsupported ROI claims.
+- Each Reel must tell one coherent miniature story: visible finished creative first, product/audience problem, 2-3 creative choices, then result and CTA. Narration must explain the visuals rather than repeat overlay text.
 
 FORMAT RULES:
 - Choose either "single image" or "reel" for each idea. Never choose carousel.
@@ -241,9 +253,10 @@ Respond ONLY with JSON:
         """Take the best variant + hints and regenerate a stronger version."""
         hints = "\n".join(f"- {h}" for h in improvement_hints)
         prompt = f"""
-You are a viral content strategist. Improve this content prompt to maximize virality.
+You are an Instagram growth strategist for a small creative studio. Improve this content prompt to attract relevant non-followers and potential buyers, while preserving the brand focus.
 Preserve the current format (single image or Reel). Do not change it to a carousel.
-For a Reel, keep 4-5 sequential visual scene beats, one overlay per beat, and a separate 4-5 line spoken script in reel_narration. The first spoken line starts with the exact hook. Write at least 45 spoken words total and end with a clear CTA. Never use visual scene beats or overlays as voiceover.
+Keep the idea within the business's editorial strategy. Remove unrelated fandom, landscape, motivation, or finance themes unless they are clearly part of a product ad concept. Use a specific product-ad hook and one concrete DM AD or product-category CTA. Do not invent proof or results.
+For a Reel, keep 4-5 sequential visual scene beats, show the finished ad concept first, add one overlay per beat, and use a separate 4-5 line spoken script in reel_narration. The first spoken line starts with the exact hook. Write at least 45 spoken words total and end with a clear CTA. Never use visual scene beats or overlays as voiceover.
 
 Current prompt:
 {fence(best_variant)}

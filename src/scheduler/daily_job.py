@@ -291,8 +291,8 @@ class DailyPipeline:
                 parts = [hook]
                 if angle:
                     parts.append(f"💡 {angle}")
-                parts.append("📌 Save this breakdown for your next campaign.")
-                parts.append(f"👉 Follow @{handle} for daily high-converting playbooks.")
+                parts.append("📌 Save this breakdown if you are planning a product ad.")
+                parts.append(f"👉 DM @{handle} 'AD' with your product and advertising goal to discuss a concept.")
                 if hashtags:
                     parts.append(hashtags)
                 caption = "\n\n".join(parts).strip()
@@ -303,8 +303,8 @@ class DailyPipeline:
             # First-comment CTA: posting a pinned first comment reliably lifts
             # reach and comment rate, so we hand the user a ready one.
             p["first_comment"] = (
-                f"💬 What's your take? Comment below.\n\n"
-                f"Follow @{handle} for more."
+                "💬 What product should we turn into the next ad concept?\n\n"
+                f"DM @{handle} 'AD' with your product and goal."
             )
 
     def _recommend_post_time(

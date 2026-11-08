@@ -66,8 +66,8 @@ class ViralityPredictor:
         # or the JSON schema ("Missing Content Prompt") and every score was garbage.
         return (
             f"""
-You are a viral content strategist for the Indian social media market (Instagram + LinkedIn).
-Predict the virality potential of a content prompt for this business.
+You are a growth strategist for the Indian social media market, evaluating Instagram-first content for this creative studio.
+Score whether a content prompt can earn relevant non-follower reach and attract potential buyers, not whether an unrelated image might collect casual likes.
 
 Business profile:
 {fence(business_profile, CONTEXT_CHARS)}
@@ -77,6 +77,9 @@ Audience map:
 
 Today's trends:
 {fence(trend_data, CONTEXT_CHARS)}
+
+Editorial strategy (a targeting hypothesis, not verified business evidence):
+{fence(business_profile.get("content_strategy", {}), CONTEXT_CHARS)}
 
 Prompt type: {prompt_type}
 
@@ -88,15 +91,12 @@ Content prompt to evaluate:
 """
         + f"{fence_text(prompt_text)}\n"
         + """
-Evaluate like a senior growth marketer. Consider: hook strength (first 3 words),
-emotional trigger, specificity, Indian cultural relevance, platform fit,
-scroll-stopping potential, shareability, and fit with the audience map. Weight
-the REAL PAST PERFORMANCE above: if this prompt resembles a proven winner, score
-it higher; if it resembles a proven loser, score it lower.
+Evaluate like a senior growth marketer. First penalize ideas that do not clearly demonstrate this studio's ad-creative offers or fit the stated audience. Then consider hook strength (first 3 words), specificity, useful creative insight, product relevance, Indian cultural relevance, platform fit, scroll-stopping potential, save/share potential, profile-visit or inquiry potential, and fit with the audience map. Weight the REAL PAST PERFORMANCE above: if this prompt resembles a proven winner, score it higher; if it resembles a proven loser, score it lower.
+Do not reward generic anime/fandom art, scenery, motivation, finance advice, or unrelated trend posts just because they are visually striking. A spec concept should be identifiable as advertising creative and labeled as a spec concept. Do not treat likes from a tiny follower base as proof of broad reach.
 
 Respond ONLY with JSON:
 {
-  "virality_score": 0-100 integer,
+  "virality_score": 0-100 integer (relevant discovery and buyer-interest potential),
   "virality_label": "LOW" | "MEDIUM" | "HIGH",
   "virality_probability": 0.0-1.0,
   "key_factors": ["top 3-5 factors driving the score"],

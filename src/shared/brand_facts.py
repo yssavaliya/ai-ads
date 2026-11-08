@@ -38,14 +38,21 @@ def has_content(facts: dict[str, Any]) -> bool:
 def merge_into_profile(profile: dict[str, Any] | None, facts: dict[str, Any]) -> dict[str, Any]:
     """The business profile the generator sees, with the verified facts attached under one clear key."""
     merged = dict(profile or {})
-    if facts:
-        merged["verified_facts"] = facts
+    verified = {key: value for key, value in facts.items() if key != "content_strategy"}
+    strategy = facts.get("content_strategy")
+    if verified:
+        merged["verified_facts"] = verified
+    if isinstance(strategy, dict) and strategy:
+        # Keep editorial strategy separate from verified business claims. The
+        # generator should follow it, but it is not evidence for factual claims.
+        merged["content_strategy"] = strategy
     return merged
 
 
 def grounding_text(facts: dict[str, Any]) -> str:
     """Text the claims guard may treat as supporting a number (empty when the owner wrote nothing)."""
-    return json.dumps(facts, ensure_ascii=False) if facts else ""
+    verified = {key: value for key, value in facts.items() if key != "content_strategy"}
+    return json.dumps(verified, ensure_ascii=False) if verified else ""
 
 
 def warn_if_empty(facts: dict[str, Any]) -> bool:
