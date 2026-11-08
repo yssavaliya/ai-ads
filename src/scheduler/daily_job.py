@@ -123,27 +123,6 @@ class DailyPipeline:
                 threshold=threshold,
             )
 
-            # If the text-model chain is temporarily unavailable, keep the
-            # studio's Reel workflow alive with a carefully bounded, unscored
-            # spec concept. It uses only the verified offer and never invents
-            # client results, pricing, or performance claims. Other businesses
-            # continue to fail closed instead of receiving generic copy.
-            if not prompts and name.casefold().replace(" ", "") == "aimagixstudio":
-                prompts = [self._aimagix_fallback_reel()]
-                logger.warning(
-                    "::warning::LLM outage: using the reviewed Aimagix spec-Reel fallback; "
-                    "it remains unscored and must pass the same media and claims checks."
-                )
-            elif (
-                os.getenv("FORCE_REEL_ONLY", "").lower() in ("1", "true", "yes")
-                and name.casefold().replace(" ", "") == "aimagixstudio"
-            ):
-                # The explicitly requested Reel-only run gets a reviewed
-                # renderable candidate in addition to model ideas. If the
-                # model's Reel has invalid narration or its render degrades,
-                # Buffer can still choose this one-minute candidate.
-                prompts.append(self._aimagix_fallback_reel())
-
             # NOVELTY (#2): don't re-send a prompt we already sent in the last
             # 14 days — replace near-duplicates so the feed stays fresh.
             recent_texts = self._recent_prompt_texts(db, biz)
@@ -152,6 +131,21 @@ class DailyPipeline:
                 if kept:
                     logger.info("Dedup: %d/%d prompts kept (dropped near-duplicates)", len(kept), len(prompts))
                     prompts = kept
+
+            # Keep the explicitly requested Reel candidate after deduplication:
+            # this reviewed fallback is intentionally reusable, and must remain
+            # available when the model emits only stills or its Reel fails QA.
+            force_reel = os.getenv("FORCE_REEL_ONLY", "").lower() in ("1", "true", "yes")
+            if name.casefold().replace(" ", "") == "aimagixstudio":
+                if force_reel:
+                    prompts.append(self._aimagix_fallback_reel())
+                elif not prompts:
+                    # On an ordinary run, use it only when the LLM chain is down.
+                    prompts = [self._aimagix_fallback_reel()]
+                    logger.warning(
+                        "::warning::LLM outage: using the reviewed Aimagix spec-Reel fallback; "
+                        "it remains unscored and must pass the same media and claims checks."
+                    )
 
             # EXPLORATION (gap #5): with modest probability, generate one extra
             # variant in an under-tested format/angle so the learner keeps
