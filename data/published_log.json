@@ -81,6 +81,25 @@
           "status": "scheduled"
         }
       ]
+    },
+    {
+      "id": "2026-11-08-93",
+      "title": "Agency budget myth bust",
+      "prompt_id": 93,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "storytelling",
+      "format": "single image",
+      "hook_type": "",
+      "audience_segment": "Startup Founder",
+      "caption": "Why most agencies waste your design budget\n\ud83d\udd39 We keep every line item transparent so you see exactly where money goes\n\ud83d\udd39 Lean production methods let you get high\u2011impact visuals without excess spend\n\ud83d\udd39 Fast iteration cycles mean you approve earlier and avoid costly re\u2011work\n\ud83d\udcbe Save this before you sign your next agency contract\n\n#DesignSprintAI #BrandMakeover #CreativeCompliance #GraphicDesign #BrandStrategy #Marketing #InstaDesign #Creative",
+      "at": "2026-11-08T07:00:13.703369+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af01dfc9214322f6838b96f",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "scheduled"
+        }
+      ]
     }
   ]
 }
