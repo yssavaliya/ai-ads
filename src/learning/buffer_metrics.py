@@ -38,6 +38,7 @@ query GetPostMetrics {
   post(input: { id: {post_id} }) {
     id
     status
+    dueAt
     sentAt
     channelId
     metrics {
@@ -222,8 +223,10 @@ def sync_buffer_metrics() -> dict[str, int]:
         for post_id, entry in mappings.items():
             previous = snapshots.get(post_id)
             checked = last_checked.get(post_id)
-            if checked and now - checked < timedelta(hours=REFRESH_AFTER_HOURS) and previous:
-                current[post_id] = previous
+            if checked and now - checked < timedelta(hours=REFRESH_AFTER_HOURS):
+                if previous:
+                    current[post_id] = previous
+                skipped += 1
                 continue
             try:
                 post = _fetch_post(client, token, post_id)
@@ -254,7 +257,7 @@ def sync_buffer_metrics() -> dict[str, int]:
                 skipped += 1
                 event = {
                     "type": "check", "buffer_post_id": post_id, "checked_at": now.isoformat(),
-                    "status": post.get("status"), "sent_at": sent_at,
+                    "status": post.get("status"), "due_at": post.get("dueAt"), "sent_at": sent_at,
                     "metrics_updated_at": metrics_updated_at,
                 }
                 _append_event(METRICS_LOG, event)
