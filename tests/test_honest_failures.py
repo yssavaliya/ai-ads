@@ -77,7 +77,7 @@ def test_forge_variants_keep_valid_reels_and_keep_segment():
         {
             "prompt_type": "educational",
             "title": "T",
-            "hook": "H",
+            "hook": "Show the finished blend",
             "prompt_text": "Create a 30-second Reel with on-screen text beats and several slides for a video carousel.",
             "hashtags": ["#a"],
             "format": "reel",
@@ -85,6 +85,11 @@ def test_forge_variants_keep_valid_reels_and_keep_segment():
             "audience_segment": "young couples",
             "reel_beats": ["tea leaves in close-up", "tea pours into a cup", "finished chai pack reveal"],
             "reel_overlays": ["Leaves meet warm light", "A slow pour", "Your next chai ritual"],
+            "reel_narration": [
+                "Show the finished blend. Start with the final cup, then trace the small choices that make it inviting.",
+                "Follow the tea leaves into warm water and notice how texture and color build the story.",
+                "End on the ritual, and invite viewers to save this idea for their next quiet break.",
+            ],
         }
     ]
 

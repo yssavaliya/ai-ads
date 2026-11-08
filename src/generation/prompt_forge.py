@@ -19,6 +19,11 @@ _TIMED_VIDEO = re.compile(
     r"\b(?:create|make|produce)\s+(?:a\s+)?\d+(?:[- ]second|[- ]minute)\s+(?:reel|video)\b",
     re.IGNORECASE,
 )
+MIN_REEL_NARRATION_WORDS = 45
+
+
+def _word_count(lines: list[str]) -> int:
+    return sum(len(line.split()) for line in lines)
 
 
 def single_image_variant(variant: dict[str, Any]) -> dict[str, Any]:
@@ -48,14 +53,25 @@ def normalize_variant(variant: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(variant)
     beats = [str(b).strip() for b in (normalized.get("reel_beats") or []) if str(b).strip()][:5]
     if str(normalized.get("format", "")).strip().lower() in {"reel", "video"} and len(beats) >= 3:
+        overlays = [str(s).strip() for s in (normalized.get("reel_overlays") or []) if str(s).strip()][:5]
+        overlays = [" ".join(line.split()[:6]) for line in overlays]
+        narration = [str(s).strip() for s in (normalized.get("reel_narration") or []) if str(s).strip()][:5]
+        hook = str(normalized.get("hook") or "").strip()
+        # Do not turn short overlay text into a pretend voiceover. A Reel is valid
+        # only when it has a spoken hook and enough narration for a useful runtime.
+        if (
+            not hook
+            or len(overlays) != len(beats)
+            or len(narration) != len(beats)
+            or _word_count(narration) < MIN_REEL_NARRATION_WORDS
+            or not narration[0].casefold().startswith(hook.casefold())
+        ):
+            return single_image_variant(normalized)
         normalized["format"] = "reel"
         normalized["reel_beats"] = beats
-        overlays = [str(s).strip() for s in (normalized.get("reel_overlays") or []) if str(s).strip()][:5]
-        normalized["reel_overlays"] = [" ".join(line.split()[:6]) for line in overlays]
-        narration = [str(s).strip() for s in (normalized.get("reel_narration") or []) if str(s).strip()][:5]
-        # Legacy/malformed Reel briefs can still speak overlay copy, but never
-        # narrate reel_beats: those are scene directions for the image model.
-        normalized["reel_narration"] = narration or list(normalized["reel_overlays"])
+        normalized["reel_overlays"] = overlays
+        normalized["reel_narration"] = narration
+        normalized["reel_overlays"][0] = " ".join(hook.split()[:6])
         text = str(normalized.get("prompt_text", "")).strip()
         text = _TIMED_VIDEO.sub("Create a short Reel", text)
         text = _SLIDE_COUNT.sub("sequential scenes", text)
@@ -150,7 +166,7 @@ Provide a complete, ready-to-post "caption" with:
 FORMAT RULES:
 - Choose either "single image" or "reel" for each idea. Never choose carousel.
 - For "single image", describe one finished composition.
-- For "reel", provide 3-5 sequential, visually distinct scene descriptions in reel_beats, 3-5 short on-screen lines in reel_overlays (max 6 words each), and a separate 3-5 item spoken script in reel_narration with one natural sentence per beat. Start with the finished result or strongest visual in the first beat. Build a simple beginning, middle, and end that can be assembled from stills with gentle motion. reel_beats are visual directions and must never be used as narration.
+- For "reel", provide 4-5 sequential, visually distinct scene descriptions in reel_beats, one short on-screen line per beat in reel_overlays (max 6 words each), and a separate spoken script in reel_narration with exactly one natural sentence per beat. The first spoken sentence MUST start with the exact hook text, and the first overlay is a short version of that hook. Write at least 45 spoken words total (usually 10-15 words per line) so the finished voiceover runs about 18 seconds or longer. End with a clear spoken CTA. reel_beats are visual directions and must never be used as narration. Do not use overlays as a substitute for narration.
 - Avoid relying on generated text inside an image. On-screen lines are overlaid by the renderer.
 
 TRUTHFULNESS (strict):
@@ -174,9 +190,9 @@ Respond ONLY with JSON:
     "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5", "#tag6", "#tag7", "#tag8"],
     "platform_focus": "instagram" | "linkedin" | "both",
     "format": "single image" | "reel",
-    "reel_beats": ["scene 1 visual", "scene 2 visual", "scene 3 visual"],
-    "reel_overlays": ["short line 1", "short line 2", "short line 3"],
-    "reel_narration": ["spoken sentence for beat 1", "spoken sentence for beat 2", "spoken sentence for beat 3"],
+    "reel_beats": ["scene 1 visual", "scene 2 visual", "scene 3 visual", "scene 4 visual"],
+    "reel_overlays": ["short hook", "short line 2", "short line 3", "short line 4"],
+    "reel_narration": ["exact hook followed by spoken sentence for beat 1", "spoken sentence for beat 2", "spoken sentence for beat 3", "spoken sentence and CTA for beat 4"],
     "angle": "one sentence strategic angle",
     "audience_segment": "persona name from audience map"
   }}
@@ -227,7 +243,7 @@ Respond ONLY with JSON:
         prompt = f"""
 You are a viral content strategist. Improve this content prompt to maximize virality.
 Preserve the current format (single image or Reel). Do not change it to a carousel.
-For a Reel, keep 3-5 sequential visual scene beats, short on-screen overlay lines, and a separate 3-5 line spoken script in reel_narration. Never use visual scene beats as voiceover.
+For a Reel, keep 4-5 sequential visual scene beats, one overlay per beat, and a separate 4-5 line spoken script in reel_narration. The first spoken line starts with the exact hook. Write at least 45 spoken words total and end with a clear CTA. Never use visual scene beats or overlays as voiceover.
 
 Current prompt:
 {fence(best_variant)}
@@ -256,9 +272,9 @@ Respond ONLY with the improved prompt as JSON with the same fields:
   "hashtags": ["..."],
   "platform_focus": "...",
   "format": "{best_variant.get('format', 'single image')}",
-  "reel_beats": ["scene 1 visual", "scene 2 visual", "scene 3 visual"],
-  "reel_overlays": ["short line 1", "short line 2", "short line 3"],
-  "reel_narration": ["spoken sentence for beat 1", "spoken sentence for beat 2", "spoken sentence for beat 3"],
+  "reel_beats": ["scene 1 visual", "scene 2 visual", "scene 3 visual", "scene 4 visual"],
+  "reel_overlays": ["short hook", "short line 2", "short line 3", "short line 4"],
+  "reel_narration": ["exact hook followed by spoken sentence for beat 1", "spoken sentence for beat 2", "spoken sentence for beat 3", "spoken sentence and CTA for beat 4"],
   "angle": "...",
   "audience_segment": "..."
 }}

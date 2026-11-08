@@ -182,7 +182,7 @@ def forge(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "logs_dir", tmp_path / "logs")
     monkeypatch.setattr(cf, "FONT_PATH", Path(__file__).resolve().parents[1] / "assets" / "fonts" / "Poppins-Bold.ttf")
     f = cf.CreativeForge()
-    monkeypatch.setattr(f, "_tts_beats", lambda beats, name: (_ for _ in ()).throw(cf.CreativeForgeError("no voice in test")))
+    monkeypatch.setattr(f, "_tts_beats", lambda lines, name: ("voice.wav", [5.0] * len(lines)))
     monkeypatch.setattr(f, "_assemble_video", lambda stills, durations, audio, out: Path(out).write_bytes(b"mp4"))
     monkeypatch.setattr(f, "_extract_thumbnail", lambda video, name: None)
     return f
@@ -203,7 +203,18 @@ def _fake_generate(latency, gauge=None, fail_for=()):
     return generate
 
 
-REEL = {"format": "reel", "title": "Reel", "hook": "H", "reel_beats": ["one", "two", "three", "four", "five"]}
+REEL = {
+    "format": "reel", "title": "Reel", "hook": "H",
+    "reel_beats": ["one", "two", "three", "four", "five"],
+    "reel_overlays": ["H", "Step two", "Step three", "Step four", "Try it today"],
+    "reel_narration": [
+        "H. Open with the finished idea, then promise one useful detail viewers can use.",
+        "Show the creative choices clearly, so people can follow how the first concept develops.",
+        "Explain why simple visual decisions help a message feel focused and easy to remember.",
+        "Give viewers one practical takeaway they can apply to their next creative project.",
+        "Close by inviting people to save this Reel or message the studio with an idea.",
+    ],
+}
 
 
 def test_reel_beats_render_concurrently_in_order_and_faster(forge, monkeypatch):
@@ -221,16 +232,36 @@ def test_reel_beats_render_concurrently_in_order_and_faster(forge, monkeypatch):
     assert t_par < t_seq * 0.7, f"sequential {t_seq:.2f}s vs concurrent {t_par:.2f}s"
 
 
-def test_a_failed_beat_is_skipped_and_the_rest_keep_their_order(forge, monkeypatch):
-    stills = {}
+def test_a_failed_beat_prevents_short_incomplete_narration_from_becoming_a_reel(forge, monkeypatch, caplog):
+    generated_scenes = []
     monkeypatch.setattr(settings, "image_concurrency", 3)
     monkeypatch.setattr(settings, "image_card_fallback", False)  # a failed beat has no fallback -> skipped
-    monkeypatch.setattr(ip, "generate", _fake_generate(0.01, fail_for=("beat-two",)))
-    monkeypatch.setattr(forge, "_assemble_video", lambda s, d, a, out: (stills.setdefault("s", list(s)), Path(out).write_bytes(b"mp4")))
-    result = forge.render_prompt({**REEL, "reel_beats": ["beat-one", "beat-two", "beat-three"]}, {"name": "Order Biz"})
-    assert result["asset_type"] == "reel" and len(stills["s"]) == 2
-    assert [Path(s).name.split("-beat")[1][0] for s in stills["s"]] == ["0", "2"]  # beats 0 and 2, in order
-    assert any("Beat 1 image skipped" in w for w in result["warnings"])
+    generate = _fake_generate(0.01, fail_for=("beat-two",))
+
+    def track_scenes(prompt, width, height):
+        result = generate(prompt, width, height)
+        if result is not None:
+            generated_scenes.append(prompt)
+        return result
+
+    monkeypatch.setattr(ip, "generate", track_scenes)
+    monkeypatch.setattr(forge, "_assemble_video", lambda *_args: pytest.fail("short Reel must not be assembled"))
+    result = forge.render_prompt(
+        {**REEL, "reel_beats": ["beat-one", "beat-two", "beat-three"],
+         "reel_overlays": ["H", "Step two", "Try it today"],
+         "reel_narration": [
+             "H. Open with the final idea and promise a useful detail viewers can apply today.",
+             "Explain the creative choices one by one with clear examples anyone can follow today.",
+             "End by inviting viewers to save this Reel or message us with their idea this week.",
+         ]},
+        {"name": "Order Biz"},
+    )
+    assert result["asset_type"] == "image"
+    assert any("Scene: beat-one" in prompt for prompt in generated_scenes)
+    assert any("Scene: beat-three" in prompt for prompt in generated_scenes)
+    assert not any("Scene: beat-two" in prompt for prompt in generated_scenes)
+    assert "Beat 1 image skipped" in caplog.text
+    assert any("remaining Reel narration is too short" in w for w in result["warnings"])
 
 
 def test_warnings_and_brand_colour_do_not_leak_between_concurrent_renders(forge, monkeypatch):

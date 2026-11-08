@@ -68,6 +68,22 @@ def test_xfade_command_names_its_output_file(forge, monkeypatch):
     assert xfade[xfade.index("-map") + 1] == "[v2]"
 
 
+def test_audio_reel_extends_final_still_to_preserve_last_spoken_words(forge, monkeypatch):
+    commands: list[list[str]] = []
+
+    def fake_run(cmd, timeout, what):
+        commands.append(cmd)
+        if what == "xfade":
+            Path(cmd[-1]).write_bytes(b"video")
+
+    monkeypatch.setattr(forge, "_run_ffmpeg", fake_run)
+    audio = forge.output_dir / "voice.wav"
+    audio.write_bytes(b"wav")
+    forge._assemble_video(_stills(forge), [4.0, 4.0, 4.0], str(audio), str(forge.output_dir / "voiced.mp4"))
+    beat_commands = [cmd for cmd in commands if "-t" in cmd]
+    assert [cmd[cmd.index("-t") + 1] for cmd in beat_commands] == ["4.00", "4.00", "4.70"]
+
+
 def test_failed_xfade_falls_back_to_concat_with_absolute_paths(forge, monkeypatch):
     lists: list[str] = []
 
@@ -138,7 +154,7 @@ def test_real_ffmpeg_assembles_a_voiced_reel_with_relative_paths(tmp_path, monke
     assert "Video: h264" in info and f"{cf.REEL_W}x{cf.REEL_H}" in info
     assert "Audio: aac" in info
     h, m, s = re.search(r"Duration: (\d+):(\d+):([\d.]+)", info).groups()
-    assert 7.5 < int(h) * 3600 + int(m) * 60 + float(s) < 9.5  # 3 beats x 3s minus two 0.35s crossfades
+    assert 8.8 < int(h) * 3600 + int(m) * 60 + float(s) < 9.5  # final still extends to preserve all 9s of audio
     assert not list(forge.output_dir.glob("*-seg*.mp4"))  # temp segments cleaned up
     assert forge._extract_thumbnail(str(out), "reel") and (forge.output_dir / "reel-thumb.png").exists()
 
@@ -156,7 +172,7 @@ def test_real_ffmpeg_silent_reel_and_xfade_not_concat(tmp_path, monkeypatch, cap
 
 
 @pytest.mark.skipif(not HAVE_FFMPEG, reason="ffmpeg not installed")
-def test_real_render_prompt_produces_a_reel_not_an_image(tmp_path, monkeypatch):
+def test_real_render_prompt_falls_back_to_image_when_voiceover_fails(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(settings, "logs_dir", Path("logs"))
     monkeypatch.setattr(cf, "FONT_PATH", Path(__file__).resolve().parents[1] / "assets" / "fonts" / "Poppins-Bold.ttf")
@@ -164,11 +180,42 @@ def test_real_render_prompt_produces_a_reel_not_an_image(tmp_path, monkeypatch):
     forge = cf.CreativeForge()
     monkeypatch.setattr(forge, "_tts_beats", lambda beats, name: (_ for _ in ()).throw(cf.CreativeForgeError("no piper here")))
     result = forge.render_prompt(
-        {"format": "reel", "title": "T", "hook": "H", "reel_beats": ["one", "two", "three"]}, {"name": "Reel Biz"}
+        {
+            "format": "reel", "title": "T", "hook": "H",
+            "reel_beats": ["one", "two", "three"],
+            "reel_overlays": ["H", "Step two", "Try it today"],
+            "reel_narration": [
+                "H. Start with the useful result, then tell viewers what detail they will learn today.",
+                "Explain the process with specific visual choices and a clear point anyone can follow.",
+                "Close with a practical thought and invite viewers to save or share this idea today too.",
+            ],
+        },
+        {"name": "Reel Biz"},
     )
-    assert result["asset_type"] == "reel" and result["asset_path"].endswith(".mp4")
-    assert result["thumbnail"] and Image.open(result["thumbnail"]).size[0] > 0
-    assert any("Voiceover unavailable" in w for w in result["warnings"])  # degraded, but still a Reel
+    assert result["asset_type"] == "image"  # never publish a Reel when required speech is unavailable
+    assert any("Reel render failed" in w for w in result["warnings"])
+
+
+def test_short_voiceover_fails_closed_instead_of_trimming_the_reel(forge, monkeypatch):
+    monkeypatch.setattr(settings, "image_provider_order", "")
+    monkeypatch.setattr(settings, "image_card_fallback", True)
+    monkeypatch.setattr(forge, "_tts_beats", lambda lines, _name: ("voice.wav", [2.0] * len(lines)))
+    monkeypatch.setattr(forge, "_assemble_video", lambda *_args: pytest.fail("short audio must not be muxed"))
+    result = forge.render_prompt(
+        {
+            "format": "reel", "title": "short audio", "hook": "Start with the result",
+            "reel_beats": ["first", "second", "third"],
+            "reel_overlays": ["Start with result", "Show the process", "Save this idea"],
+            "reel_narration": [
+                "Start with the result. Show the final creative first, then explain why its opening works for this audience and what makes the message memorable.",
+                "Walk through the choices clearly and show how each detail supports the central message, from the colors and framing to the product benefit.",
+                "Close with a useful takeaway and invite viewers to save the Reel for later reference, then try this approach in their next campaign.",
+            ],
+        },
+        {"name": "Reel Biz"},
+    )
+    assert result["asset_type"] == "image"
+    assert any("only 6.0s" in warning for warning in result["warnings"])
 
 
 def test_wav_duration_needs_no_ffprobe(tmp_path, monkeypatch):
@@ -214,7 +261,7 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
     monkeypatch.setattr(forge, "_image_prompt", lambda prompt, _biz: prompt["visual_scene"])
     monkeypatch.setattr(forge, "generate_image", lambda prompt, *_args: seen_scenes.append(prompt) or "still.png")
     monkeypatch.setattr(forge, "overlay_text", lambda path, text, **_kw: seen_overlays.append(text) or path)
-    monkeypatch.setattr(forge, "_tts_beats", lambda lines, *_args: spoken_lines.extend(lines) or (None, []))
+    monkeypatch.setattr(forge, "_tts_beats", lambda lines, *_args: spoken_lines.extend(lines) or ("voice.wav", [5.2] * len(lines)))
     monkeypatch.setattr(forge, "_assemble_video", lambda *_args: None)
     monkeypatch.setattr(forge, "_extract_thumbnail", lambda *_args: None)
 
@@ -224,8 +271,13 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
             "title": "Chai",
             "visual_scene": "cinematic product photography",
             "reel_beats": ["tea leaves macro", "chai pouring", "pack reveal"],
-            "reel_overlays": ["Leaf to cup", "A slow pour", "Meet your chai"],
-            "reel_narration": ["Start with fresh tea leaves.", "Let the chai pour slowly.", "Make this your next ritual."],
+            "hook": "Start with fresh tea leaves.",
+            "reel_overlays": ["Not the hook", "A slow pour", "Meet your chai"],
+            "reel_narration": [
+                "Start with fresh tea leaves. Then show the finished cup to give viewers a reason to stay.",
+                "Let the chai pour slowly while you explain how aroma and color shape the ritual.",
+                "Make this your next ritual. Save the idea and tell us how you take your chai.",
+            ],
         },
         {"name": "Aimagix"},
         "chai",
@@ -238,10 +290,10 @@ def test_reel_render_uses_distinct_scene_beats_and_overlay_lines(monkeypatch):
             "cinematic product photography. Scene: pack reveal",
         ]
     )
-    assert seen_overlays == ["Leaf to cup", "A slow pour", "Meet your chai"]
+    assert seen_overlays == ["Start with fresh tea leaves.", "A slow pour", "Meet your chai"]
     assert spoken_lines == [
-        "Start with fresh tea leaves.",
-        "Let the chai pour slowly.",
-        "Make this your next ritual.",
+        "Start with fresh tea leaves. Then show the finished cup to give viewers a reason to stay.",
+        "Let the chai pour slowly while you explain how aroma and color shape the ritual.",
+        "Make this your next ritual. Save the idea and tell us how you take your chai.",
     ]
     assert not set(spoken_lines) & {"tea leaves macro", "chai pouring", "pack reveal"}

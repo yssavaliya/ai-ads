@@ -86,14 +86,18 @@ def test_forge_prompts_contain_every_input_and_the_schema():
 def test_forge_preserves_well_formed_reels_and_degrades_malformed_reels_to_images():
     from src.generation.prompt_forge import normalize_variant
 
-    reel = normalize_variant({"format": "reel", "reel_beats": ["macro", "pour", "pack reveal"],
-                              "reel_overlays": ["A warmer opening", "Watch the pour", "Meet the blend"]})
-    assert reel["format"] == "reel" and len(reel["reel_beats"]) == 3
-    assert reel["reel_narration"] == reel["reel_overlays"]
-    scripted = normalize_variant({"format": "reel", "reel_beats": ["macro", "pour", "pack reveal"],
-                                  "reel_overlays": ["Leaves", "Pour", "Blend"],
-                                  "reel_narration": ["Fresh leaves begin the ritual.", "A slow pour releases the aroma.", "Enjoy a calming cup."]})
-    assert scripted["reel_narration"][1] == "A slow pour releases the aroma."
+    short = normalize_variant({"format": "reel", "hook": "A warmer opening", "reel_beats": ["macro", "pour", "pack reveal"],
+                               "reel_overlays": ["A warmer opening", "Watch the pour", "Meet the blend"]})
+    assert short["format"] == "single image"  # overlay copy can never stand in for narration
+    narration = [
+        "A warmer opening. Start by showing the final visual, then reveal how the idea takes shape.",
+        "Move through the design choices one at a time, using clear details viewers can follow.",
+        "Explain how a strong visual hook makes a brand easier to remember and share.",
+    ]
+    scripted = normalize_variant({"format": "reel", "hook": "A warmer opening", "reel_beats": ["macro", "pour", "pack reveal"],
+                                  "reel_overlays": ["A warmer opening", "Watch the pour", "Meet the blend"],
+                                  "reel_narration": narration})
+    assert scripted["format"] == "reel" and scripted["reel_narration"] == narration
     image = normalize_variant({"format": "reel", "reel_beats": ["only two", "beats"]})
     assert image["format"] == "single image" and image["reel_beats"] == []
 

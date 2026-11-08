@@ -26,6 +26,9 @@ REEL_H = 1920
 FPS = 25
 DEFAULT_BRAND = (31, 111, 104)
 MAX_ZOOM_GAIN = 0.08  # Ken Burns: end at 108% of the frame
+XFADE_SECONDS = 0.35
+MIN_REEL_SECONDS = 15.0
+MIN_REEL_NARRATION_WORDS = 45
 
 FONT_PATH = Path("assets/fonts/Poppins-Bold.ttf")
 VOICE_MODEL_URL = (
@@ -388,22 +391,25 @@ class CreativeForge:
         self, prompt: dict[str, Any], business_profile: dict[str, Any], base_name: str
     ) -> dict[str, Any]:
         beats: list[str] = [b for b in (prompt.get("reel_beats") or []) if b][:5]
-        if not beats:
-            raise CreativeForgeError("no reel beats provided")
+        if len(beats) < 3:
+            raise CreativeForgeError("a Reel needs at least three visual beats")
 
         warnings: list[str] = []
         stills: list[str] = []
+        rendered_narration: list[str] = []
         card_color = self._card_color
         overlays = [str(line).strip() for line in (prompt.get("reel_overlays") or [])]
         narration = [str(line).strip() for line in (prompt.get("reel_narration") or [])]
-        # Visual beats are image-generation directions, never voiceover copy. Older
-        # prompts without a dedicated script fall back to the visible overlay copy.
-        spoken_lines = [
-            narration[i] if i < len(narration) and narration[i]
-            else overlays[i] if i < len(overlays) and overlays[i]
-            else (str(prompt.get("hook") or "").strip() if i == 0 else "")
-            for i in range(len(beats))
-        ]
+        hook = str(prompt.get("hook") or "").strip()
+        if (
+            not hook
+            or len(overlays) != len(beats)
+            or len(narration) != len(beats)
+            or sum(len(line.split()) for line in narration) < MIN_REEL_NARRATION_WORDS
+            or not narration[0].casefold().startswith(hook.casefold())
+        ):
+            raise CreativeForgeError("Reel needs a spoken hook and at least 45 words of per-beat narration")
+        overlays[0] = " ".join(hook.split()[:6])
 
         def make_still(job: tuple[int, str]) -> tuple[str, list[str]]:
             i, beat = job
@@ -428,6 +434,7 @@ class CreativeForge:
             if outcome.ok:
                 still, beat_warnings = outcome.value
                 stills.append(still)
+                rendered_narration.append(narration[i])
                 self._pending_warnings.extend(beat_warnings)
             elif isinstance(outcome.error, CreativeForgeError):
                 warnings.append(f"Beat {i} image skipped: {outcome.error}")
@@ -436,19 +443,20 @@ class CreativeForge:
                 outcome.unwrap()  # anything unexpected still aborts the reel (-> image fallback)
         if not stills:
             raise CreativeForgeError("every beat image failed")
+        if sum(len(line.split()) for line in rendered_narration) < MIN_REEL_NARRATION_WORDS:
+            raise CreativeForgeError("remaining Reel narration is too short after image generation")
 
-        audio_path: str | None = None
-        durations: list[float] = []
         try:
-            audio_path, durations = self._tts_beats(spoken_lines, base_name)
-        except Exception as exc:  # noqa: BLE001 - voiceover is optional; never kill the reel
-            warnings.append(f"Voiceover unavailable this run: {exc}")
-            logger.warning("::warning::%s", warnings[-1])
-
-        if not durations:
-            durations = [3.2] * len(stills)  # silent fallback timing
-        else:
-            durations = durations[: len(stills)] + [3.0] * max(0, len(stills) - len(durations))
+            audio_path, durations = self._tts_beats(rendered_narration, base_name)
+        except Exception as exc:  # noqa: BLE001 - never publish a silent Reel
+            raise CreativeForgeError(f"required narration failed: {exc}") from exc
+        if not audio_path or len(durations) != len(stills):
+            raise CreativeForgeError("Reel narration audio is missing or does not align with its visual beats")
+        audio_seconds = sum(durations)
+        if audio_seconds < MIN_REEL_SECONDS:
+            raise CreativeForgeError(
+                f"Reel narration is only {audio_seconds:.1f}s; at least {MIN_REEL_SECONDS:.0f}s is required"
+            )
 
         out_path = self.output_dir / f"{base_name}-reel.mp4"
         self._assemble_video(stills, durations, audio_path, str(out_path))
@@ -539,7 +547,12 @@ class CreativeForge:
         mux voiceover. Falls back to plain concat if xfade fails."""
         seg_files: list[str] = []
         try:
-            for i, (still, dur) in enumerate(zip(stills, durations)):
+            # xfade shortens the visual timeline by one transition per join. Extend
+            # the final still so -shortest cannot cut off the last spoken words.
+            video_durations = list(durations)
+            if audio and os.path.exists(audio) and len(video_durations) > 1:
+                video_durations[-1] += XFADE_SECONDS * (len(video_durations) - 1)
+            for i, (still, dur) in enumerate(zip(stills, video_durations)):
                 seg = out_path.replace(".mp4", f"-seg{i}.mp4")
                 cmd = [
                     "ffmpeg", "-y", "-i", still,
@@ -560,10 +573,10 @@ class CreativeForge:
                 offset = 0.0
                 prev = "[0:v]"
                 for idx in range(1, len(seg_files)):
-                    offset += durations[idx - 1] - 0.35
+                    offset += video_durations[idx - 1] - XFADE_SECONDS
                     out_lbl = f"[v{idx}]"
                     filter_parts.append(
-                        f"{prev}[{idx}:v]xfade=transition=fade:duration=0.35:offset={offset:.2f}{out_lbl}"
+                        f"{prev}[{idx}:v]xfade=transition=fade:duration={XFADE_SECONDS}:offset={offset:.2f}{out_lbl}"
                     )
                     prev = out_lbl
                 fc = ";".join(filter_parts)
