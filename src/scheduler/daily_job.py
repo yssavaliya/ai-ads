@@ -648,10 +648,10 @@ class DailyPipeline:
     def _aimagix_fallback_reel() -> dict[str, Any]:
         """Reviewed, claim-safe one-minute Reel used only during a total LLM outage."""
         narration = [
-            "Your product doesn't need a huge set to stop the scroll. Start with one customer benefit and make it the first image. This is a clearly labeled spec concept for a reusable bottle.",
+            "Your product doesn't need a huge set to stop the scroll. Start with one customer benefit and make it the first image. This is a clearly labeled spec concept for a reusable bottle. Think of it as a small story, not just a catalog shot.",
             "Keep the bottle recognizable. Use a fresh color story, and let condensation and light suggest a cold sip. The product stays the hero.",
-            "Move closer: crisp edges, a clean silhouette, and a bright highlight make the product feel tangible. This is an AI-made visual concept.",
-            "Now show it in context. A work bag or morning desk helps people picture where it belongs. The scene supports the product; it doesn't distract.",
+            "Move closer: crisp edges, a clean silhouette, and a bright highlight make the product feel tangible. This is an AI-made visual concept. Small details give the eye a place to land and keep the frame from feeling generic.",
+            "Now show it in context. A work bag or morning desk helps people picture where it belongs. The scene supports the product; it doesn't distract. Use props sparingly, so the viewer knows what to notice first.",
             "Bring the product and brand style together. Keep the words short, leave room for the image, and make the next step clear. A simple layout keeps the product easy to read on a phone.",
             "That's the idea: one clear product benefit, visual choices with a reason, and a simple invitation. Have a product in mind? DM AD with your product and advertising goal."
         ]

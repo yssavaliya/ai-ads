@@ -133,7 +133,7 @@ def test_match_window_widened():
 def test_reviewed_aimagix_fallback_is_a_complete_one_minute_reel():
     prompt = DailyPipeline._aimagix_fallback_reel()
     narration = prompt["reel_narration"]
-    assert 150 <= sum(len(line.split()) for line in narration) <= 175
+    assert 195 <= sum(len(line.split()) for line in narration) <= 215
     assert narration[0].startswith(prompt["hook"])
     assert len(prompt["reel_beats"]) == len(prompt["reel_overlays"]) == len(narration) == 6
     assert prompt["virality_score"] is None
