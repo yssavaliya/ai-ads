@@ -31,8 +31,11 @@ def _buffer_managed_prompt_ids() -> set[int]:
     for entry in records:
         if not isinstance(entry, dict) or not entry.get("buffer_posts"):
             continue
+        prompt_id = entry.get("prompt_id")
+        if prompt_id is None:
+            continue
         try:
-            prompt_ids.add(int(entry.get("prompt_id")))
+            prompt_ids.add(int(prompt_id))
         except (TypeError, ValueError):
             continue
     return prompt_ids

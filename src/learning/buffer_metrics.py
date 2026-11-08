@@ -334,6 +334,7 @@ def sync_buffer_metrics() -> dict[str, int]:
             retention_baseline = []
             for other in snapshots.values():
                 other_sent = _parse_date(other.get("sent_at"))
+                other_metrics_updated = _parse_date(other.get("metrics_updated_at"))
                 if (
                     other.get("buffer_post_id") == post_id
                     or str(other.get("business_name") or "") != business_name
@@ -342,8 +343,8 @@ def sync_buffer_metrics() -> dict[str, int]:
                     or now - other_sent < timedelta(hours=MIN_MATURITY_HOURS)
                     or tuple(other.get("interaction_components") or ()) != components
                     or other.get("quality_rate") is None
-                    or (_parse_date(other.get("metrics_updated_at")) is None)
-                    or now - _parse_date(other.get("metrics_updated_at")) > timedelta(hours=METRICS_MAX_AGE_HOURS)
+                    or other_metrics_updated is None
+                    or now - other_metrics_updated > timedelta(hours=METRICS_MAX_AGE_HOURS)
                 ):
                     continue
                 baseline.append(float(other["quality_rate"]))
@@ -439,8 +440,11 @@ def _buffer_managed_prompt_ids() -> set[int]:
     for entry in records:
         if not isinstance(entry, dict) or not entry.get("buffer_posts"):
             continue
+        prompt_id = entry.get("prompt_id")
+        if prompt_id is None:
+            continue
         try:
-            ids.add(int(entry.get("prompt_id")))
+            ids.add(int(prompt_id))
         except (TypeError, ValueError):
             continue
     return ids

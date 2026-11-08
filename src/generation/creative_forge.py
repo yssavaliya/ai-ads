@@ -194,6 +194,7 @@ class CreativeForge:
         # Deep indigo gradient and soft cyan/violet studio lights.
         background = Image.new("RGB", (width, height))
         pixels = background.load()
+        assert pixels is not None
         top, bottom = (5, 9, 25), (28, 12, 55)
         for y in range(height):
             t = y / max(1, height - 1)
@@ -271,6 +272,7 @@ class CreativeForge:
         md.rounded_rectangle((body_x, body_y, body_x + body_w, body_y + body_h), radius=radius, fill=255)
         fill = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         fp = fill.load()
+        assert fp is not None
         for y in range(body_y, body_y + body_h + 1):
             t = (y - body_y) / max(1, body_h)
             c = (round(12 + 24 * t), round(107 + 112 * t), round(172 + 71 * t), 226)
