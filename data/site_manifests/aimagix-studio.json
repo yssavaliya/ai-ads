@@ -5904,6 +5904,72 @@
  ],
  "weekly": [
   {
+   "date": "2026-11-08",
+   "report": {
+    "top_performing": [
+     {
+      "prompt": "ROI Proof 48h",
+      "score": 82,
+      "feedback": "none",
+      "why": "High‑impact ROI hook + speed narrative (48 h) creates immediate business value, and the visual of a soaring chart is instantly legible on mobile."
+     },
+     {
+      "prompt": "Contrarian Quality Hook",
+      "score": 82,
+      "feedback": "none",
+      "why": "Contrarian angle (“Big spend? Wrong.”) generates cognitive dissonance, while the split‑screen crumpled‑invoice vs. glowing‑tablet visual delivers a clear before/after proof."
+     },
+     {
+      "prompt": "AI Sketch‑to‑Figma Workflow",
+      "score": 82,
+      "feedback": "none",
+      "why": "Educational format that demystifies a fast, AI‑first workflow; the step‑by‑step description builds authority and appeals to founders needing rapid, VC‑ready branding."
+     }
+    ],
+    "audience_insights": [
+     "Startup Founders respond best to speed‑focused, ROI‑driven hooks; prioritize them over generic agency messaging.",
+     "Storytelling with a clear before‑after visual (single‑image format) yields higher engagement than carousel or video formats."
+    ],
+    "competitor_moves": [
+     "Several Indian design studios are launching “24‑hour brand kits” campaigns that emphasize ultra‑fast turnaround using AI.",
+     "Global competitors are leveraging micro‑influencer reels that showcase live AI‑generated mockups to prove real‑time capability."
+    ],
+    "content_pillars": [
+     {
+      "pillar": "Speed & ROI",
+      "rationale": "Founders and SME marketers care most about rapid results and measurable lift; proven by top‑scoring prompts.",
+      "suggested_frequency": "2x/week"
+     },
+     {
+      "pillar": "AI Workflow Education",
+      "rationale": "Educational prompts that break down the AI‑driven process build authority and attract designers seeking skill‑hacks.",
+      "suggested_frequency": "1x/week"
+     },
+     {
+      "pillar": "Before‑After Storytelling",
+      "rationale": "Before/after visual metaphors (hook type: before_after) have the highest learned weight and resonate strongly with the target segment.",
+      "suggested_frequency": "1x/week"
+     }
+    ],
+    "calendar": [
+     "Mon: Speed & ROI single‑image post – 48‑hour brand lift case study.",
+     "Tue: AI Workflow carousel – step‑by‑step of prompt → sketch → Figma auto‑layout.",
+     "Wed: Before‑After storytelling reel – brand makeover in 48 h.",
+     "Thu: Community Q&A story – ask founders about their biggest design bottleneck.",
+     "Fri: Promotional micro‑video – “Why big agency spend is wrong” with contrarian hook.",
+     "Sat: Light‑hearted design tip carousel – quick AI prompt for freelancers."
+    ],
+    "recommendations": [
+     "Combine the contrarian hook with a quantifiable metric (e.g., % CTR lift) to boost credibility.",
+     "Test carousel formats for the AI workflow education pillar to see if multi‑step visuals improve dwell time."
+    ],
+    "risk_alerts": [
+     "Over‑reliance on contrarian messaging may cause audience fatigue; rotate hook types weekly.",
+     "Instagram algorithm favors native video; heavy single‑image posting could reduce reach if not balanced with reels."
+    ]
+   }
+  },
+  {
    "date": "2026-11-01",
    "report": {
     "top_performing": [
