@@ -317,6 +317,7 @@ class SitePublisher:
                 "first_comment": p.get("first_comment") or "",
                 "recommended_post_time": p.get("recommended_post_time") or "",
                 "format": p.get("format") or "",
+                "video_duration_seconds": p.get("video_duration_seconds"),
                 "platform_focus": p.get("platform_focus") or "",
                 "audience_segment": p.get("audience_segment") or "",
                 "reasoning": p.get("reasoning") or "",

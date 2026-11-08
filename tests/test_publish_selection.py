@@ -48,6 +48,17 @@ def test_highest_score_wins_among_real_images():
     assert picked["title"] == "b"
 
 
+def test_reel_only_requires_verified_duration_of_at_least_one_minute():
+    pb = _publish_module()
+    image = {"id": "image", "title": "image", "score": 99, "asset": {"type": "image"}}
+    short_reel = {"id": "short", "title": "short", "score": 98, "asset": {"type": "reel"},
+                  "video_duration_seconds": 59.9}
+    minute_reel = {"id": "minute", "title": "minute", "score": 70, "asset": {"type": "reel"},
+                   "video_duration_seconds": 60}
+    assert pb.pick_prompt([image, short_reel, minute_reel], reel_only=True)["id"] == "minute"
+    assert pb.pick_prompt([image, short_reel], reel_only=True) is None
+
+
 def test_font_safe_replaces_hyphens_and_drops_emoji():
     safe = CreativeForge._font_safe
     assert safe("48 hrs to VC‑ready") == "48 hrs to VC-ready"

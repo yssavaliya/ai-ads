@@ -469,6 +469,7 @@ class CreativeForge:
         return {
             "asset_path": str(out_path),
             "asset_type": "reel",
+            "duration_seconds": audio_seconds,
             "thumbnail": thumbnail,
             "warnings": warnings + self._take_warnings(),
         }

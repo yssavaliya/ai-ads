@@ -115,6 +115,16 @@ def is_degraded(entry: dict) -> bool:
     return any("branded card" in str(w).lower() for w in (entry.get("warnings") or []))
 
 
+def is_verified_minute_reel(entry: dict) -> bool:
+    asset = entry.get("asset") or {}
+    asset_type = str(asset.get("type") or entry.get("asset_type") or "").lower()
+    try:
+        duration = float(entry.get("video_duration_seconds") or 0)
+    except (TypeError, ValueError):
+        return False
+    return asset_type in {"reel", "video"} and duration >= 60
+
+
 def auto_publish_block_reason(prompt: dict) -> str | None:
     """Fail closed on missing, malformed, or known-degraded assets before Buffer scheduling."""
     asset = prompt.get("asset") or {}
@@ -154,6 +164,7 @@ def pick_prompt(
     posted: set[str] | frozenset[str] = frozenset(),
     grounding: str = "",
     require_publishable_asset: bool = False,
+    reel_only: bool = False,
 ) -> dict | None:
     """Highest-scoring creative that has a real AI image and no unverified statistics.
 
@@ -164,6 +175,8 @@ def pick_prompt(
     usable = []
     for p in prompts:
         if is_degraded(p) or str(p.get("id")) in posted:
+            continue
+        if reel_only and not is_verified_minute_reel(p):
             continue
         if require_publishable_asset and auto_publish_block_reason(p):
             continue
@@ -184,6 +197,7 @@ def main() -> None:
     parser.add_argument("--now", action="store_true", help="Post immediately to social media")
     parser.add_argument("--token", type=str, help="Override Buffer Access Token")
     parser.add_argument("--profile-id", type=str, help="Override Buffer Profile ID")
+    parser.add_argument("--reel-only", action="store_true", help="Publish only a verified Reel with at least 60 seconds of narration")
 
     args = parser.parse_args()
 
@@ -228,13 +242,17 @@ def main() -> None:
             posted_ids(),
             grounding_text(load_brand_facts()),
             require_publishable_asset=True,
+            reel_only=args.reel_only or os.getenv("BUFFER_REEL_ONLY", "").lower() in ("1", "true", "yes"),
         )
         if target_prompt is None:
-            print("::warning::No creative today is safe to post (flat fallback card, or an unverified statistic in the "
-                  "copy); nothing was posted.")
+            print("::warning::No creative today meets the publishing requirements (fallback media, unverified claims, "
+                  "or no verified one-minute Reel); nothing was posted.")
             sys.exit(0)
 
     block_reason = auto_publish_block_reason(target_prompt)
+    if not block_reason and (args.reel_only or os.getenv("BUFFER_REEL_ONLY", "").lower() in ("1", "true", "yes")):
+        if not is_verified_minute_reel(target_prompt):
+            block_reason = "Reel is missing verified narration duration of at least 60 seconds"
     if block_reason:
         print(f"Automated render QA blocked publication: {block_reason}. Skipping Buffer publication.")
         sys.exit(0)

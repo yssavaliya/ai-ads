@@ -173,6 +173,8 @@ class DailyPipeline:
                     asset = outcome.unwrap()
                     p["asset_path"] = asset["asset_path"]
                     p["asset_type"] = asset["asset_type"]
+                    if asset.get("duration_seconds") is not None:
+                        p["video_duration_seconds"] = asset["duration_seconds"]
                     p["thumbnail"] = asset.get("thumbnail")
                     if asset.get("warnings"):
                         p.setdefault("warnings", []).extend(asset["warnings"])
