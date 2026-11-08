@@ -302,6 +302,7 @@ class SitePublisher:
                 "date": day,
                 "created_at": utc_now_naive().isoformat(timespec="seconds"),
                 "prompt_id": pid,
+                "hook_type": p.get("hook_type") or "",
                 "title": p.get("title") or "",
                 "prompt_type": p.get("prompt_type") or "",
                 "score": p.get("virality_score"),

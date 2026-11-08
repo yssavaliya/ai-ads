@@ -24,6 +24,7 @@ mutation CreatePost($input: CreatePostInput!) {
     ... on PostActionSuccess {
       post {
         id
+        channelId
         status
         dueAt
       }

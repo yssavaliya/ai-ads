@@ -21,6 +21,7 @@ jobs:
       LOG_LEVEL: INFO
       DATABASE_PATH: agent.db
       APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPO: ${{ github.repository }}
     steps:
@@ -32,13 +33,16 @@ jobs:
         with:
           state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 
+      - name: Sync Buffer post metrics and learn
+        run: bash .github/scripts/run_pipeline.sh src.learning.buffer_metrics
+
       - name: Scrape IG engagement and learn
         run: bash .github/scripts/run_pipeline.sh src.learning.auto_learner
 
       - uses: ./.github/actions/persist-state
         if: always()
         with:
-          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl
+          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl data/buffer_metrics.jsonl
           message: "chore: engagement sync state"
           state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 

@@ -47,8 +47,9 @@ def get_latest_prompts() -> list[dict]:
             continue
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            business_name = (data.get("business") or {}).get("name") or ""
             for entry in data.get("entries", []):
-                all_entries.append((entry.get("date", ""), entry))
+                all_entries.append((entry.get("date", ""), {**entry, "_business_name": business_name}))
         except Exception:
             continue
 
@@ -73,14 +74,38 @@ def posted_ids() -> set[str]:
     return {str(item.get("id")) for item in data.get("posted", []) if isinstance(item, dict) and item.get("id")}
 
 
-def record_posted(entry: dict) -> None:
-    """Remember what was sent so a re-run the same day cannot post the same creative again."""
+def record_posted(entry: dict, buffer_posts: list[dict] | None = None) -> None:
+    """Remember the creative and exact Buffer IDs for later per-post analytics."""
     try:
         data = json.loads(PUBLISHED_LOG.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         data = {}
     posted = [item for item in data.get("posted", []) if isinstance(item, dict)]
-    posted.append({"id": str(entry.get("id")), "title": entry.get("title"), "at": datetime.now(UTC).isoformat()})
+    stable_id = str(entry.get("id") or "")
+    record = next((item for item in posted if str(item.get("id") or "") == stable_id), None)
+    if record is None:
+        record = {"id": stable_id}
+        posted.append(record)
+    record.update({
+        "title": entry.get("title"),
+        "prompt_id": entry.get("prompt_id"),
+        "business_name": entry.get("_business_name") or entry.get("business_name") or "",
+        "prompt_type": entry.get("prompt_type") or "",
+        "format": entry.get("format") or "",
+        "hook_type": entry.get("hook_type") or "",
+        "audience_segment": entry.get("audience_segment") or "",
+        "caption": entry.get("caption") or "",
+        "at": datetime.now(UTC).isoformat(),
+    })
+    record["buffer_posts"] = [
+        {
+            "id": str(post.get("id")),
+            "channel_id": str(post.get("channelId") or ""),
+            "status": str(post.get("status") or ""),
+        }
+        for post in (buffer_posts or [])
+        if post.get("id")
+    ]
     PUBLISHED_LOG.parent.mkdir(parents=True, exist_ok=True)
     PUBLISHED_LOG.write_text(json.dumps({"posted": posted[-MAX_LOG_ENTRIES:]}, indent=2), encoding="utf-8")
 
@@ -264,8 +289,9 @@ def main() -> None:
     try:
         res = publisher.schedule_post(text=caption, image_url=image_url, video_url=video_url)
         print("✅ Successfully published to Buffer!")
-        record_posted(target_prompt)
-        for post in res.get("posts", []):
+        buffer_posts = res.get("posts", [])
+        record_posted(target_prompt, buffer_posts)
+        for post in buffer_posts:
             print(f"Post ID   : {post.get('id')}")
             print(f"Status    : {post.get('status')}")
             print(f"Due At    : {post.get('dueAt') or 'Auto Queue'}")

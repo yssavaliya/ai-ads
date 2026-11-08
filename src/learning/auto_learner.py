@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
@@ -15,6 +16,26 @@ from src.shared.utils import load_businesses, utc_now_naive
 from src.storage.models import Business, Engagement, Platform, Prompt, SessionLocal
 
 logger = logging.getLogger(__name__)
+
+
+def _buffer_managed_prompt_ids() -> set[int]:
+    """Keep exact Buffer-linked posts out of the lower-fidelity IG scraper."""
+    if not (getattr(settings, "buffer_access_token", None) or os.getenv("BUFFER_ACCESS_TOKEN")):
+        return set()
+    try:
+        data = (settings.data_dir / "published_log.json").read_text(encoding="utf-8")
+        records = json.loads(data).get("posted") or []
+    except (OSError, ValueError, TypeError):
+        return set()
+    prompt_ids = set()
+    for entry in records:
+        if not isinstance(entry, dict) or not entry.get("buffer_posts"):
+            continue
+        try:
+            prompt_ids.add(int(entry.get("prompt_id")))
+        except (TypeError, ValueError):
+            continue
+    return prompt_ids
 
 MIN_SIMILARITY = 0.30          # min caption/prompt token overlap to count as a match
 POST_MATCH_WINDOW_DAYS = 21    # how many days after a prompt the user may have posted
@@ -211,6 +232,7 @@ class AutoLearner:
             .all()
             if p.auto_learned_at is not None or p.sent_at >= cutoff
         ]
+        buffer_managed = _buffer_managed_prompt_ids()
         return [
             {
                 "learned": p.auto_learned_at is not None,
@@ -224,6 +246,7 @@ class AutoLearner:
                 "sent_at": p.sent_at,
             }
             for p in rows
+            if p.id not in buffer_managed
         ]
 
     def _benchmark_median(self, posts: list[dict[str, Any]], followers: int | None) -> tuple[float, int]:
@@ -481,6 +504,16 @@ class AutoLearner:
                             "rate": round(rate, 4),
                             "likes": int(post.get("likes") or 0),
                             "comments": int(post.get("comments") or 0),
+                            "shares": post.get("shares"),
+                            "saves": post.get("saves"),
+                            "reach": post.get("reach"),
+                            "impressions": post.get("impressions"),
+                            "views": post.get("views"),
+                            "follows": post.get("follows"),
+                            "totalTimeWatched": post.get("totalTimeWatched"),
+                            "averageTimeWatched": post.get("averageTimeWatched"),
+                            "avg_watch_seconds": post.get("avg_watch_seconds"),
+                            "metrics_source": "buffer" if str(post.get("post_id") or "").startswith("buffer:") else "instagram_scraper",
                             "outcome": outcome,
                             **(meta or {}),
                         }
