@@ -114,7 +114,11 @@ def _score(metrics: dict[str, float]) -> tuple[float | None, tuple[str, ...], fl
     rate = interactions / reach
     watched = metrics.get("totalTimeWatched")
     views = metrics.get("views")
-    avg_watch_seconds = (watched * 60.0 / views) if watched is not None and views and views > 0 else None
+    # Buffer reports Instagram Reels' averageTimeWatched directly in seconds.
+    # totalTimeWatched is reported in minutes on networks such as LinkedIn.
+    avg_watch_seconds = metrics.get("averageTimeWatched")
+    if avg_watch_seconds is None and watched is not None and views and views > 0:
+        avg_watch_seconds = watched * 60.0 / views
     return round(rate, 6), components, round(avg_watch_seconds, 3) if avg_watch_seconds is not None else None
 
 

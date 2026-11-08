@@ -68,7 +68,19 @@
     {
       "id": "2026-11-08-91",
       "title": "The 3\u2011Step AI Creative Engine",
-      "at": "2026-11-08T05:48:29.004507+00:00"
+      "at": "2026-11-08T05:48:29.004507+00:00",
+      "prompt_id": 91,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "educational",
+      "format": "reel",
+      "audience_segment": "Creative Agency Decision\u2011Maker",
+      "buffer_posts": [
+        {
+          "id": "6af00d2c9214322f68347e44",
+          "channel_id": "",
+          "status": "scheduled"
+        }
+      ]
     }
   ]
 }
