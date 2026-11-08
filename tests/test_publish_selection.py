@@ -74,3 +74,11 @@ def test_overlay_draws_text_without_raising_for_unsupported_characters(tmp_path)
     out = forge.overlay_text(str(base), "VC‑ready ✨ branding", category="before_after", brand_handle="aimagix.studio",
                              out_path=str(tmp_path / "out.png"))
     assert Image.open(io.BytesIO(Path(out).read_bytes())).size == (540, 675)
+
+
+def test_local_reel_scene_draws_distinct_open_source_visuals():
+    first = CreativeForge._local_reel_scene(270, 480, 0)
+    second = CreativeForge._local_reel_scene(270, 480, 3)
+    assert Image.open(io.BytesIO(first)).size == (270, 480)
+    assert Image.open(io.BytesIO(second)).size == (270, 480)
+    assert first != second

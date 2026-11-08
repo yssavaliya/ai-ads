@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import io
 import os
 import re
 import shutil
@@ -167,6 +168,11 @@ class CreativeForge:
         generated = image_providers.generate(image_prompt, width, height)
         if generated is not None:
             data, provider = generated
+        elif re.search(r"-beat\d+$", name):
+            beat = int(re.search(r"-beat(\d+)$", name).group(1))  # type: ignore[union-attr]
+            data = self._local_reel_scene(width, height, beat)
+            provider = "local-open-source-scene"
+            self._pending_warnings.append(f"AI image unavailable; locally illustrated Reel scene {beat + 1} was used")
         elif settings.image_card_fallback:
             data, provider = image_providers.branded_card(width, height, self._card_color, seed=name), "local-card"
             message = "All AI image providers failed or are rate limited — used a branded card background instead"
@@ -179,6 +185,126 @@ class CreativeForge:
         out_path.write_bytes(data)
         logger.info("Rendered image %s via %s (%d bytes)", out_path, provider, len(data))
         return str(out_path)
+
+    @staticmethod
+    def _local_reel_scene(width: int, height: int, beat: int) -> bytes:
+        """Draw a polished, open-source procedural product scene when image APIs are down."""
+        from PIL import Image, ImageDraw, ImageFilter
+
+        # Deep indigo gradient and soft cyan/violet studio lights.
+        background = Image.new("RGB", (width, height))
+        pixels = background.load()
+        top, bottom = (5, 9, 25), (28, 12, 55)
+        for y in range(height):
+            t = y / max(1, height - 1)
+            color = tuple(round(a * (1 - t) + b * t) for a, b in zip(top, bottom))
+            for x in range(width):
+                pixels[x, y] = color
+
+        glow = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        g = ImageDraw.Draw(glow)
+        cx = width * (0.68 if beat % 2 else 0.34)
+        g.ellipse((cx - width * .31, height * .10, cx + width * .31, height * .48), fill=(0, 202, 255, 90))
+        g.ellipse((width * .18, height * .50, width * .82, height * .94), fill=(119, 48, 255, 42))
+        glow = glow.filter(ImageFilter.GaussianBlur(max(12, width // 12)))
+        frame = Image.alpha_composite(background.convert("RGBA"), glow)
+        draw = ImageDraw.Draw(frame, "RGBA")
+
+        # A changing halo gives the six scenes their own visual rhythm.
+        center_x = width // 2
+        halo_y = int(height * (.37 if beat in (0, 5) else .43))
+        for inset, alpha in ((0, 72), (width * .045, 48), (width * .09, 28)):
+            draw.ellipse((center_x - width * .34 + inset, halo_y - height * .20 + inset,
+                          center_x + width * .34 - inset, halo_y + height * .20 - inset),
+                         outline=(63, 221, 255, alpha), width=max(2, width // 280))
+
+        # Scene-specific graphic details: palette, macro glints, a desk, and final-frame rays.
+        if beat == 1:
+            swatches = [(27, 224, 239, 220), (123, 83, 255, 220), (255, 128, 100, 220)]
+            for i, color in enumerate(swatches):
+                x = int(width * (.10 + i * .13))
+                y = int(height * (.24 + (i % 2) * .07))
+                draw.rounded_rectangle((x, y, x + width * .085, y + width * .085), radius=width // 35,
+                                       fill=color, outline=(255, 255, 255, 110), width=max(1, width // 540))
+        elif beat == 3:
+            draw.line((width * .08, height * .77, width * .92, height * .77), fill=(82, 215, 243, 150), width=max(3, width // 180))
+            draw.rounded_rectangle((width * .68, height * .60, width * .91, height * .77), radius=width // 30,
+                                   outline=(151, 119, 255, 200), width=max(3, width // 180))
+            draw.arc((width * .72, height * .55, width * .87, height * .68), 180, 360,
+                     fill=(151, 119, 255, 200), width=max(3, width // 180))
+        elif beat == 5:
+            for i in range(7):
+                x = int(width * (.12 + i * .13))
+                draw.line((x, height * .18, width * .5 + (x - width * .5) * 1.55, height * .42),
+                          fill=(71, 210, 255, 48), width=max(1, width // 400))
+
+        # Reusable bottle, built from softly lit vector shapes instead of a flat fallback card.
+        scale = 1.18 if beat == 2 else (0.84 if beat == 4 else 1.0)
+        body_w, body_h = int(width * .38 * scale), int(height * .45 * scale)
+        body_x = (width - body_w) // 2
+        body_y = int(height * (.35 if beat == 2 else .31))
+        if body_y + body_h > height * .76:
+            body_h = int(height * .76) - body_y
+        radius = max(18, body_w // 5)
+
+        shadow = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        sd = ImageDraw.Draw(shadow)
+        sd.ellipse((body_x - body_w * .16, body_y + body_h - 8, body_x + body_w * 1.16,
+                    body_y + body_h + height * .055), fill=(0, 0, 0, 150))
+        frame = Image.alpha_composite(frame, shadow.filter(ImageFilter.GaussianBlur(max(4, width // 45))))
+        draw = ImageDraw.Draw(frame, "RGBA")
+
+        neck_w = int(body_w * .48)
+        neck_x = (width - neck_w) // 2
+        cap_h = int(body_h * .13)
+        neck_h = int(body_h * .12)
+        draw.rounded_rectangle((neck_x, body_y - neck_h, neck_x + neck_w, body_y + neck_h // 2),
+                               radius=max(10, neck_w // 7), fill=(15, 104, 154, 235),
+                               outline=(126, 240, 255, 220), width=max(2, width // 220))
+        cap_y = body_y - neck_h - cap_h + 5
+        draw.rounded_rectangle((neck_x + neck_w * .08, cap_y, neck_x + neck_w * .92, body_y - neck_h * .35),
+                               radius=max(8, neck_w // 8), fill=(94, 83, 224, 245),
+                               outline=(185, 159, 255, 235), width=max(2, width // 220))
+
+        mask = Image.new("L", (width, height), 0)
+        md = ImageDraw.Draw(mask)
+        md.rounded_rectangle((body_x, body_y, body_x + body_w, body_y + body_h), radius=radius, fill=255)
+        fill = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        fp = fill.load()
+        for y in range(body_y, body_y + body_h + 1):
+            t = (y - body_y) / max(1, body_h)
+            c = (round(12 + 24 * t), round(107 + 112 * t), round(172 + 71 * t), 226)
+            for x in range(body_x, body_x + body_w + 1):
+                fp[x, y] = c
+        frame = Image.alpha_composite(frame, Image.composite(fill, Image.new("RGBA", (width, height), (0, 0, 0, 0)), mask))
+        draw = ImageDraw.Draw(frame, "RGBA")
+        draw.rounded_rectangle((body_x, body_y, body_x + body_w, body_y + body_h), radius=radius,
+                               outline=(169, 249, 255, 235), width=max(3, width // 140))
+        draw.rounded_rectangle((body_x + body_w * .16, body_y + body_h * .12,
+                                body_x + body_w * .23, body_y + body_h * .81),
+                               radius=max(4, body_w // 45), fill=(232, 255, 255, 125))
+        draw.line((body_x + body_w * .19, body_y + body_h * .08,
+                   body_x + body_w * .81, body_y + body_h * .08), fill=(232, 255, 255, 120), width=max(2, width // 250))
+
+        # Condensation highlights add tactile detail without simulated lettering or logos.
+        for i in range(12):
+            dx = (i * 37 + beat * 19) % max(1, body_w - 36)
+            dy = (i * 71 + 43) % max(1, body_h - 60)
+            r = max(3, width // (150 + (i % 4) * 25))
+            x, y = body_x + 18 + dx, body_y + 22 + dy
+            draw.ellipse((x, y, x + r * 2, y + r * 2), fill=(214, 251, 255, 125))
+        draw.ellipse((width * .22, height * .80, width * .78, height * .845),
+                     fill=(25, 187, 228, 65), outline=(114, 231, 255, 110), width=max(1, width // 400))
+
+        if beat == 4:
+            # A set of increasingly crisp frames signals concept refinement.
+            for inset, color in ((width * .08, (84, 224, 255, 100)), (width * .13, (155, 112, 255, 85))):
+                draw.rounded_rectangle((inset, height * .20, width - inset, height * .79),
+                                       radius=width // 24, outline=color, width=max(2, width // 240))
+
+        output = io.BytesIO()
+        frame.convert("RGB").save(output, format="PNG", optimize=True)
+        return output.getvalue()
 
     # Thin shims kept for callers/tests that target a specific provider.
     def _pollinations_image(self, image_prompt: str, width: int, height: int) -> bytes | None:
