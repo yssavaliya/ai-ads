@@ -111,8 +111,12 @@ def record_posted(entry: dict, buffer_posts: list[dict] | None = None) -> None:
 
 
 def is_degraded(entry: dict) -> bool:
-    """True when the creative shipped with the flat fallback card because every AI image provider failed."""
-    return any("branded card" in str(w).lower() for w in (entry.get("warnings") or []))
+    """True when provider failure forced a branded card or procedural Reel artwork."""
+    return any(
+        marker in str(w).lower()
+        for w in (entry.get("warnings") or [])
+        for marker in ("branded card", "locally illustrated reel scene")
+    )
 
 
 def is_verified_minute_reel(entry: dict) -> bool:
@@ -149,6 +153,7 @@ def auto_publish_block_reason(prompt: dict) -> str | None:
     for fragment in (
         "all ai image providers failed",
         "used a branded card background",
+        "locally illustrated reel scene",
         "reel render failed",
         "falling back to single image",
         "asset render failed",

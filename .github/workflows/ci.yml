@@ -54,13 +54,21 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        with:
+          go-version: "1.23.4"
+
       - name: Shell syntax of helper scripts
         run: bash -n .github/scripts/run_pipeline.sh
 
-      - name: actionlint (workflows + composite actions)
+      - name: Install actionlint
         run: |
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
-          ./actionlint -color -shellcheck=
+          mkdir -p "$RUNNER_TEMP/bin"
+          GOBIN="$RUNNER_TEMP/bin" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: actionlint (workflows + composite actions)
+        run: actionlint -color -shellcheck=
 
   dependencies:
     runs-on: ubuntu-latest

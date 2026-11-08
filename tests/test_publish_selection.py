@@ -34,6 +34,19 @@ def test_nothing_is_picked_when_only_flat_cards_remain():
     assert pb.pick_prompt([]) is None
 
 
+def test_procedural_reel_art_is_not_selected_for_buffer():
+    pb = _publish_module()
+    fallback_reel = {
+        "title": "fallback Reel",
+        "score": 99,
+        "asset": {"type": "reel", "video": "assets/reel.mp4"},
+        "video_duration_seconds": 66,
+        "warnings": ["AI image unavailable; locally illustrated Reel scene 1 was used"],
+    }
+    assert pb.is_degraded(fallback_reel)
+    assert pb.pick_prompt([fallback_reel], reel_only=True) is None
+
+
 def test_a_creative_with_an_unverified_statistic_is_never_picked_even_with_the_top_score():
     pb = _publish_module()
     invented = {"title": "invented", "score": 82, "warnings": [], "hook": "250% CTR in 48h", "caption": "Proof: 3x ROI."}

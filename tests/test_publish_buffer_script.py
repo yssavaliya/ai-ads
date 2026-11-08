@@ -43,3 +43,12 @@ def test_auto_publish_blocks_known_failed_render_even_for_reel():
     )
     assert reason is not None
     assert reason.startswith("render QA failed:")
+
+
+def test_auto_publish_blocks_procedural_scene_fallback_reel():
+    reason = auto_publish_block_reason({
+        "asset_type": "reel",
+        "asset_path": "assets/reel.mp4",
+        "warnings": ["AI image unavailable; locally illustrated Reel scene 1 was used"],
+    })
+    assert reason == "render QA failed: locally illustrated reel scene"
