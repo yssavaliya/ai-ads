@@ -5005,6 +5005,109 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-91-poster.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-08-92",
+   "date": "2026-11-08",
+   "created_at": "2026-11-08T05:48:17",
+   "prompt_id": 92,
+   "title": "The 5-Step Design Sprint Blueprint",
+   "prompt_type": "social_proof",
+   "score": 71,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "The 5-Step Design Sprint Blueprint",
+   "angle": "Demonstrating a repeatable, fast process to build trust with decision-makers.",
+   "prompt_text": "This social proof post targets Creative Agency Decision-Makers who want to stay ahead of design trends and win pitches. The 'framework' hook provides a clear, actionable 5-step blueprint that demonstrates the studio's process. The visual scene uses a timelapse of a hand sketching to show the rapid concept-to-final workflow, addressing the pain point of 'Long lead times that jeopardise client deadlines.' The caption outlines the steps of the design sprint, emphasizing speed and quality. By showing the process rather than just the result, we build trust and demonstrate our capability. The CTA encourages saving the post as a reference, aligning with the audience's need for reliable, repeatable processes.",
+   "caption": "The 5-Step Design Sprint Blueprint\n\nGrab these 10 reel templates that triple engagement instantly (meta-reference to speed).\n\n1. Define the goal and audience.\n2. Generate concepts rapidly with AI.\n3. Refine with human feedback.\n4. Produce high-quality visuals.\n5. Launch and iterate.\n\nThis blueprint helps you stay ahead of design trends and win pitches. \n\nSave this blueprint for your next project.\n\n#BrandMakeover #DesignSprintAI #CreativeCompliance #StartupDesign #SMEGrowth #AimagixStudio #IndiaBiz #DigitalDesign",
+   "hashtags": [
+    "#BrandMakeover",
+    "#DesignSprintAI",
+    "#CreativeCompliance",
+    "#StartupDesign",
+    "#SMEGrowth",
+    "#AimagixStudio",
+    "#IndiaBiz",
+    "#DigitalDesign"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "platform_focus": "both",
+   "audience_segment": "Creative Agency Decision-Maker",
+   "reasoning": "The concept matches the top‑performing patterns (blueprint + ROI proof) for the primary persona and uses a format that thrives on Instagram. While the idea is solid, the hook’s opening needs a punchier phrasing and a touch of local relevance to maximise scroll‑stopping power.",
+   "key_factors": [
+    "Strong alignment with Creative Agency Decision‑Maker’s need for fast, repeatable processes",
+    "Clear 5‑step blueprint (specific, actionable) that creates a curiosity/ROI hook",
+    "Timelapse visual that instantly demonstrates speed – perfect for Instagram reels",
+    "CTA to save the post taps the audience’s habit of bookmarking reference material"
+   ],
+   "risks": [
+    "First‑three‑word hook isn’t explicitly defined; a weak opening could cause scroll‑pass",
+    "Lack of explicit Indian cultural cues may reduce resonance with metro Indian agencies",
+    "If the timelapse feels generic rather than studio‑specific, it may not convey unique value"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "reel",
+    "video": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-92.mp4",
+    "poster": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-92-poster.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-92-poster.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-08-93",
+   "date": "2026-11-08",
+   "created_at": "2026-11-08T05:48:17",
+   "prompt_id": 93,
+   "title": "Agency budget myth bust",
+   "prompt_type": "storytelling",
+   "score": 70,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "Why most agencies waste your design budget",
+   "angle": "Challenge the myth that expensive agencies equal better outcomes for startup founders.",
+   "prompt_text": "Create a single‑image post that challenges the common belief that high‑priced agencies automatically deliver better results. The visual should convey a calm, high‑tech studio environment that feels affordable yet professional, appealing to Startup Founders who crave VC‑ready branding on a tight budget. Use the contrarian hook to capture attention in the first line, then list three concrete benefits that directly address the founder's pain points: hidden costs, slow turn‑around, and lack of clarity. End with a clear CTA encouraging the viewer to bookmark the post for future reference. The tone must stay professional yet aspirational, positioning Aimagix Studio as the transparent alternative without making unverifiable promises. Leverage the audience’s best posting window (Mon‑Wed 8‑11 AM PST) and include a mix of hyper‑niche, industry, and broad hashtags to maximize discoverability.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Why most agencies waste your design budget\n🔹 We keep every line item transparent so you see exactly where money goes\n🔹 Lean production methods let you get high‑impact visuals without excess spend\n🔹 Fast iteration cycles mean you approve earlier and avoid costly re‑work\n💾 Save this before you sign your next agency contract\n\n#DesignSprintAI #BrandMakeover #CreativeCompliance #GraphicDesign #BrandStrategy #Marketing #InstaDesign #Creative",
+   "hashtags": [
+    "#DesignSprintAI",
+    "#BrandMakeover",
+    "#CreativeCompliance",
+    "#GraphicDesign",
+    "#BrandStrategy",
+    "#Marketing",
+    "#InstaDesign",
+    "#Creative"
+   ],
+   "first_comment": "💬 What's your take? Comment below.\n\nFollow @aimagix.studio for more.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt leverages a proven contrarian pattern and delivers concrete, founder‑centric benefits, which aligns well with the target persona. However, the single‑image format and potential text density reduce the scroll‑stopper effect compared to carousel or reel formats that are popular among startup founders. Without a visual proof element or ROI data, the post may not fully satisfy the audience’s desire for tangible evidence, keeping the virality potential in the medium range.",
+   "key_factors": [
+    "Strong contrarian hook that taps into founders’ frustration with agency pricing",
+    "Clear, specific benefits that directly address the target pain points",
+    "Alignment with audience preferences for concise, ROI‑focused content",
+    "Platform‑appropriate single‑image format that works well on Instagram’s feed",
+    "Inclusion of a CTA that encourages long‑term engagement (bookmarking)"
+   ],
+   "risks": [
+    "The hook may be perceived as overly negative or confrontational, risking backlash",
+    "A single image with text can become cluttered, reducing readability and scroll‑stopper power",
+    "Lack of visual storytelling (e.g., before‑after) may under‑serve the startup founder’s appetite for quick visual proof",
+    "Hashtag mix may not be optimised for Indian audiences, limiting discoverability"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-93.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-93-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
