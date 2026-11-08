@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from statistics import median
@@ -135,11 +136,20 @@ def _metrics_map(raw_metrics: list[dict[str, Any]]) -> dict[str, float]:
 def _fetch_post(client: httpx.Client, token: str, post_id: str) -> dict[str, Any] | None:
     # JSON string encoding escapes quotes and control characters for GraphQL.
     query = POST_METRICS_QUERY.replace("{post_id}", json.dumps(post_id, ensure_ascii=False))
-    response = client.post(
-        BUFFER_GQL_URL,
-        headers={"Authorization": f"Bearer {token}"},
-        json={"query": query},
-    )
+    response = None
+    for attempt in range(3):
+        response = client.post(
+            BUFFER_GQL_URL,
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": query},
+        )
+        if response.status_code != 429 and response.status_code < 500:
+            break
+        if attempt < 2:
+            time.sleep(2 ** attempt)
+    assert response is not None
+    if response.is_error:
+        raise RuntimeError(f"Buffer API HTTP {response.status_code}: {response.text[:500]}")
     response.raise_for_status()
     payload = response.json()
     errors = payload.get("errors") or []
