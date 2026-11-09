@@ -5900,6 +5900,62 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-08/2026-11-08-108-poster.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-10-109",
+   "date": "2026-11-10",
+   "created_at": "2026-11-09T22:39:56",
+   "prompt_id": 109,
+   "hook_type": "before_after",
+   "title": "From Vague Brief to Viral Ad: Smart Speaker Spec",
+   "prompt_type": "process",
+   "score": 58,
+   "below_threshold": true,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "Watch AI Transform",
+   "angle": "Demonstrate the difference between vague and specific creative direction using a smart speaker spec ad, highlighting the studio's ability to craft compelling AI video concepts.",
+   "prompt_text": "This single image targets Startup Founders and SME Marketing Managers who are frustrated by generic AI outputs. The 'before_after' hook immediately visualizes the problem (flat image) versus the solution (dynamic ad). The visual scene uses a clear split-screen to prove the impact of specificity without needing text. The caption educates on the importance of sensory details in creative direction, positioning the studio as a strategic partner, not just a tool-user. The CTA invites users to DM 'AD' to start a conversation about their specific product, directly addressing the pain point of vague briefs and generic results.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Watch AI Transform\n\nMost founders think AI ads look bad because the tech is weak. It’s not. It’s because the brief is boring.\n\nIf you just say 'show a speaker,' you get a flat, white-background image that no one stops for. But if you specify 'show sound waves rippling through a cozy night scene with warm lighting,' you get an ad that feels alive.\n\nThis spec concept for a smart-home speaker shows exactly how specific creative direction changes the output. We don’t just generate images; we direct the scene.\n\nStop guessing with vague prompts. DM us \"AD\" with your product and goal, and we’ll show you the difference.\n\n#AIAds #ProductMarketing #SMBGrowth #CreativeAI #AdTech #StartupMarketing #DigitalAds #ReelMarketing #IndiaBiz #EntrepreneurLife",
+   "hashtags": [
+    "#AIAds",
+    "#ProductMarketing",
+    "#SMBGrowth",
+    "#CreativeAI",
+    "#AdTech",
+    "#StartupMarketing",
+    "#DigitalAds",
+    "#ReelMarketing",
+    "#IndiaBiz",
+    "#EntrepreneurLife"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The concept hits the core audience’s frustration with bland AI output and includes a DM call‑to‑action, giving decent inquiry potential. However, it falls short on specificity, format, and cultural tailoring, which limits its discovery and shareability on Instagram.",
+   "key_factors": [
+    "Before‑after split‑screen visual directly addresses founder/marketing pain points",
+    "Clear CTA inviting DMs for a product‑specific brief",
+    "Alignment with studio’s AI‑ad offering (shows transformation) "
+   ],
+   "risks": [
+    "No concrete product‑category example – appears too generic for the “spec ad” pillar",
+    "Static image rather than a Reel, which is the preferred format for Instagram discovery",
+    "Caption hook not defined; weak opening may fail to stop the scroll",
+    "Lacks Indian cultural or seasonal relevance that could boost local resonance"
+   ],
+   "warnings": [
+    "Below your quality bar (58/100, bar 70) - review before posting."
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-10/2026-11-10-109.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-10/2026-11-10-109-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
