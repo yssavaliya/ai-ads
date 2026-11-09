@@ -3,3 +3,4 @@
 {"buffer_post_id": "6af00d2c9214322f68347e44", "checked_at": "2026-11-08T06:34:09.977573+00:00", "metrics_updated_at": "2026-11-08T05:48:28.902Z", "sent_at": null, "status": "scheduled", "type": "check"}
 {"buffer_post_id": "6af01dfc9214322f6838b96f", "checked_at": "2026-11-08T13:20:33.800059+00:00", "due_at": "2026-11-17T14:03:00.000Z", "metrics_updated_at": "2026-11-08T07:00:12.287Z", "sent_at": null, "status": "scheduled", "type": "check"}
 {"buffer_post_id": "6af02a4a229bf05daf9a4e02", "checked_at": "2026-11-08T13:20:33.800059+00:00", "due_at": "2026-11-18T13:23:00.000Z", "metrics_updated_at": "2026-11-08T07:52:42.698Z", "sent_at": null, "status": "scheduled", "type": "check"}
+{"buffer_post_id": "6af00d2c9214322f68347e44", "checked_at": "2026-11-09T06:21:30.238569+00:00", "due_at": "2026-11-12T04:51:00.000Z", "metrics_updated_at": "2026-11-08T05:48:28.902Z", "sent_at": null, "status": "scheduled", "type": "check"}
