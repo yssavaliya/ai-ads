@@ -138,6 +138,25 @@
           "status": "scheduled"
         }
       ]
+    },
+    {
+      "id": "2026-11-10-109",
+      "title": "From Vague Brief to Viral Ad: Smart Speaker Spec",
+      "prompt_id": 109,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "process",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Startup Founder",
+      "caption": "Watch AI Transform\n\nMost founders think AI ads look bad because the tech is weak. It\u2019s not. It\u2019s because the brief is boring.\n\nIf you just say 'show a speaker,' you get a flat, white-background image that no one stops for. But if you specify 'show sound waves rippling through a cozy night scene with warm lighting,' you get an ad that feels alive.\n\nThis spec concept for a smart-home speaker shows exactly how specific creative direction changes the output. We don\u2019t just generate images; we direct the scene.\n\nStop guessing with vague prompts. DM us \"AD\" with your product and goal, and we\u2019ll show you the difference.\n\n#AIAds #ProductMarketing #SMBGrowth #CreativeAI #AdTech #StartupMarketing #DigitalAds #ReelMarketing #IndiaBiz #EntrepreneurLife",
+      "at": "2026-11-09T22:40:13.689173+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af24bcde862837263afab8e",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "scheduled"
+        }
+      ]
     }
   ]
 }
