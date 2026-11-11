@@ -157,6 +157,25 @@
           "status": "scheduled"
         }
       ]
+    },
+    {
+      "id": "2026-11-12-110",
+      "title": "Eco\u2011Gadget Spec Ad",
+      "prompt_id": 110,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "social_proof",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Startup Founder",
+      "caption": "Turn 1 Photo into a Full Ad\nWe started with a single clean shot of an eco\u2011gadget. Using AI\u2011driven prompts we generated motion, lighting shifts, and a concise story that fits a 30\u2011second slot. The result is a polished spec concept that shows what the final ad could look like \u2013 no designers, no extra footage.\nWhat\u2019s the biggest visual challenge for your product\u2019s ads? DM AD with your product and the advertising goal you have in mind.\n#EcoGadgetAds #AIAdBlueprint #SpecAdDemo #AIAds #CreativeAutomation #ProductLaunch #Entrepreneur #Marketing",
+      "at": "2026-11-11T19:52:29.797228+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af4c77d2f8776bfa37a73d3",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "scheduled"
+        }
+      ]
     }
   ]
 }
