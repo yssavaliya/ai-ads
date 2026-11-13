@@ -6009,6 +6009,60 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-12/2026-11-12-110-thumb.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-14-111",
+   "date": "2026-11-14",
+   "created_at": "2026-11-13T20:02:17",
+   "prompt_id": 111,
+   "hook_type": "before_after",
+   "title": "Snack, Click, Profit – Indian Snack Spec Ad",
+   "prompt_type": "educational",
+   "score": 70,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "Snack, Click, Profit",
+   "angle": "Showcase a fast, AI‑driven workflow that turns a simple sketch into a high‑impact Reel for Indian snack brands.",
+   "prompt_text": "Create a 60‑second single image that animates a sketch‑to‑AI transformation for an Indian‑market snack (e.g., spicy Bhel Puri). Start with a hand drawing the snack on paper, then show the AI prompt being typed (no visible text on screen), followed by the AI generating a vivid 3D render and a short motion clip of the snack being tossed. Overlay a clear “Spec Concept” badge and a quick tip about the prompt structure used. Use a three‑word curiosity‑gap hook “Snack, Click, Profit” as the opening spoken line and overlay a short version of the hook. Include 2‑3 trending hashtags (#AIAds, #StartupMarketing, #IndiaBiz). End with a CTA inviting viewers to DM “AD” with their product and ad goal. Target Startup Founders who need fast, budget‑friendly ad concepts for Indian audiences.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Snack, Click, Profit\n\nWe turned a hand‑sketched idea for a spicy Indian snack into a scroll‑stopping Reel, all with AI. The quick prompt we used was: *product + desired emotion + single call‑to‑action*. That structure lets you go from concept to video in minutes.\n\n💡 Quick tip: keep your prompt under 20 words and include the core benefit.\n\n👉 Got a product you want to showcase the same way? DM \"AD\" with your product and advertising goal.\n\n#SnackAds #AIVisuals #ProductAd #AIAds #StartupMarketing #IndiaBiz #CreativeAI #DigitalAds",
+   "hashtags": [
+    "#SnackAds",
+    "#AIVisuals",
+    "#ProductAd",
+    "#AIAds",
+    "#StartupMarketing",
+    "#IndiaBiz",
+    "#CreativeAI",
+    "#DigitalAds"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt aligns with the studio’s spec‑product‑ad pillar, uses a trending hook, and targets the right persona with a culturally resonant snack. The visual promise of a sketch‑to‑AI transformation is compelling, but the static‑image deliverable risks under‑delivering on the animation promise. Overall, the concept has high potential for discovery and buyer interest, but small refinements could boost its scroll‑stopping power.",
+   "key_factors": [
+    "Clear spec‑concept badge that signals a finished ad idea",
+    "Strong curiosity‑gap hook “Snack, Click, Profit” that grabs attention",
+    "Highly relevant Indian snack example that speaks to the target founders",
+    "Quick tip on prompt structure adds actionable value",
+    "Direct CTA inviting DMs aligns with the audience’s buying intent"
+   ],
+   "risks": [
+    "Static image may not fully convey the promised animation, reducing engagement",
+    "Hook is generic; could be less memorable than a more specific product name",
+    "Badge and text overlay might clutter the frame and dilute the visual impact",
+    "DM‑based CTA may be perceived as too vague or hard to act on without a clear next step"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-111.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-111-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
