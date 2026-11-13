@@ -176,6 +176,25 @@
           "status": "scheduled"
         }
       ]
+    },
+    {
+      "id": "2026-11-14-111",
+      "title": "Snack, Click, Profit \u2013 Indian Snack Spec Ad",
+      "prompt_id": 111,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "educational",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Startup Founder",
+      "caption": "Snack, Click, Profit\n\nWe turned a hand\u2011sketched idea for a spicy Indian snack into a scroll\u2011stopping Reel, all with AI. The quick prompt we used was: *product\u202f+\u202fdesired emotion\u202f+\u202fsingle call\u2011to\u2011action*. That structure lets you go from concept to video in minutes.\n\n\ud83d\udca1 Quick tip: keep your prompt under 20 words and include the core benefit.\n\n\ud83d\udc49 Got a product you want to showcase the same way? DM \"AD\" with your product and advertising goal.\n\n#SnackAds #AIVisuals #ProductAd #AIAds #StartupMarketing #IndiaBiz #CreativeAI #DigitalAds",
+      "at": "2026-11-13T20:02:30.655704+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af76cd64b28296eb110c90e",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "scheduled"
+        }
+      ]
     }
   ]
 }
