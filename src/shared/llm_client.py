@@ -119,8 +119,8 @@ LABEL_MAX_TOKENS: dict[str, int] = {
     "weekly-report": 5000,
 }
 MIN_USEFUL_TOKENS = 600  # below this the answer is cut off, so skip the model instead of wasting a call
-TOKEN_SAFETY_MARGIN = 250
-CHARS_PER_TOKEN = 3.0  # deliberately pessimistic for English + JSON
+TOKEN_SAFETY_MARGIN = 400
+CHARS_PER_TOKEN = 3.5  # slightly pessimistic for English + JSON (measured ~4)
 
 
 def _parse_limits(raw: str) -> dict[str, int]:
@@ -214,6 +214,15 @@ class LLMClient:
             "Add another free key (GROQ_API_KEY, GEMINI_API_KEY, CEREBRAS_API_KEY, "
             "OPENROUTER_API_KEY, MISTRAL_API_KEY, HF_TOKEN) or check the ERROR lines above."
         )
+
+    def primary_budget(self, prompt: str, label: str | None) -> int | None:
+        """Completion tokens available on the first configured provider/model, or None when unbounded/unknown.
+        Callers use it to ask for fewer items instead of getting a truncated answer."""
+        for name in llm_providers.provider_order():
+            provider = llm_providers.get_provider(name)
+            if provider is not None and provider.models:
+                return completion_budget(name, provider.models[0], prompt, label)
+        return None
 
     def run_json(
         self,

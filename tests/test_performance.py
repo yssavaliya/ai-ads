@@ -161,7 +161,7 @@ def test_llm_calls_from_many_threads_respect_llm_concurrency(monkeypatch):
             self.chat = type("C", (), {"completions": type("X", (), {"create": staticmethod(self._create)})})
 
         @staticmethod
-        def _create(model, messages, temperature, max_tokens=None):
+        def _create(model, messages, temperature, max_tokens=None, **_extra):
             with gauge:
                 time.sleep(0.04)
             return type("R", (), {"choices": [type("Ch", (), {"message": type("M", (), {"content": "ok"}), "finish_reason": "stop"})]})

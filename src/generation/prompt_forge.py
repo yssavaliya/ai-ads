@@ -93,6 +93,10 @@ PROMPT_TYPE_DESCRIPTIONS = {
 }
 
 
+TOKENS_PER_VARIANT = 1300  # a Reel variant (brief, caption, 6 beats, narration) measured ~1000-1300 tokens
+MIN_VARIANTS_PER_CALL = 2
+
+
 class PromptForge:
     """Generate creator briefs for either a single image or an assembled Reel."""
 
@@ -122,7 +126,8 @@ class PromptForge:
             else "No previous feedback."
         )
 
-        prompt = f"""
+        def build(count: int) -> str:
+            return f"""
 You are a practical Instagram growth strategist for a small creative studio. Optimize for qualified non-follower reach, saves, shares, profile visits, and inquiries, not vague "virality" claims.
 Generate {count} distinct content prompts that all belong to the business's positioning and content strategy. Use a mix of single images and Reels.
 When count is 5, include at least 3 Reels and 2 single images so the batch tests discovery and portfolio formats. When count is smaller, prefer a Reel unless a still image is clearly the better demonstration.
@@ -211,6 +216,20 @@ Respond ONLY with JSON:
   }}
 ]
 """
+
+        prompt = build(count)
+        # A single request must fit the provider's per-minute token budget (prompt + answer). The fixed
+        # instructions are large, so on small budgets ask for fewer variants rather than get a cut-off answer.
+        budget = self.llm.primary_budget(prompt, "prompt-forge")
+        if budget is not None:
+            fit = max(MIN_VARIANTS_PER_CALL, min(count, budget // TOKENS_PER_VARIANT))
+            if fit < count:
+                logger.warning(
+                    "::warning::Token budget (%d) fits ~%d variants per call; asking for %d instead of %d",
+                    budget, budget // TOKENS_PER_VARIANT, fit, count,
+                )
+                count = fit
+                prompt = build(count)
         data = self.llm.run_json(prompt, label="prompt-forge", temperature=0.8)
         if isinstance(data, dict):
             data = data.get("prompts", [])
