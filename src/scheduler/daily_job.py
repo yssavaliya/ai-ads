@@ -23,7 +23,7 @@ from src.intelligence.campaign_strategist import (
     brief_for_creative,
     strategy_summary,
 )
-from src.intelligence.research import research_quality
+from src.intelligence.research import research_quality, verified_competitors
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.brand_facts import load_brand_facts, merge_into_profile, warn_if_empty
@@ -72,7 +72,8 @@ class DailyPipeline:
             profile = merge_into_profile(profile, brand_facts)
             def _competitors() -> Any:
                 return self._cached_intel(
-                    business, "competitors", lambda: self.competitors.discover_and_fetch(profile)
+                    business, "competitors", lambda: self.competitors.discover_and_fetch(profile),
+                    usable=lambda data: bool(verified_competitors(data)),
                 )
 
             def _own_posts() -> dict[str, Any]:
@@ -409,7 +410,7 @@ class DailyPipeline:
             hours.append(h)
         return max(hours)  # catch the late-evening window, typically peak
 
-    def _cached_intel(self, business: dict[str, Any], key: str, compute) -> Any:
+    def _cached_intel(self, business: dict[str, Any], key: str, compute, usable=None) -> Any:
         """Cache slow LLM-built intelligence (audience map, trends) per business
         for 24h so the daily job doesn't re-pay for it every run (#5)."""
         import json as _json
@@ -420,7 +421,7 @@ class DailyPipeline:
         if path.exists():
             try:
                 blob = _json.loads(path.read_text(encoding="utf-8"))
-                if (time.time() - blob.get("ts", 0)) < 24 * 3600:
+                if (time.time() - blob.get("ts", 0)) < 24 * 3600 and (usable is None or usable(blob["data"])):
                     logger.info("Intel cache hit: %s/%s", business.get("name"), key)
                     return blob["data"]
             except Exception:
@@ -444,6 +445,10 @@ class DailyPipeline:
                 except Exception:
                     pass
             return {}
+        if usable is not None and not usable(data):
+            # e.g. competitors that could not be scraped (bad token, rate limit): do not pin that result for 24h
+            logger.warning("::warning::Intel '%s' for %s is not usable (not cached): retrying next run", key, business.get("name"))
+            return data
         try:
             path.write_text(
                 _json.dumps({"ts": time.time(), "data": data}, default=str),

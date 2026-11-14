@@ -67,3 +67,39 @@ def test_check_llm_fails_when_nothing_is_configured(monkeypatch):
 @pytest.mark.parametrize("name", ["check_llm", "check_apify", "init_db", "onboard_business", "run_auto_learn"])
 def test_every_script_imports_without_pythonpath(name):
     _load(name)  # raises ModuleNotFoundError if a script relies on PYTHONPATH
+
+
+def test_apify_instagram_request_uses_direct_urls_not_the_retired_usernames_input(monkeypatch):
+    """Real run: {"usernames": [...]} made the actor answer 201 with one 'no_items' error item, so every profile
+    (own account, competitors, leads) looked empty and no engagement could ever be measured."""
+    import asyncio
+
+    import httpx
+
+    from src.fetch.social_scraper import SocialScraper
+
+    sent = {}
+
+    class FakeClient:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, url, json):
+            sent["url"], sent["json"] = url, json
+            request = httpx.Request("POST", url)
+            return httpx.Response(201, json=[{"username": "acme", "followersCount": 6, "postsCount": 2,
+                                              "latestPosts": [{"caption": "hi", "likesCount": 3, "commentsCount": 1}]}],
+                                  request=request)
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeClient)
+    scraper = SocialScraper()
+    result = asyncio.run(scraper._apify_instagram("@acme/", 5))
+    assert sent["json"]["directUrls"] == ["https://www.instagram.com/acme/"]
+    assert sent["json"]["resultsType"] == "details" and "usernames" not in sent["json"]
+    assert result["follower_count"] == 6 and len(result["posts"]) == 1 and result["error"] is None

@@ -53,3 +53,27 @@ def test_research_quality_record():
     q = research_quality([REAL, GHOST], {"posts": [1, 2, 3]})
     assert q == {"competitors_suggested": 2, "competitors_verified": 1, "own_posts_seen": 3,
                  "trend_source": "model knowledge (no live feed)"}
+
+
+def test_unscrapable_competitors_are_not_cached_for_a_day(tmp_path, monkeypatch):
+    """Real run: a bad Apify token produced 5 competitors with no posts, and the 24h cache pinned that result."""
+    from src.scheduler.daily_job import DailyPipeline
+    from src.shared.config import settings
+
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    pipeline = DailyPipeline.__new__(DailyPipeline)
+    biz = {"name": "Cache Biz"}
+    calls = []
+
+    def compute():
+        calls.append(1)
+        return [GHOST]
+
+    usable = lambda data: bool(verified_competitors(data))  # noqa: E731
+    pipeline._cached_intel(biz, "competitors", compute, usable=usable)
+    pipeline._cached_intel(biz, "competitors", compute, usable=usable)
+    assert len(calls) == 2  # not cached: the second run retries
+
+    good = lambda: [REAL]  # noqa: E731
+    pipeline._cached_intel(biz, "competitors", good, usable=usable)
+    assert pipeline._cached_intel(biz, "competitors", compute, usable=usable) == [REAL]  # cached once usable

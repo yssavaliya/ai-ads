@@ -127,8 +127,11 @@ class SocialScraper:
         async with httpx.AsyncClient(timeout=self.APIFY_TIMEOUT, headers=self._auth_headers()) as client:
             run_resp = await client.post(
                 f"{self.APIFY_BASE}/acts/{self.APIFY_INSTAGRAM_ACTOR}/run-sync-get-dataset-items",
+                # The actor's current input is `directUrls` + `resultsType`. The old `usernames` input made it answer
+                # HTTP 201 with a single "no_items: Empty or private data" item, so every profile looked empty.
                 json={
-                    "usernames": [handle],
+                    "directUrls": [f"https://www.instagram.com/{handle.strip().lstrip('@').strip('/')}/"],
+                    "resultsType": "details",
                     "resultsLimit": limit,
                     "commentsLimit": 3,
                 },
