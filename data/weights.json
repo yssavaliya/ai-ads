@@ -5,17 +5,27 @@
         "weight": 0.6666666666666666,
         "trials": 1,
         "hits": 1
+      },
+      "educational": {
+        "weight": 0.6666666666666666,
+        "trials": 4,
+        "hits": 3
       }
     },
     "formats": {
       "single image": {
-        "weight": 0.6666666666666666,
-        "trials": 1,
-        "hits": 1
+        "weight": 0.7142857142857143,
+        "trials": 5,
+        "hits": 4
       }
     },
     "audience_segments": {
       "Startup Founder": {
+        "weight": 0.6666666666666666,
+        "trials": 4,
+        "hits": 3
+      },
+      "Creative Agency Decision‑Maker": {
         "weight": 0.6666666666666666,
         "trials": 1,
         "hits": 1
@@ -23,6 +33,21 @@
     },
     "hook_types": {
       "before_after": {
+        "weight": 0.75,
+        "trials": 2,
+        "hits": 2
+      },
+      "contrarian": {
+        "weight": 0.3333333333333333,
+        "trials": 1,
+        "hits": 0
+      },
+      "framework": {
+        "weight": 0.6666666666666666,
+        "trials": 1,
+        "hits": 1
+      },
+      "curiosity_gap": {
         "weight": 0.6666666666666666,
         "trials": 1,
         "hits": 1

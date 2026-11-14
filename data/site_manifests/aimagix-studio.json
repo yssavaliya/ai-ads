@@ -6361,6 +6361,88 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-116-thumb.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-14-117",
+   "date": "2026-11-14",
+   "created_at": "2026-11-14T06:54:34",
+   "prompt_id": 117,
+   "hook_type": "before_after",
+   "title": "Spec Concept: AI‑Generated Smart‑Bottle Ad",
+   "prompt_type": "social_proof",
+   "score": 68,
+   "below_threshold": true,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "From a plain brief to a high‑impact AI ad in minutes",
+   "angle": "Show a rapid transformation from a simple product brief to a polished AI‑generated ad concept.",
+   "prompt_text": "Create a single‑image post that serves as a spec concept for a smart‑bottle product. The image must show the finished ad composition without any on‑screen text, focusing on visual hierarchy: the bottle as the hero, a subtle glowing gauge overlay (added in post‑production, not in the generated image), and a clean background that emphasizes the product. The caption follows the “before‑after” hook, briefly describing the brief, the three creative decisions (hook, benefit, CTA), and ends with a focused question and a CTA inviting the viewer to DM \"AD\" with their product and advertising goal. This post targets Startup Founders, leveraging the high weight of before‑after hooks and the single‑image format that still delivers portfolio proof. No invented client names, results, or timelines are included.\n\nAngle: Demonstrate Aimagix Studio’s ability to prototype a polished ad concept from a minimal brief in minutes, positioning the studio as the fast, AI‑driven alternative to traditional agencies.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "From a plain brief to a high‑impact AI ad in minutes\n\nWe received a one‑sentence brief: “Smart‑bottle that tracks hydration.”\n\n🔹 Hook: a close‑up of the bottle lighting up as a digital gauge appears.\n🔹 Benefit: a quick AI‑generated animation shows daily water intake stats.\n🔹 CTA: “Track your health – swipe up.”\n\nWhat’s the single feature of your product you wish more people noticed?\nDM \"AD\" with your product and the ad goal – we’ll turn it into a spec concept fast.\n\n#AIAds #ProductAds #CreativeAI #AdCreative #DigitalAds #StartupMarketing #SMBMarketing #Entrepreneur",
+   "hashtags": [
+    "#AIAds",
+    "#ProductAds",
+    "#CreativeAI",
+    "#AdCreative",
+    "#DigitalAds",
+    "#StartupMarketing",
+    "#SMBMarketing",
+    "#Entrepreneur"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt leverages a proven before‑after hook and a clear spec concept, matching past winners. It directly addresses the startup founder persona and offers a tangible CTA. However, the single‑image format and lack of explicit cultural hooks limit its viral edge compared to multi‑frame Reels or localized storytelling.",
+   "strategy": {
+    "objective": "lead_generation",
+    "persona": "Startup Founder",
+    "problem": "Long lead times and high costs for creating high‑impact ad creative",
+    "trigger": "relief",
+    "angle": "3‑Step Prompt Blueprint",
+    "angle_hook_type": "framework",
+    "angle_score": 98.3,
+    "rationale": "Angle '3‑Step Prompt Blueprint' scored 98/100, strongest on audience fit and conversion pull. It beat 'Brief‑to‑Reel in 30 min' (93) by 6 points. Learned results moved it +3.3 points.",
+    "cta": "DM us with your product and advertising goal",
+    "kpis": [
+     "saves",
+     "shares",
+     "profile visits"
+    ],
+    "hypothesis": "If we lead with the '3‑Step Prompt Blueprint' angle (framework hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Long lead times and high costs for creating high‑impact ad creative. Runner-up to test next: 'Brief‑to‑Reel in 30 min'.",
+    "alternatives": [
+     {
+      "name": "Brief‑to‑Reel in 30 min",
+      "score": 92.8
+     },
+     {
+      "name": "Agency Waste vs AI Speed",
+      "score": 85.5
+     }
+    ]
+   },
+   "key_factors": [
+    "Strong before‑after hook aligns with high‑relevance trend and audience preference",
+    "Clear spec concept demonstrates studio’s AI‑driven speed and creative expertise",
+    "Single‑image format is platform‑friendly and showcases portfolio proof",
+    "Targeted CTA invites direct inquiry from high‑value founders"
+   ],
+   "risks": [
+    "Risk of being perceived as generic product showcase if visual hierarchy is weak",
+    "Potential lack of cultural cues may reduce resonance with Indian founders",
+    "Single‑image posts may not fully exploit Reels’ scroll‑stopping potential",
+    "If the caption is too long, it could dilute the hook and reduce engagement"
+   ],
+   "warnings": [
+    "Below your quality bar (68/100, bar 70) - review before posting."
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-117.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-117-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
