@@ -214,6 +214,25 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-14-115",
+      "title": "3\u2011Step Prompt Blueprint for a Scroll\u2011Stopping Reel",
+      "prompt_id": 115,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "educational",
+      "format": "single image",
+      "hook_type": "framework",
+      "audience_segment": "Startup Founder",
+      "caption": "Use this 3\u2011step prompt to create scroll\u2011stopping reels instantly\n\n\ud83d\udd39 Step\u202f1 \u2013 Hook: Identify the single pain point (slow ad creation) and frame it as a relief promise.\n\ud83d\udd39 Step\u202f2 \u2013 Visual cue: Pair the hook with a quick AI\u2011generated product visual that flips from blank to polished.\n\ud83d\udd39 Step\u202f3 \u2013 Call\u2011to\u2011action: Ask the viewer to DM \"AD\" with their product and ad goal.\n\nWhat\u2019s the biggest bottleneck in your launch timeline?\nDM \"AD\" with your product and the goal you want to hit, and we\u2019ll sketch the first hook together.\n\n#AIAds #ProductAds #CreativeAI #StartupMarketing #SMBMarketing #DigitalAds #Entrepreneur #Reels",
+      "at": "2026-11-14T06:40:45.458330+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af8026dd8bd2962e4102341",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
