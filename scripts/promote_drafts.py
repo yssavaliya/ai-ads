@@ -129,9 +129,13 @@ def main() -> None:
             if reason:
                 if not dry_run:
                     try:
-                        delete_post(token, post_id)
+                        ok = delete_post(token, post_id)
                     except Exception as exc:  # noqa: BLE001
                         logger.error("Could not delete %s: %s", post_id, exc)
+                        continue
+                    if not ok:  # Buffer answered with an error result: it was NOT deleted, so do not report it as deleted
+                        logger.error("Buffer refused to delete %s", post_id)
+                        report.append(f"| `{preview}…` | {age:.0f}h | ❌ delete refused by Buffer |")
                         continue
                 deleted += 1
                 report.append(f"| `{preview}…` | {age:.0f}h | 🗑️ deleted: {reason} |")

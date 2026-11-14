@@ -81,14 +81,13 @@ mutation PromoteDraft($input: EditPostInput!) {
 }
 """
 
+# Buffer's deletePost returns ``DeletePostPayload``, which can never be ``PostActionSuccess``: the old fragment made
+# every delete fail GraphQL validation ("Fragment cannot be spread here"). ``__typename`` is valid on any result type,
+# so success is read from the type name (a success type, or anything that is not an *Error type).
 DELETE_POST_MUTATION = """
 mutation DeletePost($input: DeletePostInput!) {
   deletePost(input: $input) {
     __typename
-    ... on PostActionSuccess { post { id status } }
-    ... on UnauthorizedError { message }
-    ... on InvalidInputError { message }
-    ... on UnexpectedError { message }
   }
 }
 """
@@ -241,8 +240,8 @@ def delete_post(token: str, post_id: str, client: httpx.Client | None = None) ->
         data = _graphql(client, token, DELETE_POST_MUTATION, {
             "input": {"postId": post_id},
         })
-        result = data.get("deletePost") or {}
-        return result.get("__typename") == "PostActionSuccess"
+        typename = str((data.get("deletePost") or {}).get("__typename") or "")
+        return bool(typename) and "Error" not in typename
     finally:
         if owns:
             client.close()

@@ -393,3 +393,38 @@ def test_a_draft_is_never_compared_with_itself_when_reviewed():
     assert queue.texts(include_drafts=False) == ["Something else entirely"]
     d = dr.review_draft(draft(), record(), queue.texts(include_drafts=False), [], NOW)
     assert d.action == "schedule"
+
+
+# ------------------------------------------------------------------ delete (live run found it always failed)
+def test_delete_mutation_is_valid_for_buffers_payload_type():
+    """Real run: 'Fragment cannot be spread here as objects of type DeletePostPayload can never be PostActionSuccess'."""
+    q = bs.DELETE_POST_MUTATION
+    assert "PostActionSuccess" not in q and "__typename" in q and q.count("{") == q.count("}")
+
+
+def test_delete_post_reads_success_from_the_result_type_name(monkeypatch):
+    for typename, expected in (("DeletePostSuccess", True), ("VoidMutationSuccess", True), ("UnauthorizedError", False),
+                               ("InvalidInputError", False), ("", False)):
+        _fake_graphql(monkeypatch, lambda q, v, t=typename: {"deletePost": {"__typename": t}})
+        assert bs.delete_post("tok", "p1", client=httpx.Client()) is expected, typename
+    _fake_graphql(monkeypatch, lambda q, v: {})
+    assert bs.delete_post("tok", "p1", client=httpx.Client()) is False
+
+
+def test_promote_does_not_report_a_refused_delete_as_deleted(monkeypatch, tmp_path):
+    promote = _script("promote_drafts")
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "published_log.json").write_text(json.dumps({"posted": []}))
+    monkeypatch.setattr(promote, "ROOT", tmp_path)
+    for k, v in (("BUFFER_ACCESS_TOKEN", "t"), ("BUFFER_PROFILE_IDS", "c"), ("DRY_RUN", "false"),
+                 ("DRAFT_MAX_AGE_HOURS", "1"), ("GITHUB_STEP_SUMMARY", str(tmp_path / "s.md"))):
+        monkeypatch.setenv(k, v)
+    monkeypatch.setattr(promote, "supports_custom_schedule", lambda t: True)
+    monkeypatch.setattr(promote, "fetch_queue_state", lambda t, c: bs.QueueState([]))
+    monkeypatch.setattr(promote, "fetch_drafts", lambda t, c: [old_draft("d1", hours=30)])
+    monkeypatch.setattr(promote, "check_asset_url", lambda u: True)
+    calls = []
+    monkeypatch.setattr(promote, "delete_post", lambda t, pid: calls.append(pid) or False)
+    promote.main()
+    summary = (tmp_path / "s.md").read_text(encoding="utf-8")
+    assert calls == ["d1"] and "delete refused by Buffer" in summary and "🗑️ deleted" not in summary
