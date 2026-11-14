@@ -108,3 +108,13 @@ def test_decide_outcome_positive_comments_rescue():
             "comments_text": ["love this 🔥 amazing", "want this"]}
     outcome = AutoLearner._decide_outcome(post, 100, 0.5, 0, post["comments_text"])
     assert outcome == "good"
+
+
+def test_ties_at_the_median_with_one_like_are_not_learned_as_good():
+    """Real run: a 6-follower account's posts all had ~1 like, so every tie read as 'good' and moved the weights."""
+    from src.learning.auto_learner import AutoLearner
+
+    flat = {"likes": 1, "comments": 0, "shares": 0, "saves": 0, "reach": 0}
+    assert AutoLearner._decide_outcome(flat, 6, benchmark=engagement_rate(flat, 6), bench_n=5) == "bad"
+    engaged = {"likes": 5, "comments": 1, "shares": 0, "saves": 0, "reach": 0}
+    assert AutoLearner._decide_outcome(engaged, 6, benchmark=engagement_rate(flat, 6), bench_n=5) == "good"

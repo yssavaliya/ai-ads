@@ -45,7 +45,12 @@ Respond ONLY with a JSON array:
         data = self.llm.run_json(prompt, label="competitor-discovery")
         if isinstance(data, dict):
             data = data.get("competitors", [])
-        competitors = [c for c in data if isinstance(c, dict) and c.get("handle")]
+        # Instagram only: the LinkedIn actor needs a logged-in cookie and proxy (HTTP 400 without them), so a
+        # LinkedIn competitor could never be verified and only added a failing call per run.
+        competitors = [
+            c for c in data
+            if isinstance(c, dict) and c.get("handle") and str(c.get("platform") or "instagram").lower() == "instagram"
+        ]
         logger.info("Discovered %d competitors", len(competitors))
         return competitors[: self.COMPETITOR_COUNT]
 

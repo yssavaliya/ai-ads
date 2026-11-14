@@ -77,3 +77,21 @@ def test_unscrapable_competitors_are_not_cached_for_a_day(tmp_path, monkeypatch)
     good = lambda: [REAL]  # noqa: E731
     pipeline._cached_intel(biz, "competitors", good, usable=usable)
     assert pipeline._cached_intel(biz, "competitors", compute, usable=usable) == [REAL]  # cached once usable
+
+
+def test_competitor_discovery_keeps_instagram_only(monkeypatch):
+    """The LinkedIn actor needs a cookie and proxy; a LinkedIn competitor could never be verified."""
+    from unittest.mock import patch
+
+    from src.fetch.competitor_finder import CompetitorFinder
+
+    finder = CompetitorFinder()
+    answer = [
+        {"name": "A", "platform": "instagram", "handle": "a"},
+        {"name": "B", "platform": "linkedin", "handle": "b"},
+        {"name": "C", "handle": "c"},
+        {"name": "D", "platform": "instagram"},
+    ]
+    with patch.object(finder.llm, "run_json", return_value=answer):
+        found = finder.discover({"name": "X"})
+    assert [c["handle"] for c in found] == ["a", "c"]

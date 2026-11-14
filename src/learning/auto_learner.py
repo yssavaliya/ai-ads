@@ -293,7 +293,9 @@ class AutoLearner:
         likes = int(post.get("likes") or 0)
         comments = int(post.get("comments") or 0)
         if bench_n >= MIN_POSTS_FOR_BENCHMARK:
-            base = "good" if rate >= benchmark else "bad"
+            # "At or above the median" is meaningless when every post got ~1 like (ties all read as good), so a
+            # good post must also show a real reaction. Otherwise a tiny account teaches the weights from noise.
+            base = "good" if rate >= benchmark and (likes >= 2 or comments >= 1) else "bad"
         # Not enough history: a post that drew any real reaction is good; a
         # total flop is bad. Avoids penalizing a tiny account's first tries
         # while still learning from genuine duds.
