@@ -167,7 +167,7 @@ def test_schedule_draft_sends_custom_mode_and_utc_due_time(monkeypatch):
     _fake_graphql(monkeypatch, responder)
     post = bs.schedule_draft("t", "p1", datetime(2026, 11, 15, 13, 30, tzinfo=UTC), client=httpx.Client())
     assert post["status"] == "scheduled"
-    assert seen["input"] == {"postId": "p1", "saveToDraft": False, "mode": "customScheduled",
+    assert seen["input"] == {"id": "p1", "saveToDraft": False, "mode": "customScheduled",
                              "schedulingType": "automatic", "dueAt": "2026-11-15T13:30:00.000Z"}
     _fake_graphql(monkeypatch, lambda q, v: {"editPost": {"__typename": "InvalidInputError", "message": "bad mode"}})
     with pytest.raises(RuntimeError, match="bad mode"):
@@ -267,6 +267,7 @@ def _run_promote(monkeypatch, tmp_path, drafts, record_map, queue_posts=(), cust
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "summary.md"))
     calls = {"schedule": [], "promote": [], "delete": []}
     monkeypatch.setattr(promote, "supports_custom_schedule", lambda token: custom)
+    monkeypatch.setattr(promote, "check_mutation_inputs", lambda token: [])
     monkeypatch.setattr(promote, "fetch_queue_state", lambda token, ch: bs.QueueState(list(queue_posts)))
     monkeypatch.setattr(promote, "fetch_drafts", lambda token, ch: drafts)
     monkeypatch.setattr(promote, "check_asset_url", lambda url: True)
@@ -420,6 +421,7 @@ def test_promote_does_not_report_a_refused_delete_as_deleted(monkeypatch, tmp_pa
                  ("DRAFT_MAX_AGE_HOURS", "1"), ("GITHUB_STEP_SUMMARY", str(tmp_path / "s.md"))):
         monkeypatch.setenv(k, v)
     monkeypatch.setattr(promote, "supports_custom_schedule", lambda t: True)
+    monkeypatch.setattr(promote, "check_mutation_inputs", lambda t: [])
     monkeypatch.setattr(promote, "fetch_queue_state", lambda t, c: bs.QueueState([]))
     monkeypatch.setattr(promote, "fetch_drafts", lambda t, c: [old_draft("d1", hours=30)])
     monkeypatch.setattr(promote, "check_asset_url", lambda u: True)
@@ -428,3 +430,62 @@ def test_promote_does_not_report_a_refused_delete_as_deleted(monkeypatch, tmp_pa
     promote.main()
     summary = (tmp_path / "s.md").read_text(encoding="utf-8")
     assert calls == ["d1"] and "delete refused by Buffer" in summary and "🗑️ deleted" not in summary
+
+
+# ------------------------------------------------------------------ schema preflight (postId vs id)
+def test_every_mutation_names_the_post_id_id(monkeypatch):
+    """Real runs: DeletePostInput requires 'id' and rejects 'postId'; every delete failed validation."""
+    seen = []
+    _fake_graphql(monkeypatch, lambda q, v: seen.append(v["input"]) or {
+        "editPost": {"__typename": "PostActionSuccess", "post": {}}, "deletePost": {"__typename": "DeletePostSuccess"}})
+    bs.promote_draft("t", "p1", client=httpx.Client())
+    bs.schedule_draft("t", "p1", NOW, client=httpx.Client())
+    bs.delete_post("t", "p1", client=httpx.Client())
+    assert all(i["id"] == "p1" and "postId" not in i for i in seen) and len(seen) == 3
+
+
+def _schema(edit_fields, delete_fields):
+    def responder(query, variables):
+        fields = edit_fields if variables.get("name") == "EditPostInput" else delete_fields
+        return {"__type": {"inputFields": [{"name": n, "type": {"kind": "NON_NULL" if req else "SCALAR"}} for n, req in fields.items()]}}
+    return responder
+
+
+def test_preflight_passes_when_buffers_inputs_match_what_we_send(monkeypatch):
+    _fake_graphql(monkeypatch, _schema(
+        {"id": True, "saveToDraft": False, "mode": False, "schedulingType": False, "dueAt": False, "text": False}, {"id": True}))
+    assert bs.check_mutation_inputs("t", client=httpx.Client()) == []
+
+
+def test_preflight_names_each_mismatch_before_anything_live_runs(monkeypatch):
+    _fake_graphql(monkeypatch, _schema(
+        {"postId": True, "saveToDraft": False, "mode": False, "schedulingType": False, "channel": True}, {"id": True, "force": True}))
+    problems = " | ".join(bs.check_mutation_inputs("t", client=httpx.Client()))
+    assert "we send 'id' but Buffer has no such field" in problems and "we send 'dueAt' but Buffer has no such field" in problems
+    assert "Buffer requires 'postId'" in problems and "Buffer requires 'channel'" in problems and "Buffer requires 'force'" in problems
+
+
+def test_preflight_reports_an_unreadable_schema(monkeypatch):
+    _fake_graphql(monkeypatch, lambda q, v: (_ for _ in ()).throw(RuntimeError("introspection disabled")))
+    assert all("schema unreadable" in p for p in bs.check_mutation_inputs("t", client=httpx.Client()))
+    _fake_graphql(monkeypatch, lambda q, v: {"__type": None})
+    assert len(bs.check_mutation_inputs("t", client=httpx.Client())) == 2
+
+
+def test_a_live_run_refuses_to_start_when_the_schema_check_fails(monkeypatch, tmp_path):
+    promote = _script("promote_drafts")
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "published_log.json").write_text(json.dumps({"posted": []}))
+    monkeypatch.setattr(promote, "ROOT", tmp_path)
+    for k, v in (("BUFFER_ACCESS_TOKEN", "t"), ("BUFFER_PROFILE_IDS", "c"), ("DRY_RUN", "false"), ("GITHUB_STEP_SUMMARY", str(tmp_path / "s.md"))):
+        monkeypatch.setenv(k, v)
+    monkeypatch.setattr(promote, "supports_custom_schedule", lambda t: True)
+    monkeypatch.setattr(promote, "check_mutation_inputs", lambda t: ["DeletePostInput: Buffer requires 'x' and we do not send it"])
+    monkeypatch.setattr(promote, "fetch_queue_state", lambda t, c: pytest.fail("must not read anything after a failed preflight"))
+    with pytest.raises(SystemExit) as stop:
+        promote.main()
+    assert stop.value.code == 1 and "Buffer requires 'x'" in (tmp_path / "s.md").read_text(encoding="utf-8")
+    monkeypatch.setenv("DRY_RUN", "true")  # a dry run still proceeds (and only reports)
+    monkeypatch.setattr(promote, "fetch_queue_state", lambda t, c: bs.QueueState([]))
+    monkeypatch.setattr(promote, "fetch_drafts", lambda t, c: [])
+    promote.main()

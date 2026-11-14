@@ -220,7 +220,7 @@ def promote_draft(token: str, post_id: str, client: httpx.Client | None = None) 
     client = client or httpx.Client(timeout=30)
     try:
         data = _graphql(client, token, PROMOTE_DRAFT_MUTATION, {
-            "input": {"postId": post_id, "saveToDraft": False, "mode": "addToQueue", "schedulingType": "automatic"},
+            "input": {"id": post_id, "saveToDraft": False, "mode": "addToQueue", "schedulingType": "automatic"},
         })
         result = data.get("editPost") or {}
         typename = result.get("__typename")
@@ -238,7 +238,7 @@ def delete_post(token: str, post_id: str, client: httpx.Client | None = None) ->
     client = client or httpx.Client(timeout=30)
     try:
         data = _graphql(client, token, DELETE_POST_MUTATION, {
-            "input": {"postId": post_id},
+            "input": {"id": post_id},
         })
         typename = str((data.get("deletePost") or {}).get("__typename") or "")
         return bool(typename) and "Error" not in typename
@@ -292,7 +292,7 @@ def schedule_draft(
     try:
         data = _graphql(client, token, PROMOTE_DRAFT_MUTATION, {
             "input": {
-                "postId": post_id, "saveToDraft": False, "mode": "customScheduled",
+                "id": post_id, "saveToDraft": False, "mode": "customScheduled",
                 "schedulingType": "automatic", "dueAt": due_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
             },
         })
@@ -300,6 +300,45 @@ def schedule_draft(
         if result.get("__typename") != "PostActionSuccess":
             raise RuntimeError(f"Buffer schedule failed: {result.get('message') or result}")
         return result.get("post") or {}
+    finally:
+        if owns:
+            client.close()
+
+
+# What each mutation sends. Buffer's input types name the post id ``id`` (``postId`` made every edit and delete fail
+# validation), so the keys are checked against the live schema in a preflight before any real run.
+SENT_INPUT_KEYS = {
+    "EditPostInput": {"id", "saveToDraft", "mode", "schedulingType", "dueAt"},
+    "DeletePostInput": {"id"},
+}
+INPUT_FIELDS_QUERY = (
+    "query InputFields($name: String!) { __type(name: $name) { inputFields { name type { kind } } } }"
+)
+
+
+def check_mutation_inputs(token: str, client: httpx.Client | None = None) -> list[str]:
+    """Problems between what we send and Buffer's current input types (empty list = compatible).
+    A required field we never send, or a field we send that does not exist, would fail the real call."""
+    owns = client is None
+    client = client or httpx.Client(timeout=30)
+    problems: list[str] = []
+    try:
+        for type_name, sent in SENT_INPUT_KEYS.items():
+            try:
+                fields = ((_graphql(client, token, INPUT_FIELDS_QUERY, {"name": type_name}).get("__type") or {}).get("inputFields")) or []
+            except Exception as exc:  # noqa: BLE001 - introspection off: nothing to compare
+                problems.append(f"{type_name}: schema unreadable ({exc})")
+                continue
+            if not fields:
+                problems.append(f"{type_name}: schema unreadable (no fields returned)")
+                continue
+            names = {f.get("name") for f in fields}
+            required = {f.get("name") for f in fields if (f.get("type") or {}).get("kind") == "NON_NULL"}
+            for unknown in sorted(sent - names):
+                problems.append(f"{type_name}: we send '{unknown}' but Buffer has no such field")
+            for missing in sorted(required - sent):
+                problems.append(f"{type_name}: Buffer requires '{missing}' and we do not send it")
+        return problems
     finally:
         if owns:
             client.close()

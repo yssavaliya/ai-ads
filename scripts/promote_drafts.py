@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT))
 from src.delivery.buffer_state import (  # noqa: E402
     asset_urls,
     check_asset_url,
+    check_mutation_inputs,
     delete_post,
     fetch_drafts,
     fetch_queue_state,
@@ -87,6 +88,20 @@ def main() -> None:
     grounding = _grounding()
     custom_ok = supports_custom_schedule(token)  # True / False / None (unknown: try, then fall back)
     print(f"Buffer custom scheduling supported: {custom_ok if custom_ok is not None else 'unknown (will try)'}")
+
+    # Preflight: compare what we send with Buffer's CURRENT input types. A mismatch used to surface only when a real
+    # delete/schedule failed; now a live run refuses to start (nothing is changed) and a dry run reports it.
+    problems = check_mutation_inputs(token)
+    if problems:
+        print("::warning::Buffer schema check found problems:")
+        for problem in problems:
+            print(f"  - {problem}")
+        _summary(["### Buffer schema check", ""] + [f"- ⚠️ {p}" for p in problems])
+        if not dry_run:
+            print("Refusing to change anything while the Buffer schema check fails. Nothing was scheduled or deleted.")
+            sys.exit(1)
+    else:
+        print("Buffer schema check: ok (edit and delete inputs match)")
 
     now = datetime.now(UTC)
     scheduled = deleted = held = young = 0
