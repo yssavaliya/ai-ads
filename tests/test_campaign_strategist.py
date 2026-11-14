@@ -176,3 +176,13 @@ def test_strategist_has_a_token_budget(label):
     from src.shared import llm_client as lc
 
     assert lc.completion_budget("groq", "openai/gpt-oss-120b", "x" * 4000, label) >= lc.LABEL_MIN_TOKENS[label]
+
+
+def test_hypothesis_is_built_from_the_winning_angle_not_the_models_own_text():
+    raw = payload([angle("A", "Agency cost contrast", WEAK), angle("B", "Prompt blueprint", GOOD, hook="framework")])
+    raw["test_hypothesis"] = "If we compare against agencies, then DMs rise"  # argues for the angle that lost
+    brief = cs.CampaignStrategist.build_brief(raw)
+    text = brief["test_hypothesis"]
+    assert "Prompt blueprint" in text and "framework hook" in text and "saves per reach" in text
+    assert "Agency cost contrast" in text  # named only as the runner-up to test next
+    assert "compare against agencies" not in text

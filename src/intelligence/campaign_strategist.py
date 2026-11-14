@@ -90,6 +90,19 @@ def _explain(chosen: dict[str, Any], runner_up: dict[str, Any] | None) -> str:
     return text
 
 
+def _hypothesis(chosen: dict[str, Any], runner_up: dict[str, Any], kpis: list[str], problem: str) -> str:
+    """Built from the WINNING angle in code. The model writes its hypothesis before the winner is known, so its
+    own text often argues for an angle that lost (seen in production)."""
+    metric = kpis[0] if kpis else "saves"
+    text = (
+        f"If we lead with the '{chosen['name']}' angle ({chosen['hook_type'].replace('_', ' ')} hook), "
+        f"then {metric} per reach will beat this account's recent baseline"
+    )
+    if problem:
+        text += f", because it speaks directly to: {problem}"
+    return text + f". Runner-up to test next: '{runner_up['name']}'."
+
+
 def score_angles(
     raw_angles: Any, grounding: str = "", weights: dict[str, Any] | None = None
 ) -> list[dict[str, Any]]:
@@ -161,6 +174,7 @@ class CampaignStrategist:
                            len(angles), MIN_VALID_ANGLES)
             return None
         chosen, runner_up = angles[0], angles[1]
+        kpis = [_clean(k, 40) for k in (payload.get("kpis") or []) if _clean(k, 40)][:4]
         return {
             "objective": _one_of(payload.get("objective"), OBJECTIVES, "engagement"),
             "persona": _clean(payload.get("target_persona"), 120),
@@ -170,8 +184,8 @@ class CampaignStrategist:
             "platform": "instagram",
             "format": _one_of(payload.get("format"), FORMATS, "reel").replace("_", " "),
             "cta": _clean(payload.get("cta"), 160),
-            "kpis": [_clean(k, 40) for k in (payload.get("kpis") or []) if _clean(k, 40)][:4],
-            "test_hypothesis": _clean(payload.get("test_hypothesis"), 300),
+            "kpis": kpis,
+            "test_hypothesis": _hypothesis(chosen, runner_up, kpis, _clean(payload.get("customer_problem"), 120)),
             "angles": angles,
             "chosen": chosen,
             "rationale": _explain(chosen, runner_up),
@@ -223,7 +237,6 @@ Respond ONLY with JSON:
   "format": "reel|single image",
   "cta": "the one thing the viewer should do next",
   "kpis": ["saves", "shares", "profile visits"],
-  "test_hypothesis": "If we <change>, then <metric> will <direction>, because <reason>",
   "angles": [
     {{"id": "A", "name": "short angle name", "hook_type": "contrarian|roi_proof|curiosity_gap|before_after|framework",
       "pitch": "one sentence: the hook and the idea",
