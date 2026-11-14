@@ -23,21 +23,47 @@ WAITING_STATUSES = {"scheduled", "buffer", "needs_approval"}  # drafts are not q
 DRAFT_STATUSES = {"draft"}
 
 ORGANIZATIONS_QUERY = "query GetOrganizations { account { organizations { id name } } }"
-POSTS_QUERY = """
-query GetPosts($input: PostsInput!, $first: Int) {
-  posts(first: $first, input: $input) {
-    edges { node { id status dueAt sentAt text channelId createdAt assets { url type } } }
-  }
-}
-"""
+# Buffer's schema has changed under us before (``Asset.url`` vanished and every queue/draft read failed). The asset
+# sub-selection is therefore built from what the live schema actually offers, and the read never depends on it.
+ASSET_FIELD_CANDIDATES = ("source", "url", "thumbnail", "mimeType", "type")
+ASSET_FIELDS_QUERY = 'query AssetFields { __type(name: "Asset") { fields { name } } }'
+_ASSET_SELECTION_CACHE: dict[str, str] = {}
 
-DRAFTS_QUERY = """
-query GetDrafts($input: PostsInput!, $first: Int) {
-  posts(first: $first, input: $input) {
-    edges { node { id status text channelId createdAt assets { url type } } }
-  }
-}
-"""
+
+def posts_query(asset_selection: str, include_times: bool = True) -> str:
+    times = "dueAt sentAt " if include_times else ""
+    return (
+        "query GetPosts($input: PostsInput!, $first: Int) { posts(first: $first, input: $input) { edges { node { "
+        f"id status {times}text channelId createdAt assets {{ {asset_selection} }} }} }} }}"
+    )
+
+
+def asset_selection(client: httpx.Client, token: str) -> str:
+    """Field selection for ``assets``: the candidate fields that exist, else ``__typename`` (always valid)."""
+    if token in _ASSET_SELECTION_CACHE:
+        return _ASSET_SELECTION_CACHE[token]
+    selection = "__typename"
+    try:
+        fields = ((_graphql(client, token, ASSET_FIELDS_QUERY).get("__type") or {}).get("fields")) or []
+        names = {f.get("name") for f in fields}
+        chosen = [name for name in ASSET_FIELD_CANDIDATES if name in names]
+        if chosen:
+            selection = " ".join(chosen)
+    except Exception as exc:  # noqa: BLE001 - introspection off: fall back to the always-valid selection
+        logger.info("Buffer asset schema probe unavailable (%s)", exc)
+    _ASSET_SELECTION_CACHE[token] = selection
+    return selection
+
+
+def asset_urls(post: dict[str, Any]) -> list[str]:
+    """Media URLs of a post, whichever field Buffer calls them (``url`` or ``source``)."""
+    urls = []
+    for asset in post.get("assets") or []:
+        if isinstance(asset, dict):
+            url = asset.get("url") or asset.get("source")
+            if isinstance(url, str) and url.startswith("http"):
+                urls.append(url)
+    return urls
 
 PROMOTE_DRAFT_MUTATION = """
 mutation PromoteDraft($input: EditPostInput!) {
@@ -137,7 +163,7 @@ def fetch_queue_state(token: str, channel_id: str, limit: int = 50, client: http
         for org in orgs:
             try:
                 data = _graphql(
-                    client, token, POSTS_QUERY,
+                    client, token, posts_query(asset_selection(client, token)),
                     {"input": {"organizationId": org["id"], "filter": {"channelIds": [channel_id]}}, "first": limit},
                 )
             except Exception as exc:  # noqa: BLE001 - try the next organisation
@@ -159,16 +185,21 @@ def fetch_drafts(token: str, channel_id: str, limit: int = 50, client: httpx.Cli
         orgs = ((_graphql(client, token, ORGANIZATIONS_QUERY).get("account") or {}).get("organizations")) or []
         if not orgs:
             raise RuntimeError("The Buffer token can see no organisations")
+        last: Exception | None = None
         for org in orgs:
             try:
                 data = _graphql(
-                    client, token, DRAFTS_QUERY,
+                    client, token, posts_query(asset_selection(client, token), include_times=False),
                     {"input": {"organizationId": org["id"], "filter": {"channelIds": [channel_id], "status": ["draft"]}}, "first": limit},
                 )
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001 - try the next organisation
+                last = exc
                 continue
             edges = (data.get("posts") or {}).get("edges") or []
             return [(edge.get("node") or {}) for edge in edges]
+        if last is not None:
+            # A schema change used to be swallowed here and read as "no drafts", so the scheduler silently did nothing.
+            raise RuntimeError(f"Could not read Buffer drafts: {last}")
         return []
     finally:
         if owns:

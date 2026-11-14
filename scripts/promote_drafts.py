@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.delivery.buffer_state import (  # noqa: E402
+    asset_urls,
     check_asset_url,
     delete_post,
     fetch_drafts,
@@ -118,7 +119,7 @@ def main() -> None:
                 report.append(f"| `{preview}…` | {age:.0f}h | waiting for human review ({min_age:.0f}h window) |")
                 continue
 
-            urls = [a.get("url") for a in (draft.get("assets") or []) if a.get("url")]
+            urls = asset_urls(draft)
             if urls and not all(check_asset_url(u) for u in urls):
                 reason = "media expired or broken"
             elif age > max_age:

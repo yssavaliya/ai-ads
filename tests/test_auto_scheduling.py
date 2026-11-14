@@ -330,3 +330,46 @@ def test_promote_does_not_double_book_an_occupied_slot(monkeypatch, tmp_path):
     calls, _ = _run_promote(monkeypatch, tmp_path, [old_draft("p1")], [record()], queue_posts=queue)
     (_, due), = calls["schedule"]
     assert abs(due - first) >= timedelta(hours=sp.MIN_GAP_HOURS)
+
+
+# ------------------------------------------------------------------ schema-adaptive reads (Asset.url vanished)
+def test_asset_selection_uses_only_fields_the_live_schema_has(monkeypatch):
+    bs._ASSET_SELECTION_CACHE.clear()
+    _fake_graphql(monkeypatch, lambda q, v: {"__type": {"fields": [{"name": "id"}, {"name": "source"}, {"name": "mimeType"}]}})
+    assert bs.asset_selection(httpx.Client(), "tok1") == "source mimeType"
+    # introspection failing -> the always-valid selection, and it is cached per token
+    bs._ASSET_SELECTION_CACHE.clear()
+    _fake_graphql(monkeypatch, lambda q, v: (_ for _ in ()).throw(RuntimeError("off")))
+    assert bs.asset_selection(httpx.Client(), "tok2") == "__typename"
+    _fake_graphql(monkeypatch, lambda q, v: {"__type": None})
+    bs._ASSET_SELECTION_CACHE.clear()
+    assert bs.asset_selection(httpx.Client(), "tok3") == "__typename"
+
+
+def test_posts_query_has_no_asset_url_unless_selected():
+    q = bs.posts_query("source")
+    assert "assets { source }" in q and "url" not in q and "dueAt sentAt" in q
+    assert "dueAt" not in bs.posts_query("__typename", include_times=False)
+
+
+def test_asset_urls_accepts_url_or_source_and_ignores_junk():
+    post = {"assets": [{"url": "https://a/x.jpg"}, {"source": "https://b/y.mp4"}, {"source": "not-a-url"}, "junk", {}]}
+    assert bs.asset_urls(post) == ["https://a/x.jpg", "https://b/y.mp4"] and bs.asset_urls({}) == []
+
+
+def test_fetch_drafts_raises_instead_of_reading_a_schema_error_as_no_drafts(monkeypatch):
+    bs._ASSET_SELECTION_CACHE.clear()
+
+    def responder(query, variables):
+        if "GetOrganizations" in query:
+            return {"account": {"organizations": [{"id": "o1"}]}}
+        if "AssetFields" in query:
+            return {"__type": {"fields": [{"name": "url"}]}}
+        raise RuntimeError('Cannot query field "url" on type "Asset"')
+
+    _fake_graphql(monkeypatch, responder)
+    with pytest.raises(RuntimeError, match="Could not read Buffer drafts"):
+        bs.fetch_drafts("tok", "chan", client=httpx.Client())
+    _fake_graphql(monkeypatch, lambda q, v: {"account": {"organizations": [{"id": "o1"}]}} if "GetOrganizations" in q
+                  else {"__type": {"fields": []}} if "AssetFields" in q else {"posts": {"edges": [{"node": {"id": "d1"}}]}})
+    assert bs.fetch_drafts("tok2", "chan", client=httpx.Client()) == [{"id": "d1"}]
