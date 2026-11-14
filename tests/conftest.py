@@ -64,3 +64,14 @@ def _isolated_state(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "delivery_mode", "site")
     monkeypatch.setattr(settings, "templates_dir", ROOT / "templates")  # cwd-independent
     yield
+
+
+@pytest.fixture(autouse=True)
+def _no_live_trend_signals(monkeypatch):
+    """The daily pipeline asks Google News / Hacker News / Apify for live signals: tests must never reach them."""
+    import src.scheduler.daily_job as daily_job
+
+    monkeypatch.setattr(
+        daily_job, "collect_signals",
+        lambda *a, **k: {"fetched_at": "", "queries": [], "signals": [], "sources": []},
+    )

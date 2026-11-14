@@ -14,7 +14,7 @@ import re
 
 from src.shared.config import settings
 
-KINDS = ("good", "bad", "regenerate", "posted")
+KINDS = ("good", "bad", "regenerate", "posted", "lead")
 TOKEN_RE = re.compile(r"\bt:([0-9a-f]{32})\.([0-9a-f]{20})\b")
 SIG_HEX_CHARS = 20  # 80 bits: ample against online guessing through GitHub issues
 

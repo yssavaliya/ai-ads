@@ -88,7 +88,7 @@ jobs:
       - uses: ./.github/actions/persist-state
         if: always() && steps.pending.outputs.count != '0'
         with:
-          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl data/site_manifests
+          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl data/site_manifests data/conversions.jsonl
           message: "chore: feedback run state"
           state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 

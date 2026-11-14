@@ -18,7 +18,7 @@ from src.storage.models import Business, FeedbackType, Prompt, PromptType, Sessi
 logger = logging.getLogger(__name__)
 
 FEEDBACK_PREFIX = "[content-intel-feedback]"
-FEEDBACK_RE = re.compile(r"prompt #(\d+) \[(GOOD|BAD|REGENERATE|POSTED)")
+FEEDBACK_RE = re.compile(r"prompt #(\d+) \[(GOOD|BAD|REGENERATE|POSTED|LEAD)")
 IG_POST_RE = re.compile(r"https?://(?:www\.)?instagram\.com/(?:p|reel|reels|tv)/[A-Za-z0-9_-]+/?", re.I)
 # Fallback for users who paste just the shortcode (e.g. "shortcode: ABC123").
 SHORTCODE_RE = re.compile(r"shortcode[:\s]+([A-Za-z0-9_-]{5,30})", re.I)
@@ -157,10 +157,11 @@ def process_feedback() -> int:
 
             # Repeated clicks on the same button must not inflate the weights.
             key = (uid, feedback)
-            if key in seen:
-                close_issue(issue["issue_number"])
-                continue
-            seen.add(key)
+            if feedback != "lead":  # every lead is a distinct event, each counted once by its issue number
+                if key in seen:
+                    close_issue(issue["issue_number"])
+                    continue
+                seen.add(key)
 
             prompt = db.query(Prompt).filter(Prompt.uid == uid).first()
             if prompt is None:
@@ -171,6 +172,12 @@ def process_feedback() -> int:
                 close_issue(issue["issue_number"])
                 continue
             prompt_id = prompt.id
+
+            if feedback == "lead":
+                if _record_lead(db, updater, prompt, issue):
+                    processed += 1
+                close_issue(issue["issue_number"])
+                continue
 
             if feedback == "posted":
                 url_match = IG_POST_RE.search(issue["body"])
@@ -274,6 +281,38 @@ def process_feedback() -> int:
         db.close()
     logger.info("Processed %d feedback issues", processed)
     return processed
+
+
+def _record_lead(db: Any, updater: BayesianUpdater, prompt: Any, issue: dict[str, Any]) -> bool:
+    """Log one owner-reported lead for this exact creative. Idempotent per issue number; credits the creative's
+    dimensions in the weights only for its first lead (a repeat lead is a result, not a second trial)."""
+    from src.learning import conversions
+
+    data_dir = Path(settings.data_dir)
+    business = db.get(Business, prompt.business_id)
+    event = conversions.record(
+        conversions.ledger_path(data_dir),
+        f"issue-{issue['issue_number']}",
+        {
+            "uid": prompt.uid, "prompt_id": prompt.id, "business": business.name if business else "",
+            "angle": conversions.angle_for_prompt(data_dir, prompt.id),
+            "hook_type": getattr(prompt, "hook_type", None) or "",
+            "format": prompt.format or "", "audience_segment": prompt.audience_segment or "",
+            "prompt_type": prompt.prompt_type.value if prompt.prompt_type else "",
+        },
+        issue.get("body") or "",
+    )
+    if event is None:
+        return False
+    if event["first_for_prompt"]:
+        updater.record(
+            _weights_key(db, prompt.business_id), "good",
+            prompt_type=prompt.prompt_type.value if prompt.prompt_type else None,
+            format=prompt.format or None, audience_segment=prompt.audience_segment or None,
+            hook_type=getattr(prompt, "hook_type", None), source="lead",
+        )
+    logger.info("Recorded %s for prompt %s (issue #%s)", event["type"], prompt.id, issue["issue_number"])
+    return True
 
 
 def regenerate_prompt(prompt: Any, db: Any) -> bool:

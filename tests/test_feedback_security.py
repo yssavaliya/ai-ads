@@ -172,7 +172,7 @@ def test_links_are_only_issued_signed_and_never_expose_a_verifiable_id(monkeypat
     links = GithubFeedback().create_feedback_links(1, "B", "T", uid)
     assert all(v.startswith("https://github.com/o/r/issues/new?") for v in links.values())
     tokens = {kind: url.split("%20t%3A")[1].split("&")[0] for kind, url in links.items()}
-    assert len(set(tokens.values())) == 4  # a different signature per button
+    assert len(set(tokens.values())) == 5  # a different signature per button
 
 
 def test_parse_exposes_the_title_for_token_verification(monkeypatch):

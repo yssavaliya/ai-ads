@@ -81,6 +81,19 @@ benchmark and a bounded ranking boost (±6 points). It is **not** model training
 Manual 👍/👎/🔄 clicks remain as additional signals. Run the auto-learner standalone
 with `python scripts/run_auto_learn.py`.
 
+## Hands-off operation
+
+- **Drafts are not a dead end.** The Daily run saves Buffer drafts for review. `promote_drafts.yml` (daily, 10:00 IST) leaves
+  a draft alone for `DRAFT_MIN_AGE_HOURS` (24), then re-checks it (quality score, unverified claims, duplicates, media) and
+  schedules it at its measured or experiment time, at least 20 hours from other posts. A draft that fails a check is *held*
+  with the reason in the run summary; drafts older than `DRAFT_MAX_AGE_HOURS` (168) are deleted. Run it manually with
+  `dry_run: true` to see what it would do. Set `AUTO_SCHEDULE_MIN_SCORE` to raise the bar.
+- **One experiment per week** (hook type, posting block, format) rides on a creative that already passed the quality bar;
+  verdicts appear in the Engagement run summary and the weekly report.
+- **Leads:** every post on the hub has a "📩 Got a lead?" link. One click opens a pre-filled issue; the feedback job logs the
+  lead against that exact creative and angle (`data/conversions.jsonl`). Instagram DMs cannot be detected automatically.
+- **Research** uses live Google News / Hacker News / Instagram hashtag signals and Instagram-search competitors (needs `APIFY_TOKEN`).
+
 ## Brand facts (fill this in)
 
 The generator only knows what it is told. A website scrape of an Instagram URL returns almost nothing, so without help it

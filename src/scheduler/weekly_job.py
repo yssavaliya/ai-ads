@@ -55,6 +55,7 @@ class WeeklyPipeline:
 
             report = self._build_report(biz, prompts, business, [(p, e) for p, e in engagement_rows])
             degraded = bool(report.pop("_degraded", False))
+            report["results"] = self._results_block(name)
             delivered = self.delivery.send_weekly_report(business, report)
             logger.info("Weekly report for %s delivered=%s degraded=%s", name, bool(delivered), degraded)
             return {
@@ -75,6 +76,21 @@ class WeeklyPipeline:
                 logger.error("Weekly pipeline failed for %s: %s", business.get("name"), exc)
                 results.append({"business": business.get("name"), "error": str(exc)})
         return results
+
+    @staticmethod
+    def _results_block(business_name: str) -> dict[str, Any]:
+        """Deterministic 'results that matter': logged conversions and experiment verdicts, from files, not the LLM."""
+        from src.learning import conversions, experiments
+
+        data_dir = Path(settings.data_dir)
+        summary = conversions.summarize(conversions.read_events(conversions.ledger_path(data_dir)), business_name)
+        verdicts = []
+        for verdict in (experiments.load_state(data_dir / "experiments.json").get("results") or {}).values():
+            line = f"{verdict.get('variable')}: {verdict.get('status')} (matured posts {verdict.get('n_a')}/{verdict.get('n_b')})"
+            if verdict.get("status") == "winner":
+                line += f", '{verdict.get('value')}' wins ({verdict.get('lift')})"
+            verdicts.append(line)
+        return {"conversions": conversions.lines_for_report(summary), "experiments": verdicts[-4:]}
 
     def _build_report(
         self,

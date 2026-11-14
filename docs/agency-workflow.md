@@ -1,6 +1,6 @@
 # From content automation to an advertising agency workflow
 
-Status: increments 1 and 2 shipped (strategy stage, explainable lead scoring, research provenance; measured competitor
+Status: increments 1-3 shipped (strategy stage, explainable lead scoring, research provenance; measured competitor
 benchmarks, evidence-based posting window, per-lead recommended campaign). Everything else below is the prioritised roadmap. Written 2026-11-14 from a read of the actual code, not from the README.
 
 ## 1. What the system does today
@@ -64,17 +64,25 @@ LEARN     update hook/angle/format/time weights; designed experiments; roll back
 | Evidence-based posting window | `posting_time.py`, `daily_job.py`, hub | Time chosen by relative engagement per 3-hour block, not by posting habit; shows confidence and basis | Needs >= 8 usable posts, otherwise falls back with a clear label |
 | Per-lead recommended campaign | `lead_job.py`, digest page | Sales-ready: each top lead shows objective, persona, problem, angle and CTA | One extra LLM call per top lead (`LEAD_STRATEGY_COUNT`, default 3) |
 
+## 4c. Increment 3 (shipped): hands-off operation
+
+| Change | Files | Value | Risk and control |
+| --- | --- | --- | --- |
+| **Unattended draft review and scheduling** | `draft_review.py`, `slot_planner.py`, `scripts/promote_drafts.py`, `promote_drafts.yml` | A draft nobody reviewed is re-checked after the review window (quality score, unverified claims, duplicates, media) and scheduled at an exact time from the measured window or an experiment arm, 20h+ clear of other posts. Failures are HELD with a reason in the Actions summary | Never publishes below-bar, unscored or claim-carrying drafts. Falls back to the automatic queue slot if Buffer rejects a custom time. `DRY_RUN` input reports without changing Buffer |
+| Custom schedule for new posts | `buffer_publisher.py`, `publish_buffer.py` | Non-draft posts publish at the planned slot instead of Buffer's next automatic slot | Falls back to the queue on any error |
+| **Designed experiments** | `experiments.py`, daily and engagement workflows | One variable per ISO week (hook, posting block, format), control vs challenger, balanced from the published log; verdict only with >= 4 matured posts per arm and |t| >= 2 | Never promotes a creative under the quality bar. Winners only inform strategy hints and a preferred posting hour |
+| **Competitor discovery by Instagram search** | `competitor_finder.py` | Real accounts (search results) in the right size band, scraped in waves until 3 are verified | Apify credits; LLM suggestions remain as a supplement |
+| **Live trend signals** | `trend_sources.py`, `trend_radar.py` | Dated, attributed Google News / Hacker News / hashtag-post signals; topics marked `live_signal` or `model_knowledge` | Each source fails independently; hashtag source needs Apify |
+| **Conversion tracking** | `conversions.py`, `process_feedback.py`, hub, weekly report | A signed "Got a lead?" link per post logs the lead against the exact creative, angle, hook and format; weekly "Results that matter" | Owner-reported: Instagram DMs cannot be detected without Meta Graph API access |
+
 ## 5. Roadmap
 
 Priority = value / effort given today's constraints (free-tier LLM at 8k tokens/min, one active account, learning starved).
 
 | P | Improvement | Business value | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| P1 | **Close the measurement loop on conversions**: UTM-tagged link in bio / CTA, a lead log (DM keyword "AD" counts entered manually or via link-in-bio tool), cost per lead when ads are paid | Optimises for leads, not vanity metrics | A link tracker (Bitly or self-hosted redirect), owner discipline to log DMs | Medium |
-| P1 | **Send the measured window to Buffer** as a custom schedule (recommendation exists; scheduling still uses the queue) | Right-time publishing | ~20 matured posts; verify Buffer `customScheduled` schema first | Low-Medium |
-| P1 | **Designed experiments**: one variable per week (hook type, format, length), control vs challenger, matched baseline, evidence threshold before weights move | Real learning instead of noise | Posting cadence >= 3/week for 8 weeks | Medium |
-| P2 | **Live market signals**: Google Trends, Reddit/YouTube search, Apify hashtag top posts; replace "trends from model memory" | Trends that exist this week | API keys / Apify quota | Medium |
-| P2 | **Competitor discovery by search, not memory**: reuse `lead_finder` web search so more than 2 of 5 suggested competitors verify | Real competitor intelligence | None | Low-Medium |
+| P1 | **Automatic conversion detection**: Meta Graph API (profile visits, website taps, follows per media) and DM counts replace owner-reported leads | Fully automatic lead attribution | Instagram Business account, Meta app review, long-lived token | High |
+| P2 | **More live sources**: Google Trends, Reddit and YouTube search | Broader market signal | API keys / rate limits | Medium |
 | P2 | **Reviewer scorecard + approve/reject in the hub** (writes a GitHub issue or Buffer action) | Faster, safer review; feeds learning | GitHub issue flow exists | Medium |
 | P3 | Multi-platform formats (YouTube Shorts, Facebook): format adapters after the Instagram loop works | Reach | Platform APIs via Buffer | High |
 | P3 | Music and sound design, brand kit (palette, logo, fonts) per business | Production polish | Licensed audio, brand assets | Medium |

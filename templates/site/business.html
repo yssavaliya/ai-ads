@@ -135,6 +135,7 @@
             {% if e.feedback_links.good %}<a href="{{ e.feedback_links.good }}" target="_blank" rel="noopener" title="Great">👍</a>{% endif %}
             {% if e.feedback_links.bad %}<a href="{{ e.feedback_links.bad }}" target="_blank" rel="noopener" title="Miss">👎</a>{% endif %}
             {% if e.feedback_links.regenerate %}<a href="{{ e.feedback_links.regenerate }}" target="_blank" rel="noopener" title="Redo">🔄</a>{% endif %}
+            {% if e.feedback_links.lead %}<a href="{{ e.feedback_links.lead }}" target="_blank" rel="noopener" title="Someone enquired because of this post: log it so the angle gets credit">📩 Got a lead?</a>{% endif %}
             {% if e.feedback_links.posted %}<a class="primary" href="{{ e.feedback_links.posted }}" target="_blank" rel="noopener" title="Link your published post so real engagement is learned">📎 I posted this</a>{% endif %}
           </span>
           {% endif %}

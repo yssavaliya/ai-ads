@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 from src.delivery.channels import DeliveryResult, get_delivery
 from src.delivery.github_feedback import GithubFeedback
 from src.fetch.competitor_finder import CompetitorFinder
+from src.fetch.trend_sources import collect_signals
 from src.fetch.website_scraper import WebsiteScraper
 from src.generation.virality_gate import ViralityGate, apply_threshold_policy, rank
 from src.intelligence.audience_mapper import AudienceMapper
@@ -115,11 +116,16 @@ class DailyPipeline:
                 db.add(biz)
                 db.commit()
 
+            live_signals = self._cached_intel(
+                business, "signals",
+                lambda: collect_signals(profile, audience_map, settings.apify_token),
+                usable=lambda data: bool(data and data.get("signals")),
+            )
             trend_data = self._cached_intel(
                 business, "trends",
-                lambda: self.trends.scan(profile, audience_map, competitors),
+                lambda: self.trends.scan(profile, audience_map, competitors, live_signals or None),
             )
-            logger.info("Research quality for %s: %s", name, research_quality(competitors, social_data))
+            logger.info("Research quality for %s: %s", name, research_quality(competitors, social_data, live_signals))
             weights = self.weights.to_forge_weights(biz.weights_key)
             history = self._load_history(db, biz)
             threshold = int(business.get("virality_threshold") or biz.virality_threshold or settings.virality_threshold)

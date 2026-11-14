@@ -4,7 +4,8 @@ import json
 import logging
 from typing import Any
 
-from src.intelligence.research import TREND_PROVENANCE, summarize_competitors
+from src.fetch.trend_sources import format_for_prompt
+from src.intelligence.research import LIVE_PROVENANCE, TREND_PROVENANCE, summarize_competitors
 from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_text
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,11 @@ class TrendRadar:
         business_profile: dict[str, Any],
         audience_map: dict[str, Any],
         competitor_posts: list[dict[str, Any]] | None = None,
+        live_signals: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         competitor_summary = self._summarize_competitors(competitor_posts or [])
+        signals_text = format_for_prompt(live_signals)
+        provenance = LIVE_PROVENANCE if signals_text else TREND_PROVENANCE
         themes = audience_map.get("content_themes", [])
         pain_points = audience_map.get("top_pain_points", [])
 
@@ -43,7 +47,9 @@ Audience pain points & desires:
 Competitor posts & market signals:
 {fence_text(competitor_summary)}
 
-{TREND_PROVENANCE}
+{provenance}
+
+{fence_text(signals_text, 2600) if signals_text else ''}
 
 Focus on what ACTUALLY drives virality on Instagram in 2026:
 1. High-save triggers: Step-by-step blueprints, swipe files, prompt structures, ROI metrics.
@@ -54,7 +60,7 @@ Focus on what ACTUALLY drives virality on Instagram in 2026:
 Respond ONLY with JSON:
 {{
   "trending_topics": [
-    {{"topic": "topic name", "angle": "contrarian/ROI/blueprint angle", "hook_formula": "sample 10-word opening hook", "relevance": "high|medium|low"}}
+    {{"topic": "topic name", "angle": "contrarian/ROI/blueprint angle", "hook_formula": "sample 10-word opening hook", "relevance": "high|medium|low", "basis": "live_signal|model_knowledge"}}
   ],
   "trending_hashtags": ["#niche1", "#niche2", "#niche3", "#industry1", "#industry2", "#broad1", "#broad2"],
   "content_gaps": [

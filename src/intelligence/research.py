@@ -14,6 +14,13 @@ TREND_PROVENANCE = (
 )
 
 
+LIVE_PROVENANCE = (
+    "DATA PROVENANCE: the LIVE SIGNALS block below is real, dated and attributed (news, Hacker News, Instagram "
+    "hashtag posts). Ground trending_topics in it where it is relevant and mark them basis=\"live_signal\"; "
+    "anything you add from your own knowledge must be marked basis=\"model_knowledge\" and treated as a hypothesis."
+)
+
+
 def verified_competitors(competitors: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     """Only competitors whose public posts were actually retrieved."""
     return [c for c in (competitors or []) if any(p.get("caption") for p in (c.get("top_posts") or []))]
@@ -39,12 +46,17 @@ def summarize_competitors(competitors: list[dict[str, Any]] | None) -> str:
     return header + "\n" + "\n".join(lines)
 
 
-def research_quality(competitors: list[dict[str, Any]] | None, social_data: dict[str, Any] | None) -> dict[str, Any]:
+def research_quality(
+    competitors: list[dict[str, Any]] | None, social_data: dict[str, Any] | None, live_signals: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Compact data-quality record for logs and the hub: what the strategy was actually based on."""
     suggested = [c for c in (competitors or []) if isinstance(c, dict)]
     return {
         "competitors_suggested": len(suggested),
         "competitors_verified": len(verified_competitors(suggested)),
         "own_posts_seen": len((social_data or {}).get("posts") or []),
-        "trend_source": "model knowledge (no live feed)",
+        "trend_source": (
+            f"live signals ({len(live_signals['signals'])} from {', '.join(live_signals.get('sources', []))}) + model knowledge"
+            if live_signals and live_signals.get("signals") else "model knowledge (no live feed)"
+        ),
     }

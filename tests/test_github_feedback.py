@@ -25,7 +25,7 @@ class _Resp:
 
 def test_links_are_inert_placeholders_without_credentials_key_or_uid(monkeypatch):
     monkeypatch.setattr(settings, "feedback_signing_key", "k")
-    placeholder = {"good": "#", "bad": "#", "regenerate": "#", "posted": "#"}
+    placeholder = {"good": "#", "bad": "#", "regenerate": "#", "posted": "#", "lead": "#"}
     assert gf.GithubFeedback(token="", repo="").create_feedback_links(1, "B", "T", UID) == placeholder
     assert gf.GithubFeedback(token="t", repo="o/r").create_feedback_links(1, "B", "T", None) == placeholder
     monkeypatch.setattr(settings, "feedback_signing_key", None)
@@ -35,7 +35,7 @@ def test_links_are_inert_placeholders_without_credentials_key_or_uid(monkeypatch
 def test_signed_links_carry_a_token_that_verifies_only_for_its_own_button(monkeypatch):
     monkeypatch.setattr(settings, "feedback_signing_key", "secret-key")
     links = gf.GithubFeedback(token="t", repo="o/r").create_feedback_links(7, "Biz & Co", "A title", UID)
-    assert set(links) == {"good", "bad", "regenerate", "posted"}
+    assert set(links) == {"good", "bad", "regenerate", "posted", "lead"}
     for kind, url in links.items():
         parsed = urlparse(url)
         assert parsed.netloc == "github.com" and parsed.path == "/o/r/issues/new"

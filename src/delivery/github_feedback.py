@@ -34,7 +34,7 @@ class GithubFeedback:
         configured OR no FEEDBACK_SIGNING_KEY exists: an unsigned link would be unverifiable,
         and feedback processing refuses anything without a valid token."""
         if not self.enabled or not feedback_tokens.enabled() or not prompt_uid:
-            return {"good": "#", "bad": "#", "regenerate": "#", "posted": "#"}
+            return {"good": "#", "bad": "#", "regenerate": "#", "posted": "#", "lead": "#"}
         title = f"{FEEDBACK_PREFIX} prompt #{prompt_id}"
         body = (
             f"**Business:** {business_name}\n"
@@ -51,15 +51,25 @@ class GithubFeedback:
             "https://www.instagram.com/p/...\n\n"
             "_The learner will attribute this post's engagement to the exact asset._"
         )
+        lead_body = (
+            f"**Business:** {business_name}\n"
+            f"**Prompt:** {prompt_title}\n"
+            f"**Prompt ID:** {prompt_id}\n\n"
+            "Someone enquired because of this post. Optional lines (delete if unknown):\n\n"
+            "Type: lead\n"
+            "Value: 0\n\n"
+            "_Logged as a conversion for this exact creative: it counts toward angle, hook and format results._"
+        )
         urls = {}
         for label, word in (
             ("good", "GOOD 👍"),
             ("bad", "BAD 👎"),
             ("regenerate", "REGENERATE 🔄"),
             ("posted", "POSTED 📎"),
+            ("lead", "LEAD 📩"),
         ):
             issue_title = f"{base_title} [{word}] {feedback_tokens.sign(prompt_uid, label)}"
-            issue_body = posted_body if label == "posted" else body.replace("__FEEDBACK__", word)
+            issue_body = {"posted": posted_body, "lead": lead_body}.get(label) or body.replace("__FEEDBACK__", word)
             urls[label] = (
                 f"https://github.com/{self.repo}/issues/new?"
                 f"title={self._quote(issue_title)}&body={self._quote(issue_body)}"

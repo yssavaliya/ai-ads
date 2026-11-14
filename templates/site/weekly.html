@@ -7,6 +7,13 @@
   <p class="muted">{{ business.name }} · {{ date|pretty_date }}</p>
 </section>
 
+{% if report.results %}
+<section class="panel"><h2>🎯 Results that matter</h2>
+  <ul>{% for line in report.results.conversions %}<li>{{ line }}</li>{% endfor %}</ul>
+  {% if report.results.experiments %}<p class="small"><strong>Experiments</strong></p><ul>{% for line in report.results.experiments %}<li>{{ line }}</li>{% endfor %}</ul>{% endif %}
+</section>
+{% endif %}
+
 {% if report.top_performing %}
 <section class="panel"><h2>🏆 Top performing</h2>
   {% for t in report.top_performing %}
