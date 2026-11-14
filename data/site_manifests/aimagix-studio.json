@@ -6107,6 +6107,50 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-112-poster.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-14-113",
+   "date": "2026-11-14",
+   "created_at": "2026-11-14T06:16:21",
+   "prompt_id": 113,
+   "hook_type": "",
+   "title": "A Product Ad Starts With One Clear Idea",
+   "prompt_type": "educational",
+   "score": null,
+   "below_threshold": false,
+   "threshold": null,
+   "label": "UNSCORED",
+   "hook": "Your product doesn't need a huge set to stop the scroll.",
+   "angle": "Show how one product benefit becomes a polished, clearly labeled spec ad concept.",
+   "prompt_text": "A six-scene vertical spec product-ad concept for a reusable bottle. Show the hook, brief, product detail, in-context use, final composition, and one DM CTA. This is a demonstration concept, not client work or a performance claim.",
+   "caption": "A clearly labeled spec concept: one product, one useful idea, and visual choices that support it. Have a product in mind? DM AD with the product and your advertising goal.\n\n#ProductAd #CreativeStudio #AIAdvertising #AimagixStudio",
+   "hashtags": [
+    "#ProductAd",
+    "#CreativeStudio",
+    "#AIAdvertising",
+    "#AimagixStudio"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "video_duration_seconds": 65.74730158730159,
+   "platform_focus": "instagram",
+   "audience_segment": "Founders and marketing teams at small product businesses",
+   "reasoning": "Reviewed deterministic fallback; not scored because the LLM provider chain was unavailable.",
+   "key_factors": [],
+   "risks": [
+    "Fallback concept is unscored; compare retention and saves after posting."
+   ],
+   "warnings": [
+    "LLM outage fallback; unscored spec concept."
+   ],
+   "asset": {
+    "type": "reel",
+    "video": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-113.mp4",
+    "poster": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-113-poster.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-113-poster.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
