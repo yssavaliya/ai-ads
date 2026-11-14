@@ -23,6 +23,8 @@ from src.intelligence.campaign_strategist import (
     brief_for_creative,
     strategy_summary,
 )
+from src.intelligence.competitor_analysis import benchmark
+from src.intelligence.posting_time import competitor_accounts, recommend_window
 from src.intelligence.research import research_quality, verified_competitors
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
@@ -123,7 +125,9 @@ class DailyPipeline:
             # STRATEGY first (objective, persona, problem, trigger, rubric-scored angles), THEN creative.
             campaign = None
             if settings.campaign_strategy_enabled:
-                campaign = self.strategist.plan(profile, audience_map, trend_data, weights, history)
+                campaign = self.strategist.plan(
+                    profile, audience_map, trend_data, weights, history, benchmark(competitors)
+                )
                 if campaign:
                     logger.info("Campaign strategy for %s: %s", name, campaign["rationale"])
             gate_kwargs: dict[str, Any] = {}
@@ -197,7 +201,7 @@ class DailyPipeline:
             prompts = apply_threshold_policy(prompts)
 
             # Attach a ready-to-post brief (caption + best time) to every prompt.
-            self._attach_posting_brief(business, prompts, social_data, audience_map)
+            self._attach_posting_brief(business, prompts, social_data, audience_map, competitors)
 
             # Render each approved prompt using its selected image or Reel format.
             from src.generation.creative_forge import CreativeForge
@@ -319,11 +323,13 @@ class DailyPipeline:
         prompts: list[dict[str, Any]],
         social_data: dict[str, Any],
         audience_map: dict[str, Any] | None = None,
+        competitors: list[dict[str, Any]] | None = None,
     ) -> None:
         """Gap #2/#9 + user request: every prompt carries a copy-paste caption
         and a recommended post time, so the human can post manually without
         re-deriving anything."""
-        post_time = self._recommend_post_time(business, social_data, audience_map)
+        post_time = self._recommend_post_time(business, social_data, audience_map, competitors)
+        window = getattr(self, "last_post_window", None)
         handle = business.get("instagram_handle") or business.get("name") or ""
         for p in prompts:
             caption = (p.get("caption") or "").strip()
@@ -343,6 +349,8 @@ class DailyPipeline:
                 caption = f"{caption}\n\n{hashtags}".strip()
             p["caption"] = caption
             p["recommended_post_time"] = post_time
+            if window:
+                p["post_time_evidence"] = window
             # First-comment CTA: posting a pinned first comment reliably lifts
             # reach and comment rate, so we hand the user a ready one.
             p["first_comment"] = (
@@ -355,10 +363,12 @@ class DailyPipeline:
         business: dict[str, Any],
         social_data: dict[str, Any],
         audience_map: dict[str, Any] | None = None,
+        competitors: list[dict[str, Any]] | None = None,
     ) -> str:
         """Recommend the next good slot to post, in the business timezone.
-        Prefers the audience map's stated best_posting_times (#3); falls back to
-        the hour the business's own posts performed best; else 7 PM local."""
+        Measured first: the 3-hour window where scraped posts (own, plus verified competitors at half weight)
+        earned the most relative engagement. With too little data it falls back, labelled, to the audience
+        map's stated time, then to 7 PM local. The evidence is kept in ``last_post_window``."""
         tz_name = business.get("timezone", "Asia/Kolkata")
         try:
             tz = ZoneInfo(tz_name)
@@ -366,16 +376,14 @@ class DailyPipeline:
             tz = ZoneInfo("Asia/Kolkata")
         now = datetime.now(tz)
 
-        best = self._audience_best_hour(audience_map)
-        if best is None:
-            from src.learning.auto_learner import AutoLearner
-
-            hours: list[int] = []
-            for post in social_data.get("posts", []):
-                dt = AutoLearner._parse_date(post.get("posted_at"))  # naive UTC
-                if dt is not None:
-                    hours.append(dt.replace(tzinfo=UTC).astimezone(tz).hour)  # the business's local hour
-            best = Counter(hours).most_common(1)[0][0] if len(hours) >= 3 else 19
+        window = recommend_window(
+            social_data.get("posts", []) if social_data else [],
+            competitor_accounts(competitors),
+            tz_name,
+            audience_hint_hour=self._audience_best_hour(audience_map),
+        )
+        self.last_post_window = window
+        best = int(window["hour"])
 
         if now.hour >= best:
             target = (now + timedelta(days=1)).replace(hour=best, minute=0, second=0, microsecond=0)

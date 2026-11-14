@@ -87,6 +87,7 @@
         {% endif %}
 
         {% if e.recommended_post_time %}<p class="time">🕒 Best time: <strong>{{ e.recommended_post_time }}</strong></p>{% endif %}
+        {% if e.post_time_evidence and e.post_time_evidence.evidence %}<p class="small muted">Timing basis ({{ e.post_time_evidence.confidence }} confidence, {{ e.post_time_evidence.source }}): {{ e.post_time_evidence.evidence }}</p>{% endif %}
 
         {% if e.first_comment %}
         <div class="block alt">

@@ -71,6 +71,22 @@ def _safe_http_url(value: Any) -> str:
     return ""
 
 
+
+def _public_campaign(campaign: Any) -> dict[str, Any]:
+    """A lead's recommended campaign, redacted for the public hub."""
+    if not isinstance(campaign, dict):
+        return {}
+    clean: dict[str, Any] = {
+        k: redact_text(v) if isinstance(v, str) else v
+        for k, v in campaign.items() if k not in ("alternatives", "kpis")
+    }
+    clean["kpis"] = [redact_text(str(k)) for k in campaign.get("kpis") or []]
+    clean["alternatives"] = [
+        {"name": redact_text(str(a.get("name") or "")), "score": a.get("score")}
+        for a in campaign.get("alternatives") or [] if isinstance(a, dict)
+    ]
+    return clean
+
 class SitePublisher:
     """Delivery channel that writes a static website."""
 
@@ -316,6 +332,7 @@ class SitePublisher:
                 "hashtags": list(p.get("hashtags") or []),
                 "first_comment": p.get("first_comment") or "",
                 "recommended_post_time": p.get("recommended_post_time") or "",
+                "post_time_evidence": p.get("post_time_evidence") or {},
                 "format": p.get("format") or "",
                 "video_duration_seconds": p.get("video_duration_seconds"),
                 "platform_focus": p.get("platform_focus") or "",
@@ -396,6 +413,7 @@ class SitePublisher:
                 "opportunity_score": lead.get("opportunity_score"),
                 "reasons": [redact_text(str(r)) for r in (lead.get("opportunity_reasons") or [])],
                 "why_target": redact_text(lead.get("why_target") or ""),
+                "campaign": _public_campaign(lead.get("campaign")),
                 "decision": lead.get("opportunity_decision") or "",
                 "breakdown": {
                     k: {"points": v.get("points"), "max": v.get("max"), "note": redact_text(str(v.get("note") or ""))}

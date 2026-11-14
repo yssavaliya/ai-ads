@@ -275,6 +275,8 @@ class SocialScraper:
                     "comments": count(item.get("commentsCount")),
                     "comments_text": comments_text,
                     "video_views": count(item.get("videoViewCount") or item.get("videoPlayCount")),
+                    "media_type": str(item.get("type") or "").lower(),
+                    "product_type": str(item.get("productType") or "").lower(),
                     "url": url,
                     "posted_at": item.get("timestamp") or item.get("postedAt") or None,
                     "platform": "instagram",

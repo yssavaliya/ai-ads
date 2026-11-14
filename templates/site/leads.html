@@ -25,6 +25,13 @@
         </p>
         <p class="banner warn small">Contact details are deliberately not published here — reach out via the Instagram profile or the business website.</p>
         {% if lead.why_target %}<p class="small"><strong>Why target:</strong> {{ lead.why_target }}</p>{% endif %}
+        {% if lead.campaign %}<details><summary class="small">🎯 Recommended campaign</summary>
+          <p class="small"><strong>Objective:</strong> {{ lead.campaign.objective }}{% if lead.campaign.persona %} · <strong>Who:</strong> {{ lead.campaign.persona }}{% endif %}{% if lead.campaign.trigger %} · <strong>Trigger:</strong> {{ lead.campaign.trigger }}{% endif %}</p>
+          {% if lead.campaign.problem %}<p class="small"><strong>Problem:</strong> {{ lead.campaign.problem }}</p>{% endif %}
+          {% if lead.campaign.angle %}<p class="small"><strong>Angle:</strong> {{ lead.campaign.angle }}</p>{% endif %}
+          {% if lead.campaign.rationale %}<p class="small muted">{{ lead.campaign.rationale }}</p>{% endif %}
+          {% if lead.campaign.cta %}<p class="small"><strong>Next step for viewers:</strong> {{ lead.campaign.cta }}</p>{% endif %}
+        </details>{% endif %}
         {% if lead.breakdown %}<details><summary class="small">Score breakdown</summary><ul class="small">{% for name, b in lead.breakdown.items() %}<li>{{ name|replace('_', ' ') }}: {{ b.points|round|int }}/{{ b.max }} — {{ b.note }}</li>{% endfor %}</ul></details>{% endif %}
         {% if lead.data_gaps %}<p class="small muted">Not measured: {{ lead.data_gaps|join('; ') }}</p>{% endif %}
         {% if lead.reasons %}<ul class="small">{% for r in lead.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}

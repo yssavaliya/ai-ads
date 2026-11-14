@@ -152,11 +152,12 @@ class CampaignStrategist:
         trend_data: dict[str, Any],
         weights: dict[str, Any] | None = None,
         history: list[dict[str, Any]] | None = None,
+        benchmarks: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         grounding = json.dumps([business_profile, audience_map, trend_data], default=str, ensure_ascii=False)
         try:
             payload = self.llm.run_json(
-                self._prompt(business_profile, audience_map, trend_data, weights, history),
+                self._prompt(business_profile, audience_map, trend_data, weights, history, benchmarks),
                 label="campaign-strategist", temperature=0.4, expect=(dict,),
             )
         except Exception as exc:  # noqa: BLE001 - strategy is an enhancement; the pipeline must still run
@@ -199,7 +200,11 @@ class CampaignStrategist:
         trends: dict[str, Any],
         weights: dict[str, Any] | None,
         history: list[dict[str, Any]] | None,
+        benchmarks: dict[str, Any] | None = None,
     ) -> str:
+        measured = "\n".join(f"- {o}" for o in (benchmarks or {}).get("observations", [])[:6]) or (
+            "No verified competitor data: do not assume anything about competitors."
+        )
         recent = "\n".join(
             f"- [{h.get('outcome') or 'unknown'}] {(h.get('prompt_text') or '')[:120]}" for h in (history or [])[:5]
         ) or "No measured results yet."
@@ -215,6 +220,9 @@ Audience map:
 
 Trends (model knowledge, not live data - adapt, never copy blindly):
 {fence(trends, 1200)}
+
+Competitor benchmarks (MEASURED from scraped public posts; the only competitor facts you may use):
+{fence_text(measured, 900)}
 
 Recent results for this account:
 {fence_text(recent, 700)}

@@ -16,6 +16,7 @@ from src.fetch.lead_finder import LeadFinder
 from src.fetch.social_scraper import SocialScraper
 from src.generation.virality_gate import ViralityGate, apply_threshold_policy
 from src.intelligence.audience_mapper import AudienceMapper
+from src.intelligence.campaign_strategist import CampaignStrategist, strategy_summary
 from src.intelligence.lead_scorer import LeadScorer
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.auto_learner import AutoLearner
@@ -41,6 +42,7 @@ class LeadPipeline:
     def __init__(self) -> None:
         self.finder = LeadFinder()
         self.scorer = LeadScorer()
+        self.strategist = CampaignStrategist()
         self.gate = ViralityGate()
         self.audience = AudienceMapper()
         self.trends = TrendRadar()
@@ -227,8 +229,9 @@ class LeadPipeline:
         failures = []
         creative = None
         try:
-            for lead in top_leads:
+            for lead_index, lead in enumerate(top_leads):
                 try:
+                    self._attach_campaign(lead, lead_index)
                     biz = self._get_or_create_business(db, lead)
                     prompts = self._generate_sample_prompts(lead, config, biz.weights_key)
                     saved_prompt_ids.extend(self._save_prompts(db, biz.id, prompts))
@@ -340,6 +343,28 @@ class LeadPipeline:
         with discovered leads. They must never be scraped as, or listed in the
         digest as, sales leads."""
         return {(b.get("name") or "").lower() for b in load_businesses()}
+
+    def _attach_campaign(self, lead: dict[str, Any], index: int) -> None:
+        """A recommended campaign for the best leads: objective, persona, problem, trigger, angles and CTA, so the
+        outreach shows WHY this business and WHAT we would run for it. Limited to the top
+        ``lead_strategy_count`` leads (free-tier token budget); never blocks the digest."""
+        if not settings.campaign_strategy_enabled or index >= settings.lead_strategy_count:
+            return
+        profile: dict[str, Any] = {
+            "name": lead.get("name"), "niche": lead.get("niche"), "location": lead.get("location"),
+            "website": lead.get("website_url"), "instagram_handle": lead.get("instagram_handle"),
+            "followers": lead.get("followers") or lead.get("follower_count"),
+            "why_selected": lead.get("why_target"), "known_gaps": lead.get("data_gaps"),
+            "verified_facts": [],  # nothing about this business is verified by its owner
+        }
+        try:
+            brief = self.strategist.plan(profile, {}, {})
+        except Exception as exc:  # noqa: BLE001 - the digest must still ship
+            logger.warning("Lead campaign for %s skipped: %s", lead.get("name"), exc)
+            return
+        summary = strategy_summary(brief)
+        if summary:
+            lead["campaign"] = summary
 
     def _merge_known_leads(
         self, db: Any, top_leads: list[dict[str, Any]], config: dict[str, Any], deadline: float | None = None
