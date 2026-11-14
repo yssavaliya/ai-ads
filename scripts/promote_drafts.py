@@ -175,6 +175,8 @@ def main() -> None:
             print(f"✅ {how}: {preview}… (Buffer says due {post.get('dueAt') or 'auto'})")
             report.append(f"| `{preview}…` | {age:.0f}h | ✅ {how} — {decision.reason} |")
 
+    for row in report[4:]:
+        print(row)  # every decision is readable in the log, not only in the Actions summary
     print("\n--- Draft Review Summary ---")
     print(f"Scheduled: {scheduled}{' (dry run)' if dry_run else ''}\nHeld     : {held}\nDeleted  : {deleted}\nIn review window: {young}")
     print("----------------------------")
