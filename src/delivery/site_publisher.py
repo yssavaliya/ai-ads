@@ -242,6 +242,7 @@ class SitePublisher:
             "name": business.get("name", ""),
             "instagram_handle": business.get("instagram_handle") or "",
             "website_url": _safe_http_url(business.get("website_url")),
+            "timezone": business.get("timezone") or "",
         }
 
     # ------------------------------------------------------------------

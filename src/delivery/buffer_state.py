@@ -8,10 +8,13 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from typing import Any
 
 import httpx
+
+from src.delivery.slot_planner import parse_due
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +66,11 @@ mutation DeletePost($input: DeletePostInput!) {
 }
 """
 
+EDIT_INPUT_MODE_QUERY = """
+query EditPostMode { __type(name: "EditPostInput") { inputFields { name type { name kind ofType { name kind } } } } }
+"""
+ENUM_VALUES_QUERY = "query ModeValues($name: String!) { __type(name: $name) { enumValues { name } } }"
+
 SIMILARITY_THRESHOLD = 0.85
 
 
@@ -76,6 +84,14 @@ class QueueState:
 
     def texts(self) -> list[str]:
         return [str(p.get("text") or "") for p in self.posts]
+
+    def due_times(self) -> list[datetime]:
+        """When the waiting (scheduled) posts will go out: the slots a new post must keep clear of."""
+        times = [
+            parse_due(p.get("dueAt")) for p in self.posts
+            if str(p.get("status", "")).lower() in WAITING_STATUSES
+        ]
+        return [t for t in times if t is not None]
 
 
 def _normalise(text: str) -> str:
@@ -202,3 +218,49 @@ def check_asset_url(url: str, timeout: float = 10) -> bool:
             return resp.status_code < 400
     except Exception:  # noqa: BLE001
         return False
+
+
+def supports_custom_schedule(token: str, client: httpx.Client | None = None) -> bool | None:
+    """True/False when Buffer's schema says whether ``mode: customScheduled`` exists; None when it cannot be read
+    (introspection off or a network error). Callers treat None as "try it, and fall back to the queue on error"."""
+    owns = client is None
+    client = client or httpx.Client(timeout=30)
+    try:
+        fields = ((_graphql(client, token, EDIT_INPUT_MODE_QUERY).get("__type") or {}).get("inputFields")) or []
+        mode = next((f for f in fields if f.get("name") == "mode"), None)
+        if mode is None:
+            return None
+        type_info = mode.get("type") or {}
+        enum_name = type_info.get("name") or (type_info.get("ofType") or {}).get("name")
+        if not enum_name:
+            return None
+        values = ((_graphql(client, token, ENUM_VALUES_QUERY, {"name": enum_name}).get("__type") or {}).get("enumValues")) or []
+        return "customScheduled" in {v.get("name") for v in values} if values else None
+    except Exception as exc:  # noqa: BLE001 - never block publishing on a schema probe
+        logger.info("Buffer schema probe unavailable (%s)", exc)
+        return None
+    finally:
+        if owns:
+            client.close()
+
+
+def schedule_draft(
+    token: str, post_id: str, due_at: datetime, client: httpx.Client | None = None
+) -> dict[str, Any]:
+    """Move a draft into the queue at an exact time (``mode: customScheduled`` + ``dueAt``)."""
+    owns = client is None
+    client = client or httpx.Client(timeout=30)
+    try:
+        data = _graphql(client, token, PROMOTE_DRAFT_MUTATION, {
+            "input": {
+                "postId": post_id, "saveToDraft": False, "mode": "customScheduled",
+                "schedulingType": "automatic", "dueAt": due_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            },
+        })
+        result = data.get("editPost") or {}
+        if result.get("__typename") != "PostActionSuccess":
+            raise RuntimeError(f"Buffer schedule failed: {result.get('message') or result}")
+        return result.get("post") or {}
+    finally:
+        if owns:
+            client.close()

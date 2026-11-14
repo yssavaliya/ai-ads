@@ -30,6 +30,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 from src.delivery.buffer_publisher import BufferPublisher  # noqa: E402
 from src.delivery.buffer_state import fetch_queue_state, find_duplicate  # noqa: E402
+from src.delivery.slot_planner import describe, plan_slot  # noqa: E402
 from src.generation.claims import unsupported_claims  # noqa: E402
 from src.shared.brand_facts import grounding_text, load_brand_facts  # noqa: E402
 from src.shared.config import settings  # noqa: E402
@@ -49,7 +50,8 @@ def get_latest_prompts() -> list[dict]:
             data = json.loads(path.read_text(encoding="utf-8"))
             business_name = (data.get("business") or {}).get("name") or ""
             for entry in data.get("entries", []):
-                all_entries.append((entry.get("date", ""), {**entry, "_business_name": business_name}))
+                timezone = (data.get("business") or {}).get("timezone") or ""
+                all_entries.append((entry.get("date", ""), {**entry, "_business_name": business_name, "_timezone": timezone}))
         except Exception:
             continue
 
@@ -75,6 +77,15 @@ def posted_ids() -> set[str]:
     return {str(item.get("id")) for item in data.get("posted", []) if isinstance(item, dict) and item.get("id")}
 
 
+def choose_due(prompt: dict, taken: list | None = None, now: datetime | None = None):
+    """The publish time for this creative: its experiment/measured hour in the business timezone, clear of the
+    times Buffer already holds. None -> let Buffer pick the next automatic slot."""
+    hour = prompt.get("schedule_hour")
+    if hour is None:
+        hour = (prompt.get("post_time_evidence") or {}).get("hour")
+    return plan_slot(now or datetime.now(UTC), hour, prompt.get("_timezone") or None, taken or [])
+
+
 def hours_since_last_post(now: datetime | None = None) -> float | None:
     """Hours since the newest entry in the published log, or None when nothing was ever posted."""
     try:
@@ -95,7 +106,7 @@ def hours_since_last_post(now: datetime | None = None) -> float | None:
     return ((now or datetime.now(UTC)) - newest).total_seconds() / 3600
 
 
-def record_posted(entry: dict, buffer_posts: list[dict] | None = None) -> None:
+def record_posted(entry: dict, buffer_posts: list[dict] | None = None, scheduled_for: str | None = None) -> None:
     """Remember the creative and exact Buffer IDs for later per-post analytics."""
     try:
         data = json.loads(PUBLISHED_LOG.read_text(encoding="utf-8"))
@@ -117,6 +128,16 @@ def record_posted(entry: dict, buffer_posts: list[dict] | None = None) -> None:
         "audience_segment": entry.get("audience_segment") or "",
         "caption": entry.get("caption") or "",
         "at": datetime.now(UTC).isoformat(),
+        # what the later (unattended) scheduling step needs to judge and time this creative
+        "score": entry.get("score"),
+        "threshold": entry.get("threshold"),
+        "below_threshold": bool(entry.get("below_threshold")),
+        "window": entry.get("post_time_evidence") or {},
+        "schedule_hour": entry.get("schedule_hour"),
+        "timezone": entry.get("_timezone") or "",
+        "experiment": entry.get("experiment") or {},
+        "angle": (entry.get("strategy") or {}).get("angle") or "",
+        "scheduled_for": scheduled_for or "",
     })
     record["buffer_posts"] = [
         {
@@ -353,10 +374,22 @@ def main() -> None:
             print(f"Status    : {post.get('status')}")
             print(f"Due At    : {post.get('dueAt') or 'Existing Buffer queue slot'}")
         else:
-            res = publisher.schedule_post(text=caption, image_url=image_url, video_url=video_url)
+            due_at = None
+            if not (is_draft or is_now):
+                due_at = choose_due(target_prompt, queue.due_times() if queue is not None else [])
+            try:
+                res = publisher.schedule_post(text=caption, image_url=image_url, video_url=video_url, due_at=due_at)
+            except Exception as exc:  # noqa: BLE001 - a custom time must never cost the day's post
+                if due_at is None:
+                    raise
+                print(f"::warning::Custom schedule rejected ({exc}); falling back to the next automatic queue slot.")
+                due_at = None
+                res = publisher.schedule_post(text=caption, image_url=image_url, video_url=video_url)
             print("✅ Successfully published to Buffer!")
+            if due_at is not None:
+                print(f"Planned   : {describe(due_at, target_prompt.get('_timezone') or None)}")
             buffer_posts = res.get("posts", [])
-            record_posted(target_prompt, buffer_posts)
+            record_posted(target_prompt, buffer_posts, due_at.isoformat() if due_at else None)
             for post in buffer_posts:
                 print(f"Post ID   : {post.get('id')}")
                 print(f"Status    : {post.get('status')}")

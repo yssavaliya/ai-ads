@@ -15,6 +15,10 @@ on:
         description: "Maximum draft age (hours) before deleting as stale"
         type: string
         default: "168"
+      dry_run:
+        description: "Report what would be scheduled without changing Buffer"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,17 +38,25 @@ jobs:
       BUFFER_QUEUE_LIMIT: ${{ vars.BUFFER_QUEUE_LIMIT || '3' }}
       DRAFT_MIN_AGE_HOURS: ${{ inputs.min_age_hours || vars.DRAFT_MIN_AGE_HOURS || '24' }}
       DRAFT_MAX_AGE_HOURS: ${{ inputs.max_age_hours || vars.DRAFT_MAX_AGE_HOURS || '168' }}
+      DRY_RUN: ${{ inputs.dry_run || 'false' }}
+      AUTO_SCHEDULE_MIN_SCORE: ${{ vars.AUTO_SCHEDULE_MIN_SCORE }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           sparse-checkout: |
             scripts/promote_drafts.py
-            src/delivery/buffer_state.py
-            src/delivery/__init__.py
-            src/shared/config.py
-            requirements.txt
-            src/shared/__init__.py
             src/__init__.py
+            src/delivery/__init__.py
+            src/delivery/buffer_state.py
+            src/delivery/draft_review.py
+            src/delivery/slot_planner.py
+            src/generation/__init__.py
+            src/generation/claims.py
+            src/shared/__init__.py
+            src/shared/brand_facts.py
+            requirements.txt
+            data/published_log.json
+            data/brand_facts.json
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:

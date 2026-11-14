@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urljoin
 
@@ -122,8 +123,10 @@ class BufferPublisher:
         draft: bool | None = None,
         now: bool | None = None,
         video_url: str | None = None,
+        due_at: datetime | None = None,
     ) -> dict[str, Any]:
-        """Post or schedule a single update via Buffer GraphQL API."""
+        """Post or schedule a single update via Buffer GraphQL API. ``due_at`` publishes at that exact time
+        (``mode: customScheduled``) instead of the next automatic queue slot; ignored for drafts and share-now."""
         if not self.access_token:
             raise ValueError("Buffer access token not configured.")
 
@@ -165,6 +168,10 @@ class BufferPublisher:
                     },
                 }
             }
+
+            if due_at is not None and not is_draft and not is_now:
+                variables["input"]["mode"] = "customScheduled"
+                variables["input"]["dueAt"] = due_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
             logger.info(
                 "Posting to Buffer channel %s (asset=%s, draft=%s, now=%s)",
