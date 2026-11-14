@@ -2,7 +2,8 @@
  "business": {
   "name": "Aimagix Studio",
   "instagram_handle": "aimagix.studio",
-  "website_url": "https://instagram.com/aimagix.studio"
+  "website_url": "https://instagram.com/aimagix.studio",
+  "timezone": "Asia/Kolkata"
  },
  "entries": [
   {
@@ -6520,6 +6521,102 @@
     "type": "image",
     "image": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-118.jpg",
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-118-thumb.jpg"
+   },
+   "feedback_links": {}
+  },
+  {
+   "id": "2026-11-14-119",
+   "date": "2026-11-14",
+   "created_at": "2026-11-14T07:57:53",
+   "prompt_id": 119,
+   "hook_type": "before_after",
+   "title": "From Sketch to Scroll‑Stopping Reel",
+   "prompt_type": "storytelling",
+   "score": 72,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "Watch a raw product sketch become a scroll‑stopping Reel",
+   "angle": "Demonstrate a before‑after transformation from a founder’s sketch to a finished Reel, highlighting speed and AI‑driven creativity.",
+   "prompt_text": "Produce a single image that tells a short story: a startup founder draws a quick sketch of a product, then Aimagix Studio’s AI workflow turns it into a finished single image. Begin with the hook overlay and spoken line, then walk through six beats – sketch, prompt creation, AI visual generation, copy overlay, final single image assembly, and the finished single image playing on a phone. Narration should explain each creative decision (why the hook was chosen, how the benefit is highlighted, the visual style) and emphasize speed and affordability for founders. Conclude with a CTA inviting DMs of product + advertising goal. Target Startup Founders, use a before‑after hook, and stay within the verified studio capabilities.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Watch a raw product sketch become a scroll‑stopping Reel\n\n✏️ We start with a founder’s quick sketch.\n🚀 AI expands it into a visual hook, adds benefit copy, and builds the final video.\n✅ The result is a ready‑to‑post Reel that grabs attention in seconds.\n\nWhat product would you like to see transformed? DM \"AD\" with your brief and goal.\n\n#AIAds #ProductAds #CreativeAI #Entrepreneur #IndiaBiz #AdCreative #DigitalAds #Reels",
+   "hashtags": [
+    "#AIAds",
+    "#ProductAds",
+    "#CreativeAI",
+    "#Entrepreneur",
+    "#IndiaBiz",
+    "#AdCreative",
+    "#DigitalAds",
+    "#Reels"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 07:00 PM Asia/Kolkata",
+   "post_time_evidence": {
+    "hour": 19,
+    "block": "18:00-20:59",
+    "confidence": "medium",
+    "source": "scraped post performance",
+    "evidence": "18:00-20:59 had the strongest relative engagement across 22 scraped posts (7 in that window, +161% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+    "samples": 22
+   },
+   "experiment": {
+    "id": "2026-W46-post_block",
+    "variable": "post_block",
+    "arm": "A",
+    "value": 19
+   },
+   "schedule_hour": null,
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt mirrors proven winners that showcase AI speed and a clear before‑after narrative, directly addressing founders’ need for rapid, affordable creative. It aligns with the studio’s verified capabilities and audience map, but the single‑frame constraint could dilute the storytelling clarity. The hook is strong, but the CTA must be unmistakable to convert curiosity into inquiries.",
+   "strategy": {
+    "objective": "lead_generation",
+    "persona": "Startup Founder",
+    "problem": "Long lead times and high costs when creating product‑focused ad creative",
+    "trigger": "relief",
+    "angle": "30‑Minute Reel Blueprint",
+    "angle_hook_type": "framework",
+    "angle_score": 94.6,
+    "rationale": "Angle '30‑Minute Reel Blueprint' scored 95/100, strongest on audience fit and usp fit. It beat 'Before‑After AI Sprint' (94) by 1 points. Learned results moved it +3.3 points.",
+    "cta": "DM us with your product and advertising goal",
+    "kpis": [
+     "saves",
+     "shares",
+     "profile visits"
+    ],
+    "hypothesis": "If we lead with the '30‑Minute Reel Blueprint' angle (framework hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Long lead times and high costs when creating product‑focused ad creative. Runner-up to test next: 'Before‑After AI Sprint'.",
+    "alternatives": [
+     {
+      "name": "Before‑After AI Sprint",
+      "score": 94.0
+     },
+     {
+      "name": "Contrarian Cost Myth",
+      "score": 64.2
+     }
+    ]
+   },
+   "key_factors": [
+    "Clear before‑after hook that instantly signals speed and transformation",
+    "Specific depiction of AI workflow steps, aligning with proven content pillars",
+    "Targeted CTA for DMs, directly addressing Startup Founders’ pain points",
+    "Visual storytelling fits Reels/Carousel format, high scroll‑stop potential",
+    "Alignment with past winning patterns (AI speed, 3‑step process, cost‑efficiency)"
+   ],
+   "risks": [
+    "Risk of being perceived as a generic “AI demo” without a distinct brand voice",
+    "Potential confusion if the single image is too cluttered to convey all six beats",
+    "Audience may overlook the CTA if the hook is not punchy enough",
+    "Limited shareability if the story feels too niche or industry‑specific"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-119.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-119-thumb.jpg"
    },
    "feedback_links": {}
   }

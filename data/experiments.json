@@ -1,0 +1,16 @@
+{
+  "active": {
+    "arms": {
+      "A": {
+        "value": 19
+      },
+      "B": {
+        "value": 9
+      }
+    },
+    "id": "2026-W46-post_block",
+    "started": "2026-11-14",
+    "variable": "post_block",
+    "week": "2026-W46"
+  }
+}
