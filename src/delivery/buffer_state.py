@@ -17,12 +17,48 @@ logger = logging.getLogger(__name__)
 
 BUFFER_GQL_URL = "https://api.buffer.com"
 WAITING_STATUSES = {"scheduled", "buffer", "needs_approval"}  # drafts are not queued posts
+DRAFT_STATUSES = {"draft"}
 
 ORGANIZATIONS_QUERY = "query GetOrganizations { account { organizations { id name } } }"
 POSTS_QUERY = """
 query GetPosts($input: PostsInput!, $first: Int) {
   posts(first: $first, input: $input) {
-    edges { node { id status dueAt sentAt text channelId } }
+    edges { node { id status dueAt sentAt text channelId createdAt assets { url type } } }
+  }
+}
+"""
+
+DRAFTS_QUERY = """
+query GetDrafts($input: PostsInput!, $first: Int) {
+  posts(first: $first, input: $input) {
+    edges { node { id status text channelId createdAt assets { url type } } }
+  }
+}
+"""
+
+PROMOTE_DRAFT_MUTATION = """
+mutation PromoteDraft($input: EditPostInput!) {
+  editPost(input: $input) {
+    __typename
+    ... on PostActionSuccess {
+      post { id channelId status dueAt }
+    }
+    ... on UnauthorizedError { message }
+    ... on InvalidInputError { message }
+    ... on LimitReachedError { message }
+    ... on UnexpectedError { message }
+  }
+}
+"""
+
+DELETE_POST_MUTATION = """
+mutation DeletePost($input: DeletePostInput!) {
+  deletePost(input: $input) {
+    __typename
+    ... on PostActionSuccess { post { id status } }
+    ... on UnauthorizedError { message }
+    ... on InvalidInputError { message }
+    ... on UnexpectedError { message }
   }
 }
 """
@@ -97,3 +133,72 @@ def fetch_queue_state(token: str, channel_id: str, limit: int = 50, client: http
     finally:
         if owns:
             client.close()
+
+
+def fetch_drafts(token: str, channel_id: str, limit: int = 50, client: httpx.Client | None = None) -> list[dict[str, Any]]:
+    """Return all draft posts for ``channel_id``."""
+    owns = client is None
+    client = client or httpx.Client(timeout=30)
+    try:
+        orgs = ((_graphql(client, token, ORGANIZATIONS_QUERY).get("account") or {}).get("organizations")) or []
+        if not orgs:
+            raise RuntimeError("The Buffer token can see no organisations")
+        for org in orgs:
+            try:
+                data = _graphql(
+                    client, token, DRAFTS_QUERY,
+                    {"input": {"organizationId": org["id"], "filter": {"channelIds": [channel_id], "status": ["draft"]}}, "first": limit},
+                )
+            except Exception:  # noqa: BLE001
+                continue
+            edges = (data.get("posts") or {}).get("edges") or []
+            return [(edge.get("node") or {}) for edge in edges]
+        return []
+    finally:
+        if owns:
+            client.close()
+
+
+def promote_draft(token: str, post_id: str, client: httpx.Client | None = None) -> dict[str, Any]:
+    """Move a draft post into the active Buffer queue."""
+    owns = client is None
+    client = client or httpx.Client(timeout=30)
+    try:
+        data = _graphql(client, token, PROMOTE_DRAFT_MUTATION, {
+            "input": {"postId": post_id, "saveToDraft": False, "mode": "addToQueue", "schedulingType": "automatic"},
+        })
+        result = data.get("editPost") or {}
+        typename = result.get("__typename")
+        if typename != "PostActionSuccess":
+            raise RuntimeError(f"Buffer promote failed: {result.get('message') or result}")
+        return result.get("post") or {}
+    finally:
+        if owns:
+            client.close()
+
+
+def delete_post(token: str, post_id: str, client: httpx.Client | None = None) -> bool:
+    """Permanently delete a post (draft or scheduled) from Buffer."""
+    owns = client is None
+    client = client or httpx.Client(timeout=30)
+    try:
+        data = _graphql(client, token, DELETE_POST_MUTATION, {
+            "input": {"postId": post_id},
+        })
+        result = data.get("deletePost") or {}
+        return result.get("__typename") == "PostActionSuccess"
+    finally:
+        if owns:
+            client.close()
+
+
+def check_asset_url(url: str, timeout: float = 10) -> bool:
+    """HEAD-check whether a media URL is still reachable (not expired or 404)."""
+    if not url:
+        return False
+    try:
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+            resp = client.head(url)
+            return resp.status_code < 400
+    except Exception:  # noqa: BLE001
+        return False

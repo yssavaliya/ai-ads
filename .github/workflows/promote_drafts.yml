@@ -1,0 +1,55 @@
+name: Promote Buffer Drafts
+
+on:
+  schedule:
+    # Run daily at 10:00 IST (04:30 UTC) — gives you ~16 hours to review
+    # after the daily pipeline creates drafts at 18:00 IST.
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+    inputs:
+      min_age_hours:
+        description: "Minimum draft age (hours) before auto-promoting"
+        type: string
+        default: "24"
+      max_age_hours:
+        description: "Maximum draft age (hours) before deleting as stale"
+        type: string
+        default: "168"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-ads-buffer-drafts
+  cancel-in-progress: true
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
+      BUFFER_PROFILE_IDS: ${{ secrets.BUFFER_PROFILE_IDS || secrets.BUFFER_PROFILE_ID }}
+      BUFFER_QUEUE_LIMIT: ${{ vars.BUFFER_QUEUE_LIMIT || '3' }}
+      DRAFT_MIN_AGE_HOURS: ${{ inputs.min_age_hours || vars.DRAFT_MIN_AGE_HOURS || '24' }}
+      DRAFT_MAX_AGE_HOURS: ${{ inputs.max_age_hours || vars.DRAFT_MAX_AGE_HOURS || '168' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          sparse-checkout: |
+            scripts/promote_drafts.py
+            src/delivery/buffer_state.py
+            src/delivery/__init__.py
+            src/shared/config.py
+            src/shared/__init__.py
+            src/__init__.py
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install httpx pydantic-settings
+
+      - name: Promote or clean up drafts
+        run: python scripts/promote_drafts.py
