@@ -12,5 +12,23 @@
     "started": "2026-11-14",
     "variable": "post_block",
     "week": "2026-W46"
+  },
+  "results": {
+    "2026-W46-post_block": {
+      "arms": {
+        "A": {
+          "value": 19
+        },
+        "B": {
+          "value": 9
+        }
+      },
+      "id": "2026-W46-post_block",
+      "n_a": 0,
+      "n_b": 0,
+      "note": "needs 4 matured posts per arm",
+      "status": "insufficient",
+      "variable": "post_block"
+    }
   }
 }
