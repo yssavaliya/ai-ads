@@ -233,6 +233,25 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-14-116",
+      "title": "3\u2011Step Prompt Blueprint for a Scroll\u2011Stopping Reel",
+      "prompt_id": 116,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "educational",
+      "format": "single image",
+      "hook_type": "curiosity_gap",
+      "audience_segment": "Startup Founder",
+      "caption": "The 1 Prompt Structure Agencies Hide\n\nWe break down the exact three\u2011step prompt that turns a plain product brief into a scroll\u2011stopping Reel in minutes. Step\u202f1: Hook phrase that sparks curiosity. Step\u202f2: Benefit line that ties the product to a real problem. Step\u202f3: Call\u2011to\u2011action cue that drives the viewer to DM.\n\nTry it on your own product and see the difference.\n\n\ud83d\udcac What\u2019s the biggest ad challenge you face right now?\n\ud83d\udc4b DM \"AD\" with your product and advertising goal \u2013 we\u2019ll build a quick concept for you.\n\n#AIAds #PromptBlueprint #CreativeAI #ProductAds #StartupMarketing #AdCreative #Reels #Entrepreneur",
+      "at": "2026-11-14T06:48:46.399374+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af8044e4b28296eb13d94e0",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
