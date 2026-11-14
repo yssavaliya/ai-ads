@@ -39,10 +39,13 @@ jobs:
       - name: Scrape IG engagement and learn
         run: bash .github/scripts/run_pipeline.sh src.learning.auto_learner
 
+      - name: Judge designed experiments
+        run: bash .github/scripts/run_pipeline.sh src.learning.experiments
+
       - uses: ./.github/actions/persist-state
         if: always()
         with:
-          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl data/buffer_metrics.jsonl
+          files: data/weights.json data/learning_ledger.jsonl data/engagement_log.jsonl data/buffer_metrics.jsonl data/experiments.json
           message: "chore: engagement sync state"
           state_encryption_key: ${{ secrets.STATE_ENCRYPTION_KEY || secrets.FEEDBACK_SIGNING_KEY }}
 

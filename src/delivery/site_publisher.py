@@ -334,6 +334,8 @@ class SitePublisher:
                 "first_comment": p.get("first_comment") or "",
                 "recommended_post_time": p.get("recommended_post_time") or "",
                 "post_time_evidence": p.get("post_time_evidence") or {},
+                "experiment": p.get("experiment") or {},
+                "schedule_hour": p.get("schedule_hour"),
                 "format": p.get("format") or "",
                 "video_duration_seconds": p.get("video_duration_seconds"),
                 "platform_focus": p.get("platform_focus") or "",

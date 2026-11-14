@@ -234,7 +234,9 @@ def pick_prompt(
         usable.append(p)
     if not usable:
         return None
-    return max(usable, key=lambda x: int(x.get("score") or x.get("virality_score") or 0))
+    # the creative carrying this week's designed experiment is preferred: it was only tagged because it already
+    # cleared the quality bar, and the test needs it published
+    return max(usable, key=lambda x: (bool(x.get("experiment")), int(x.get("score") or x.get("virality_score") or 0)))
 
 
 def main() -> None:

@@ -27,6 +27,7 @@ from src.intelligence.competitor_analysis import benchmark
 from src.intelligence.posting_time import competitor_accounts, recommend_window
 from src.intelligence.research import research_quality, verified_competitors
 from src.intelligence.trend_radar import TrendRadar
+from src.learning import experiments
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.brand_facts import load_brand_facts, merge_into_profile, warn_if_empty
 from src.shared.concurrency import parallel_map
@@ -126,7 +127,8 @@ class DailyPipeline:
             campaign = None
             if settings.campaign_strategy_enabled:
                 campaign = self.strategist.plan(
-                    profile, audience_map, trend_data, weights, history, benchmark(competitors)
+                    profile, audience_map, trend_data, weights, history, benchmark(competitors),
+                    experiments.strategy_hints(experiments.load_state(Path(settings.data_dir) / "experiments.json")),
                 )
                 if campaign:
                     logger.info("Campaign strategy for %s: %s", name, campaign["rationale"])
@@ -202,6 +204,7 @@ class DailyPipeline:
 
             # Attach a ready-to-post brief (caption + best time) to every prompt.
             self._attach_posting_brief(business, prompts, social_data, audience_map, competitors)
+            self._assign_experiment(name, prompts, weights, threshold)
 
             # Render each approved prompt using its selected image or Reel format.
             from src.generation.creative_forge import CreativeForge
@@ -317,6 +320,33 @@ class DailyPipeline:
                 return ex
         return extras[0] if extras else None
 
+    def _assign_experiment(
+        self, business_name: str, prompts: list[dict[str, Any]], weights: dict[str, Any], threshold: int
+    ) -> None:
+        """This week's designed experiment (one variable, control vs challenger) rides on one publishable creative.
+        Never blocks the run."""
+        if not settings.experiments_enabled or not prompts:
+            return
+        try:
+            data_dir = Path(settings.data_dir)
+            state_path = data_dir / "experiments.json"
+            state = experiments.load_state(state_path)
+            hooks = {k.split("::", 1)[1]: v for k, v in (weights or {}).items()
+                     if k.startswith("hook_types::") and isinstance(v, (int, float))}
+            top_hook = max(hooks, key=lambda h: hooks[h]) if hooks else None
+            window = getattr(self, "last_post_window", None) or {}
+            today = datetime.now(ZoneInfo(settings.default_timezone)).date()
+            records = experiments.read_records(data_dir, business_name)
+            experiment = experiments.ensure_active(state, today, records, window.get("hour"), top_hook)
+            tag = experiments.assign(experiment, prompts, records, threshold)
+            experiments.save_state(state_path, state)
+            if tag:
+                logger.info("Experiment %s: this creative runs arm %s (%s=%s)", tag["id"], tag["arm"], tag["variable"], tag["value"])
+            else:
+                logger.info("Experiment %s: no eligible creative for either arm today", experiment["id"])
+        except Exception as exc:  # noqa: BLE001 - an experiment must never cost the day's creative
+            logger.warning("Experiment assignment skipped: %s", exc)
+
     def _attach_posting_brief(
         self,
         business: dict[str, Any],
@@ -382,6 +412,13 @@ class DailyPipeline:
             tz_name,
             audience_hint_hour=self._audience_best_hour(audience_map),
         )
+        preferred = experiments.preferred_hour(experiments.load_state(Path(settings.data_dir) / "experiments.json"))
+        if preferred is not None and window.get("confidence") != "medium":
+            window = {
+                **window, "hour": preferred, "source": "timing experiment winner",
+                "evidence": f"A designed timing experiment found {preferred:02d}:00 performs best; "
+                            f"measured-window confidence was {window.get('confidence')}.",
+            }
         self.last_post_window = window
         best = int(window["hour"])
 

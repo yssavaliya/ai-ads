@@ -131,6 +131,7 @@ class Settings(BaseSettings):
     virality_threshold: int = Field(default=75, description="Minimum virality score (0-100)")
     below_threshold_policy: str = Field(default="flag", description="flag | block: what to do with prompts under the quality bar")
     lead_strategy_count: int = Field(default=3, ge=0, le=10, description="Top leads that get a recommended campaign per run")
+    experiments_enabled: bool = Field(default=True, description="Run one designed experiment per week (hook, post block, format)")
     campaign_strategy_enabled: bool = Field(
         default=True, description="Run the campaign-strategy stage (objective, angles, rubric) before creative generation"
     )
