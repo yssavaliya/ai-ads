@@ -6282,6 +6282,85 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-115-thumb.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-14-116",
+   "date": "2026-11-14",
+   "created_at": "2026-11-14T06:48:35",
+   "prompt_id": 116,
+   "hook_type": "curiosity_gap",
+   "title": "3‑Step Prompt Blueprint for a Scroll‑Stopping Reel",
+   "prompt_type": "educational",
+   "score": 72,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "The 1 Prompt Structure Agencies Hide",
+   "angle": "Show a hidden, actionable prompt that lets founders create high‑impact reels instantly.",
+   "prompt_text": "Goal: Teach founders a concrete, reusable AI prompt that creates a high‑impact product single image instantly. Position Aimagix Studio as the practical guide who can prototype ads in minutes, not weeks. The single image opens with the hook \"The 1 Prompt Structure Agencies Hide\" over a bold, high‑contrast text overlay. Beat 1 shows the studio desk (visual_scene) establishing credibility. Beat 2 displays a handwritten brief (e.g., \"Eco‑friendly water bottle – target eco‑conscious millennials\"). Beat 3 reveals the three‑step prompt on screen, each line appearing as the narrator explains its purpose. Beat 4 demonstrates the AI generating a storyboard thumbnail. Beat 5 shows the final rendered single image snippet playing on a monitor (no text on screen). Beat 6 ends with a direct invitation: \"DM \"AD\" with your product and goal for a free concept.\"\n\nPsychology: The curiosity gap hook forces viewers to stay for the reveal. The step‑by‑step breakdown satisfies the founder’s need for fast, actionable knowledge, encouraging saves and shares. The CTA is a single, concrete ask that drives DMs.\n\nAudience: Startup Founder – wants quick, budget‑friendly creative solutions.\n\nAngle: Position the prompt as a secret agency weapon, reinforcing the studio’s AI advantage.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "The 1 Prompt Structure Agencies Hide\n\nWe break down the exact three‑step prompt that turns a plain product brief into a scroll‑stopping Reel in minutes. Step 1: Hook phrase that sparks curiosity. Step 2: Benefit line that ties the product to a real problem. Step 3: Call‑to‑action cue that drives the viewer to DM.\n\nTry it on your own product and see the difference.\n\n💬 What’s the biggest ad challenge you face right now?\n👋 DM \"AD\" with your product and advertising goal – we’ll build a quick concept for you.\n\n#AIAds #PromptBlueprint #CreativeAI #ProductAds #StartupMarketing #AdCreative #Reels #Entrepreneur",
+   "hashtags": [
+    "#AIAds",
+    "#PromptBlueprint",
+    "#CreativeAI",
+    "#ProductAds",
+    "#StartupMarketing",
+    "#AdCreative",
+    "#Reels",
+    "#Entrepreneur"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt is highly relevant to the target audience and fills a specific educational gap, which drives saves and profile visits. However, the format mismatch (describing a video sequence but requesting a static image) is a significant structural risk that could dilute the impact. The hook is strong but relies on a common trope; adding specific visual proof of the 'hidden' prompt structure in the static frame would enhance credibility and scroll-stopping power.",
+   "strategy": {
+    "objective": "lead_generation",
+    "persona": "Startup Founder",
+    "problem": "Need high‑impact ad creative fast on a tight budget and timeline",
+    "trigger": "relief",
+    "angle": "3‑Step Prompt Blueprint",
+    "angle_hook_type": "framework",
+    "angle_score": 92.5,
+    "rationale": "Angle '3‑Step Prompt Blueprint' scored 92/100, strongest on audience fit and conversion pull. It beat 'Agency Cost Contrast' (89) by 4 points.",
+    "cta": "DM \"AD\" with your product and advertising goal",
+    "kpis": [
+     "saves",
+     "shares",
+     "profile visits"
+    ],
+    "hypothesis": "If we lead with the '3‑Step Prompt Blueprint' angle (framework hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Need high‑impact ad creative fast on a tight budget and timeline. Runner-up to test next: 'Agency Cost Contrast'.",
+    "alternatives": [
+     {
+      "name": "Agency Cost Contrast",
+      "score": 88.8
+     },
+     {
+      "name": "Brief‑to‑Reel Before/After",
+      "score": 79.5
+     }
+    ]
+   },
+   "key_factors": [
+    "Strong alignment with the 'Startup Founder' persona's need for quick, budget-friendly creative solutions.",
+    "Directly addresses a high-relevance content gap: step-by-step AI prompt engineering for ad visuals.",
+    "Clear, concrete CTA ('DM AD') that fits the studio's allowed claims and business model.",
+    "High save/share potential due to the 'reusable prompt' utility for non-designers."
+   ],
+   "risks": [
+    "Contradiction between the 'Reel' narrative (6 beats, narration, time progression) and the 'single static image' deliverable, which may confuse production or reduce engagement if the static image lacks motion cues.",
+    "The hook 'Agencies Hide' is a common contrarian trope that may feel generic without specific, novel prompt details visible in the static frame.",
+    "Lack of Indian cultural localization in the example product (eco-bottle) or hook, missing a specific content gap for the Indian SMB market."
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-116.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-116-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
