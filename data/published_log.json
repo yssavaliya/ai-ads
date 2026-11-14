@@ -252,6 +252,25 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-14-117",
+      "title": "Spec Concept: AI\u2011Generated Smart\u2011Bottle Ad",
+      "prompt_id": 117,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "social_proof",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Startup Founder",
+      "caption": "From a plain brief to a high\u2011impact AI ad in minutes\n\nWe received a one\u2011sentence brief: \u201cSmart\u2011bottle that tracks hydration.\u201d\n\n\ud83d\udd39 Hook: a close\u2011up of the bottle lighting up as a digital gauge appears.\n\ud83d\udd39 Benefit: a quick AI\u2011generated animation shows daily water intake stats.\n\ud83d\udd39 CTA: \u201cTrack your health \u2013 swipe up.\u201d\n\nWhat\u2019s the single feature of your product you wish more people noticed?\nDM \"AD\" with your product and the ad goal \u2013 we\u2019ll turn it into a spec concept fast.\n\n#AIAds #ProductAds #CreativeAI #AdCreative #DigitalAds #StartupMarketing #SMBMarketing #Entrepreneur",
+      "at": "2026-11-14T06:54:43.804820+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af805b381e1228421eba62b",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
