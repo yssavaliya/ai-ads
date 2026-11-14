@@ -16,3 +16,16 @@ Rules of the road:
 3. **Anything sent to an LLM** goes through `fence()` / `fence_text()` (redacts PII, marks the text untrusted).
 4. **Workflows** are linted with actionlint in CI; pipeline steps must fail the job when the work fails.
 5. Performance work must be measured before and after with `scripts/benchmark_pipeline.py`.
+
+## Dependencies
+
+`requirements.txt` is the **pinned lock** (Linux, Python 3.12) that CI and every pipeline install with
+`pip install -c requirements.txt`. After changing `pyproject.toml` dependencies, regenerate it:
+
+```bash
+python -m pip install uv
+python -m uv pip compile pyproject.toml --python-version 3.12 --python-platform linux -o requirements.txt
+```
+
+`tests/test_dependencies.py` fails if a runtime dependency is missing from the lock. Dependabot opens one grouped
+PR per ecosystem per week; review it, let CI pass, and squash-merge.

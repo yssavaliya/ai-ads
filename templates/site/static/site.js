@@ -78,7 +78,7 @@
     var chip = ev.target.closest(".chip");
     if (!chip) return;
     activeType = chip.dataset.type || "";
-    Array.prototype.forEach.call(chips.querySelectorAll(".chip"), function (c) { c.classList.toggle("active", c === chip); });
+    Array.prototype.forEach.call(chips.querySelectorAll(".chip"), function (c) { c.classList.toggle("active", c === chip); c.setAttribute("aria-pressed", c === chip ? "true" : "false"); });
     apply();
   });
   apply();

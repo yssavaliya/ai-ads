@@ -12,8 +12,6 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
 from src.delivery.channels import DeliveryResult, get_delivery
 from src.delivery.github_feedback import GithubFeedback
 from src.fetch.competitor_finder import CompetitorFinder
@@ -255,6 +253,7 @@ class DailyPipeline:
             logger.info("Delivery for %s via %s: delivered=%s (%d prompts)", name, "+".join(self.delivery.names), delivered, len(saved))
             return {
                 "business": name, "prompts": len(saved), "delivered": bool(delivered),
+                "unscored": sum(1 for row in saved if row.get("virality_score") is None),
                 "channels": getattr(delivered, "channels", {}),
             }
         finally:
@@ -559,6 +558,17 @@ class DailyPipeline:
                         "business": business.get("name"), "stage": "generation",
                         "error": "no prompts were generated (LLM chain down or all variants failed)",
                     })
+                elif result.get("unscored"):
+                    # Produced, but without a quality score: provider limits hit part of the run.
+                    logger.warning(
+                        "::warning::%s: %d of %d prompts are unscored (the virality predictor was unavailable)",
+                        business.get("name"), result["unscored"], result["prompts"],
+                    )
+                    failures.append({
+                        "business": business.get("name"), "stage": "scoring",
+                        "error": f"{result['unscored']} of {result['prompts']} prompts could not be scored "
+                                 "(LLM rate limits or outage); review before posting",
+                    })
             except Exception as exc:
                 logger.error(
                     "::error::Daily pipeline failed for %s: %s", business.get("name"), exc
@@ -568,6 +578,9 @@ class DailyPipeline:
 
         if failures:
             self.feedback.report_degraded_run(failures)
+        elif results:
+            # A clean run resolves earlier degraded-run reports instead of leaving them open for months.
+            self.feedback.resolve_degraded_runs()
         return results
 
     # JSON config -> DB row. data/businesses.json is the source of truth for these fields; the

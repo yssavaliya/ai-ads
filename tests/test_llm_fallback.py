@@ -343,7 +343,7 @@ def test_every_call_sets_max_tokens_so_long_json_is_not_cut_off(chain):
     """Real log: Groq's 8k-char prompt-forge answer ended mid-string ("Unterminated string")."""
     net = chain({("groq", "groq-big"): ["ok"]})
     LLMClient().run("hi")
-    assert net.max_tokens == [settings.llm_max_tokens] and settings.llm_max_tokens >= 4096
+    assert len(net.max_tokens) == 1 and 4096 <= net.max_tokens[0] <= settings.llm_max_tokens
 
 
 def test_truncated_json_strikes_off_only_that_model_not_the_whole_provider(chain):

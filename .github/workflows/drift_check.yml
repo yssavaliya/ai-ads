@@ -84,3 +84,16 @@ jobs:
           else
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$ALERT_TITLE" --body "$body"
           fi
+
+      - name: Close resolved failure alert
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALERT_TITLE: "[pipeline] workflow failed - ${{ github.workflow }}"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # A green run resolves the earlier failure alert instead of leaving it open for weeks.
+          for n in $(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number,title --jq '.[] | select(.title == env.ALERT_TITLE) | .number'); do
+            gh issue comment "$n" --repo "$GITHUB_REPOSITORY" --body "Resolved: a later run succeeded ($RUN_URL)."
+            gh issue close "$n" --repo "$GITHUB_REPOSITORY" --reason completed
+          done

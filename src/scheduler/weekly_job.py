@@ -7,8 +7,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
 from src.delivery.channels import get_delivery
 from src.intelligence.audience_mapper import AudienceMapper
 from src.intelligence.trend_radar import TrendRadar

@@ -313,6 +313,9 @@ def test_hourly_feedback_job_skips_its_expensive_setup_when_nothing_is_pending()
         if s.get("name") == "Alert on pipeline failure":
             assert s.get("if") == "failure()"  # a successful empty run has no failure to alert on
             continue
+        if s.get("name") == "Close resolved failure alert":
+            assert s.get("if") == "success()"  # cheap (gh only, no setup): an empty green run still resolves an old alert
+            continue
         assert gate in str(s.get("if")), f"step {s.get('name') or s.get('uses')!r} would run even with nothing to process"
 
 

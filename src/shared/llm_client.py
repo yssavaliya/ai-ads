@@ -108,6 +108,47 @@ def extract_json_text(text: str) -> str:
             best = text[start : start + length]
     return best or text
 
+# Largest useful answer per call site; smaller than the global cap so the reservation fits free-tier TPM budgets.
+LABEL_MAX_TOKENS: dict[str, int] = {
+    "virality-predictor": 1500,
+    "competitor-discovery": 1500,
+    "audience-mapper": 3000,
+    "trend-radar": 3000,
+    "prompt-forge": 6000,
+    "prompt-forge-refine": 5000,
+    "weekly-report": 5000,
+}
+MIN_USEFUL_TOKENS = 600  # below this the answer is cut off, so skip the model instead of wasting a call
+TOKEN_SAFETY_MARGIN = 250
+CHARS_PER_TOKEN = 3.0  # deliberately pessimistic for English + JSON
+
+
+def _parse_limits(raw: str) -> dict[str, int]:
+    limits: dict[str, int] = {}
+    for part in (raw or "").split(","):
+        key, sep, value = part.partition("=")
+        if sep and key.strip() and value.strip().isdigit():
+            limits[key.strip()] = int(value.strip())
+    return limits
+
+
+def estimate_tokens(text: str) -> int:
+    return int(len(text) / CHARS_PER_TOKEN) + 1
+
+
+def completion_budget(provider: str, model: str, prompt: str, label: str | None) -> int:
+    """max_tokens for one call: the label's cap, limited by the provider's per-request TPM budget
+    (prompt + completion) and the model's output cap. Returns 0 when nothing useful would fit."""
+    budget = min(settings.llm_max_tokens, LABEL_MAX_TOKENS.get(label or "", settings.llm_max_tokens))
+    output_cap = _parse_limits(settings.llm_model_output_caps).get(model)
+    if output_cap is not None:
+        budget = min(budget, output_cap)
+    tpm = _parse_limits(settings.llm_tpm_limits).get(provider)
+    if tpm is not None:
+        budget = min(budget, tpm - estimate_tokens(prompt) - TOKEN_SAFETY_MARGIN)
+    return budget if budget >= MIN_USEFUL_TOKENS else 0
+
+
 class LLMClient:
     """Free-tier LLM chain. Providers (Groq -> Gemini -> GitHub Models -> Cerebras ->
     OpenRouter -> Mistral -> Hugging Face -> keyless Pollinations by default) and
@@ -239,11 +280,18 @@ class LLMClient:
         for model in provider.models:
             if not HEALTH.available(name, model) or f"{name}/{model}" in self._skip:
                 continue
+            max_tokens = completion_budget(name, model, prompt, label)
+            if max_tokens == 0:
+                logger.warning(
+                    "::warning::[%s] skipping %s/%s: the prompt (~%d tokens) leaves no room for an answer within its limits",
+                    label or "llm", name, model, estimate_tokens(prompt),
+                )
+                continue
             try:
                 client = make_client(provider, self.timeout_seconds)
                 start = time.monotonic()
                 with slots("llm", settings.llm_concurrency):  # shared by every thread in the process
-                    response = self._chat(client, model, prompt, temperature, max_retries)
+                    response = self._chat(client, model, prompt, temperature, max_retries, max_tokens)
                 if isinstance(response, str):
                     # the client hands back the raw body when the endpoint did not answer in the API's format
                     raise ValueError(f"non-JSON response from {provider.base_url}: {response[:200]!r}")
@@ -253,7 +301,7 @@ class LLMClient:
                     raise ValueError("empty response")
                 if getattr(choice, "finish_reason", None) == "length":
                     logger.warning("::warning::[%s] %s/%s hit max_tokens (%d): the answer may be cut off",
-                                   label or "llm", name, model, settings.llm_max_tokens)
+                                   label or "llm", name, model, max_tokens)
                 elapsed = time.monotonic() - start
                 logger.info(
                     "::notice::[%s] %s answered via %s in %.1fs (%d chars)",
@@ -272,7 +320,7 @@ class LLMClient:
         return None
 
     @staticmethod
-    def _chat(client: Any, model: str, prompt: str, temperature: float, max_retries: int):
+    def _chat(client: Any, model: str, prompt: str, temperature: float, max_retries: int, max_tokens: int | None = None):
         """One model call. Only transient errors are retried here; rate limits,
         auth and missing-model errors return immediately so the chain can move on."""
         last_exc: Exception | None = None
@@ -282,7 +330,7 @@ class LLMClient:
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=temperature,
-                    max_tokens=settings.llm_max_tokens,
+                    max_tokens=max_tokens or settings.llm_max_tokens,
                 )
             except Exception as exc:  # noqa: BLE001 - provider SDK raises many types
                 last_exc = exc

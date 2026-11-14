@@ -63,7 +63,8 @@ def get_latest_prompts() -> list[dict]:
 
 PUBLISHED_LOG = ROOT / "data" / "published_log.json"
 MAX_LOG_ENTRIES = 300
-DEFAULT_QUEUE_LIMIT = 8  # Buffer's free plan holds 10 scheduled posts; leave room for the other project
+DEFAULT_QUEUE_LIMIT = 3  # keep few unreviewed posts in the live queue (Buffer's free plan holds 10)
+DEFAULT_MIN_HOURS_BETWEEN_POSTS = 20  # at most one auto-queued post per day, whatever triggers the run
 
 
 def posted_ids() -> set[str]:
@@ -72,6 +73,26 @@ def posted_ids() -> set[str]:
     except (OSError, ValueError):
         return set()
     return {str(item.get("id")) for item in data.get("posted", []) if isinstance(item, dict) and item.get("id")}
+
+
+def hours_since_last_post(now: datetime | None = None) -> float | None:
+    """Hours since the newest entry in the published log, or None when nothing was ever posted."""
+    try:
+        data = json.loads(PUBLISHED_LOG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    newest: datetime | None = None
+    for item in data.get("posted", []):
+        try:
+            at = datetime.fromisoformat(str(item.get("at")))
+        except (TypeError, ValueError):
+            continue
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=UTC)
+        newest = at if newest is None or at > newest else newest
+    if newest is None:
+        return None
+    return ((now or datetime.now(UTC)) - newest).total_seconds() / 3600
 
 
 def record_posted(entry: dict, buffer_posts: list[dict] | None = None) -> None:
@@ -293,6 +314,14 @@ def main() -> None:
     print(f"Mode      : {'Immediate Post' if args.now else ('Draft' if args.draft else 'Scheduled Queue')}")
     print(f"Profiles  : {publisher.profile_ids}")
     print("----------------------------\n")
+
+    # Daily cap: repeated manual runs must not stack several unreviewed posts into the live queue.
+    if not (args.prompt_id or is_now or is_draft or args.replace_post_id):
+        min_hours = float(os.getenv("BUFFER_MIN_HOURS") or DEFAULT_MIN_HOURS_BETWEEN_POSTS)
+        since = hours_since_last_post()
+        if since is not None and since < min_hours:
+            print(f"::warning::Not posting: the last post was {since:.1f}h ago (minimum {min_hours:g}h between auto-queued posts).")
+            sys.exit(0)
 
     # Other projects feed the same Buffer channel: do not repeat what it already holds or crowd its queue.
     queue_limit = int(os.getenv("BUFFER_QUEUE_LIMIT") or DEFAULT_QUEUE_LIMIT)

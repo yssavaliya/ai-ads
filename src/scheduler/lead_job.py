@@ -11,8 +11,6 @@ from typing import Any
 
 from sqlalchemy import func
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
 from src.delivery.channels import DeliveryResult, get_delivery
 from src.fetch.lead_finder import LeadFinder
 from src.fetch.social_scraper import SocialScraper
@@ -129,6 +127,7 @@ class LeadPipeline:
 
         scored_leads: list[dict[str, Any]] = []
         structurally_ineligible: list[dict[str, Any]] = []
+        rejection_reasons: dict[str, int] = {}
         for candidate in candidates:
             if time.monotonic() > deadline:
                 logger.warning(
@@ -157,6 +156,8 @@ class LeadPipeline:
                 # an unverified/zero follower count from keyless discovery,
                 # not a real tiny account, so it stays retryable.
                 reasons = assessment.get("reasons") or []
+                for reason in reasons[:1] or ["no reason given"]:
+                    rejection_reasons[str(reason)[:80]] = rejection_reasons.get(str(reason)[:80], 0) + 1
                 if any("too big" in r for r in reasons):
                     structurally_ineligible.append(candidate)
                 continue
@@ -169,6 +170,14 @@ class LeadPipeline:
             }
             scored_leads.append(lead)
 
+        if candidates and not scored_leads:
+            # Zero yield used to be invisible: say why every candidate was rejected.
+            logger.warning(
+                "::warning::Lead scoring rejected all %d candidates. Reasons: %s",
+                len(candidates), sorted(rejection_reasons.items(), key=lambda kv: -kv[1]) or "none recorded",
+            )
+        elif rejection_reasons:
+            logger.info("Lead rejections by reason: %s", rejection_reasons)
         scored_leads = self._filter_min_score(scored_leads, config)
         scored_leads.sort(key=lambda lead: lead["opportunity_score"], reverse=True)
         top_leads = scored_leads[: config["target_count"]]

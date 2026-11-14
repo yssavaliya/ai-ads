@@ -36,6 +36,9 @@ IGNORED_DOMAINS = {
     "eazydiner.com", "swiggy.com", "grocersindia.com", "whatshot.in",
     "socialsamosa.com", "adgully.com", "mobisn.com", "localstreet.in",
     "exploreandmore.in", "goodthings.com", "kooapp.com", "quora.com",
+    # real-estate / listing portals that surfaced for "home decor" and similar niches (11-09 run)
+    "zillow.com", "homes.com", "realtor.com", "redfin.com", "trulia.com", "apartments.com",
+    "homedepot.com", "houzz.com", "wayfair.com", "ebay.com", "walmart.com", "alibaba.com",
 }
 
 SOCIAL_LINK_PATTERNS = {

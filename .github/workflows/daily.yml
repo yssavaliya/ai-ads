@@ -101,7 +101,7 @@ jobs:
           # Queue automatically after automated claims, media, duplicate, and queue-capacity checks.
           # Set the repository variable BUFFER_DRAFT_MODE to true to force drafts as an emergency override.
           BUFFER_DRAFT_MODE: ${{ vars.BUFFER_DRAFT_MODE || 'false' }}
-          BUFFER_QUEUE_LIMIT: ${{ vars.BUFFER_QUEUE_LIMIT || '8' }}
+          BUFFER_QUEUE_LIMIT: ${{ vars.BUFFER_QUEUE_LIMIT || '3' }}
           BUFFER_REEL_ONLY: ${{ inputs.reel_only || 'false' }}
           BUFFER_REPLACE_POST_ID: ${{ inputs.replace_buffer_post_id }}
         run: |
@@ -147,3 +147,16 @@ jobs:
           else
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$ALERT_TITLE" --body "$body"
           fi
+
+      - name: Close resolved failure alert
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALERT_TITLE: "[pipeline] workflow failed - ${{ github.workflow }}"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # A green run resolves the earlier failure alert instead of leaving it open for weeks.
+          for n in $(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number,title --jq '.[] | select(.title == env.ALERT_TITLE) | .number'); do
+            gh issue comment "$n" --repo "$GITHUB_REPOSITORY" --body "Resolved: a later run succeeded ($RUN_URL)."
+            gh issue close "$n" --repo "$GITHUB_REPOSITORY" --reason completed
+          done

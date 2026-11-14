@@ -36,8 +36,8 @@
 <section class="toolbar" aria-label="Filters">
   <input id="q" type="search" placeholder="Search prompts, captions, hashtags…" aria-label="Search">
   <div class="chips" id="type-chips">
-    <button class="chip active" data-type="">All</button>
-    {% for t in types %}<button class="chip" data-type="{{ t }}">{{ t|pretty_type }}</button>{% endfor %}
+    <button class="chip active" data-type="" aria-pressed="true">All</button>
+    {% for t in types %}<button class="chip" data-type="{{ t }}" aria-pressed="false">{{ t|pretty_type }}</button>{% endfor %}
   </div>
   <label class="toggle"><input type="checkbox" id="hide-posted"> Hide posted</label>
 </section>

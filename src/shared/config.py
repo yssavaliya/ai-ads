@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Database
     database_path: Path = Field(default=Path("agent.db"), description="SQLite database path")
 
-    # Optional provider credentials; the default action order uses Hugging Face only.
+    # Optional provider credentials (Groq is the default text provider, Cloudflare the default image provider).
     groq_api_key: str | None = Field(default=None, description="Groq API key")
     groq_model: str = Field(default="openai/gpt-oss-120b", description="Groq model")
 
@@ -37,12 +37,20 @@ class Settings(BaseSettings):
     # forge returns ~8k chars) were cut off mid-string by provider defaults.
     llm_max_tokens: int = Field(default=8192, description="max_tokens sent with every LLM call")
 
+    # Free tiers meter tokens per minute as prompt + requested max_tokens, so a fixed 8192 reservation made
+    # every Groq call "too large" (413). The client sizes max_tokens per call to fit these budgets.
+    # Format: "key=value,key=value".
+    llm_tpm_limits: str = Field(default="groq=8000", description="provider=tokens-per-minute budget per request")
+    llm_model_output_caps: str = Field(
+        default="qwen/qwen3.8-27b=1000", description="model=max output tokens (providers' output-per-minute limits)"
+    )
+
     # Extra models tried (same key) when the primary model is rate limited / retired.
     # Groq and Gemini enforce limits per model, so a sibling model has its own quota.
     groq_fallback_models: str = Field(default="openai/gpt-oss-20b,qwen/qwen3.8-27b")
     gemini_fallback_models: str = Field(default="gemini-3.5-flash,gemini-3.1-flash-lite,gemini-flash-latest")
 
-    # Providers tried in LLM_PROVIDER_ORDER; the scheduled workflow sets this to huggingface only.
+    # Providers tried in LLM_PROVIDER_ORDER; the scheduled workflows set it explicitly (groq).
     llm_provider_order: str = Field(default="groq")
     github_models_enabled: bool = Field(default=False, description="Opt-in: GitHub Models via GITHUB_TOKEN (Actions: models: read)")
     github_models_model: str = Field(default="openai/gpt-4o-mini")
@@ -81,8 +89,7 @@ class Settings(BaseSettings):
     smtp_tls: bool = Field(default=True, description="Use TLS")
 
     # GitHub (for feedback issues)
-    # Optional comma-separated GitHub logins allowed to submit feedback issues.
-    # Unset = anyone who can open an issue (fine for private repos).
+    # Comma-separated GitHub logins allowed to submit feedback issues. Unset = feedback is ignored (fails closed).
     feedback_allowed_users: str | None = Field(
         default=None, description="GitHub logins whose feedback issues count. REQUIRED: feedback fails closed without it"
     )
@@ -98,7 +105,7 @@ class Settings(BaseSettings):
 
     # Delivery: how finished content reaches people. "site" (default) publishes a static
     # website; "email" is the legacy SMTP e-mail; "both" does both.
-    delivery_mode: str = Field(default="site", description="site | email | both | buffer")
+    delivery_mode: str = Field(default="site", description="site | email | both")
     site_dir: Path = Field(default=Path("site"), description="Checkout of the published gh-pages branch")
     site_retention_days: int = Field(default=45, description="Days of prompts kept on the site")
     site_secret: str | None = Field(default=None, description="If set, page URLs carry a keyed hash and the index lists nothing")
@@ -116,10 +123,6 @@ class Settings(BaseSettings):
     image_concurrency: int = Field(default=3, ge=1, le=16, description="Max simultaneous image-provider calls")
     fetch_concurrency: int = Field(default=2, ge=1, le=16, description="Max simultaneous scraper runs")
 
-    # Scheduling
-    daily_cron: str = Field(default="29 18 * * *", description="Daily run cron (UTC) - 11:59 PM IST")
-    weekly_cron: str = Field(default="0 2 * * 0", description="Weekly run cron (UTC) - Sunday 8 AM IST")
-    feedback_cron: str = Field(default="0 * * * *", description="Feedback processing cron (hourly)")
 
     # Virality
     virality_threshold: int = Field(default=75, description="Minimum virality score (0-100)")
@@ -129,8 +132,7 @@ class Settings(BaseSettings):
     # Paths
     data_dir: Path = Field(default=Path("data"), description="Data directory")
     logs_dir: Path = Field(default=Path("logs"), description="Logs directory")
-    prompts_dir: Path = Field(default=Path("prompts"), description="Prompt templates directory")
-    templates_dir: Path = Field(default=Path("templates"), description="Email templates directory")
+    templates_dir: Path = Field(default=Path("templates"), description="Jinja templates directory")
 
     # Logging
     log_level: str = Field(default="INFO", description="Log level")

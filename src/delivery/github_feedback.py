@@ -16,7 +16,7 @@ DEGRADED_TITLE = "[pipeline] degraded run"
 
 class GithubFeedback:
     """Creates GitHub issues for user feedback (👍/👎/🔄) on sent prompts.
-    The feedback workflow (hourly cron) reads these issues and updates weights."""
+    The feedback workflow (3-hourly cron plus issue events) reads these issues and updates weights."""
 
     def __init__(self, token: str | None = None, repo: str | None = None) -> None:
         self.token = token or settings.github_token or ""
@@ -171,3 +171,44 @@ class GithubFeedback:
         except Exception as exc:
             logger.error("Failed to report degraded run: %s", exc)
             return None
+
+    def resolve_degraded_runs(self) -> list[int]:
+        """Close open degraded-run tracking issues after a fully clean run. Never raises."""
+        if not self.enabled:
+            return []
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        closed: list[int] = []
+        try:
+            existing = httpx.get(
+                f"{self.base}/repos/{self.repo}/issues",
+                params={"state": "open", "per_page": 100},
+                headers=headers,
+                timeout=30,
+            )
+            existing.raise_for_status()
+            for issue in existing.json():
+                if "pull_request" in issue or not str(issue.get("title", "")).startswith(DEGRADED_TITLE):
+                    continue
+                number = int(issue["number"])
+                httpx.post(
+                    f"{self.base}/repos/{self.repo}/issues/{number}/comments",
+                    headers=headers,
+                    json={"body": "A later run completed with no failed stages, so this report is resolved."},
+                    timeout=30,
+                ).raise_for_status()
+                httpx.patch(
+                    f"{self.base}/repos/{self.repo}/issues/{number}",
+                    headers=headers,
+                    json={"state": "closed", "state_reason": "completed"},
+                    timeout=30,
+                ).raise_for_status()
+                closed.append(number)
+                logger.info("Closed resolved degraded-run issue #%s", number)
+        except Exception as exc:
+            logger.error("Failed to resolve degraded-run issues: %s", exc)
+        return closed
+

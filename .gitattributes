@@ -1,3 +1,5 @@
 * text=auto eol=lf
 *.ttf binary
 data/learning_ledger.jsonl merge=union
+data/buffer_metrics.jsonl merge=union
+data/engagement_log.jsonl merge=union

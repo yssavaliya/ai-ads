@@ -5,7 +5,7 @@ generates product-focused content prompts (scored 0-100), and renders static ads
 Each run publishes previews to the **Content Hub** and queues the strongest passing creative through the existing
 Buffer channel after automated media, claims, and duplicate checks (set the
 repository variable `BUFFER_DRAFT_MODE=true` to force drafts; before queueing it skips known degraded assets and
-unverified claims, checks for near-duplicates, and respects `BUFFER_QUEUE_LIMIT`, default 8). Runs 100% in GitHub
+unverified claims, checks for near-duplicates, and respects `BUFFER_QUEUE_LIMIT`, default 3, and `BUFFER_MIN_HOURS`, default 20 hours between auto-queued posts). Runs 100% in GitHub
 Actions with open-weight generation models and open-source rendering tools; Hugging Face hosts model inference and Buffer handles publishing.
 Can also **discover businesses automatically** and generate sample creatives for them.
 
@@ -32,7 +32,7 @@ follower range, target count, and digest email in `data/lead_config.json`.
 ## How it works
 
 ```
-23:59 IST daily (18:29 UTC) ──▶ daily.yml
+Mon/Wed/Fri 18:00 IST (12:30 UTC cron; GitHub may start scheduled runs hours late) ──▶ daily.yml
   0. AUTO-LEARN: scrape the business's own posts → match to previously sent
      prompts (exact post ID when the user tapped 📎 "I posted this", else
      date + caption similarity) → score real engagement → update Bayesian weights
@@ -50,7 +50,7 @@ Sunday 8 AM IST (02:30 UTC) ──▶ weekly.yml
 
 Every 6h ──▶ engagement.yml  (scrape own posts → auto-learn)
 
-Hourly ──▶ feedback.yml
+Every 3 hours and on each feedback issue ──▶ feedback.yml
   Parse feedback issues → Bayesian weight updates → close issues
 ```
 
@@ -107,7 +107,7 @@ barely influence ranking. Treat "self-learning" as the mechanism, not as evidenc
 | `GROQ_API_KEY` | Hosted inference for the open-weight GPT-OSS model |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Hosted inference for the open-weight FLUX.1-schnell image model |
 | `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_HOST`, `SMTP_PORT` | Only for the legacy e-mail mode (`DELIVERY_MODE=email\|both`) |
-| `SITE_SECRET` | Optional: makes site URLs unguessable and hides the index (see *Content Hub*) |
+| `SITE_SECRET` | Optional: keyed page URLs and an unlisted index. Obscurity only, not access control (see *Content Hub → Privacy*) |
 | `DELIVERY_MODE` (repo *variable*) | `site` (default), `email` or `both` |
 | `APIFY_TOKEN` | Free tier social scraping (console.apify.com) |
 | `GITHUB_TOKEN` | Feedback issues + degraded-run tracking (built-in) |
@@ -170,7 +170,7 @@ Rendered assets are published to the `gh-pages` branch (one orphan commit per pu
 
 Use the `onboard.yml` workflow (Actions → Onboard Business → Run workflow) or run the
 script locally. Demo seed records carry `"demo": true` and are skipped by scheduled runs.
-Feedback buttons on the site open GitHub issues that the hourly feedback job turns into
+Feedback buttons on the site open GitHub issues that the feedback job (every 3 hours, and immediately when an issue is opened or edited) turns into
 Bayesian weight updates; the **📎 I posted this** button additionally links the published
 post URL directly to the asset for exact engagement attribution. Posting alone is
 not counted as a success: the learner scores that post's real engagement later.
@@ -196,12 +196,12 @@ E-mail is replaced by a small static website published to GitHub Pages
   2. **Free for private repos:** connect **Cloudflare Pages** (or Netlify / Vercel) to the
      repo, production branch `gh-pages`, *no build command*, output directory `/`.
   The first publish creates the branch; every later publish redeploys automatically.
-- **Privacy:** published sites are public on the internet even when the repo is private; `SITE_SECRET` gives
-  unguessable URLs, it is **not** access control. Contact e-mail addresses and phone numbers are never
-  published and pages are `noindex`. Set the secret `SITE_SECRET` and every page lives
-  at an unguessable keyed URL while the index lists nothing (lead e-mails then show up
-  too). The URLs appear in each run's summary. For truly private hosting use a private
-  repo on a plan with private Pages.
+- **Privacy: treat everything on the hub as public.** While the repository is public, so are the `gh-pages` branch
+  and `data/site_manifests/` on `main` (they contain every prompt, caption and strategy, and the keyed page path).
+  `SITE_SECRET` only hides pages from casual browsing and the index; it is **not** access control and is
+  not private while the repo is public. Contact e-mail addresses and phone numbers are never published and pages
+  are `noindex`. Never put anything in a brand fact, caption or lead note that you would not publish. For genuinely
+  private content make the repository private (and host the site on a plan or service that supports it).
 - **E-mail still works:** `DELIVERY_MODE=email` or `both` (repo variable) re-enables the
   legacy SMTP e-mails.
 
@@ -241,7 +241,7 @@ the workflow `env:` block, and the committed file contains no personal data:
 pip install -e ".[dev]"
 python -m ruff check .      # lint
 python -m mypy src          # types
-python -m pytest -q         # ~480 tests incl. an end-to-end dry run of the daily pipeline (CI also enforces >= 80% coverage)
+python -m pytest -q         # ~600 tests incl. an end-to-end dry run of the daily pipeline (CI also enforces >= 80% coverage)
 python scripts/benchmark_pipeline.py   # reproducible timing with simulated latency
 ```
 
@@ -278,5 +278,5 @@ touches `data/` or `agent.db`. Optional: `pre-commit install` (ruff on commit, p
 | `All LLM providers failed` | Run the *Secrets Verify* workflow; check `GROQ_MODEL` / `GEMINI_MODEL` names are valid (unset secrets fall back to defaults) |
 | Site not updating | *Settings → Pages* must use **Deploy from a branch: `gh-pages` / root**; check the run's *publish-site* step and its summary for the URLs |
 | Emails not arriving | E-mail is off by default; set the repo variable `DELIVERY_MODE=both` and the `SMTP_*` secrets |
-| Feedback buttons do nothing | The clicker needs a GitHub account that can open issues in this repo; the hourly *Process Feedback* job applies them |
+| Feedback buttons do nothing | The clicker needs a GitHub account that can open issues in this repo; the *Process Feedback* job (every 3 hours, or on issue events) applies them |
 | No new leads | Cooldown caches `data/lead_seen.json` (21 days) / `data/lead_rejected.json` (90 days); raise `target_count` or add niches |

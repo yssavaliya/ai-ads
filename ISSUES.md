@@ -1,43 +1,46 @@
 # Project issue tracker
 
-Updated 2026-10-24 during iterative code and workflow review.
+Updated 2026-11-14 after a full project audit (security, reliability, product loop, docs). Earlier history is in git.
 
-## Resolved in this review
+## Fixed in the 2026-11-14 audit
 
-| Issue | Status |
+| Area | Issue | Fix |
+| --- | --- | --- |
+| Posting safety | Posts were auto-queued to Instagram with a queue limit of 8 and no per-day cap; manual re-runs stacked 10 posts in two days | Queue limit default is now 3 and at most one auto-queued post per 20 hours (`BUFFER_MIN_HOURS`); drafts, `--now`, `--prompt-id` and replacements are exempt |
+| Site privacy | Docs implied `SITE_SECRET` made the hub private, but the repo and `gh-pages` branch are public and `data/site_manifests/` (with the keyed path) is on `main` | README, SECURITY.md, `.env.example` and the hub index page now say plainly: public while the repo is public, obscurity only |
+| Site footer | Footer claimed "nothing is auto-posted" | Footer now says posts are queued to Buffer automatically when checks pass |
+| LLM budget | Every Groq call reserved 8192 completion tokens, so prompts exceeded the 8000 TPM limit (HTTP 413) and variants failed | `completion_budget()` sizes `max_tokens` per call (label cap, provider TPM budget, model output cap) and skips models that cannot fit; settings `LLM_TPM_LIMITS`, `LLM_MODEL_OUTPUT_CAPS` |
+| Silent degradation | Runs with unscored prompts finished green with no signal | Daily run reports stage `scoring` in the degraded-run issue and logs a warning |
+| Stale alerts | Degraded-run and "workflow failed" issues stayed open for months | A clean daily run closes degraded-run issues; every alerting workflow closes its own failure alert after a green run |
+| Lead pipeline | Zero yield was invisible; real-estate portals polluted "home decor" results | Rejection reasons are logged (and warned when everything is rejected); portal domains added to the ignore list |
+| Learning path | `buffer_metrics.py` had 13% coverage | 17 tests cover scoring, snapshots, idempotent learning, maturity and freshness rules |
+| Dependencies | `requirements.txt` was unpinned and omitted `huggingface_hub`; installs were not reproducible | `requirements.txt` is now a pinned lock; all installs use `-c requirements.txt`; a test keeps it in step with `pyproject.toml`; `pip-audit` audits the lock |
+| Secrets exposure | Job-level secrets were visible to `pip install` | Dependency installs run with a scrubbed environment (`env -i`) |
+| Scheduling | Feedback ran hourly in the shared concurrency group, which can displace a queued Daily run | Feedback cron is every 3 hours (issue events still trigger it immediately) |
+| State merges | `-X theirs` could drop concurrent appends to `.jsonl` state | `.gitattributes` union-merges all three `.jsonl` state files |
+| Dead config / hacks | Unused `*_CRON`, `PROMPTS_DIR` settings, wrong comments, `sys.path` hacks in module entry points | Removed or corrected |
+| Accessibility | No focus styles, no skip link, filter chips without state | Focus-visible outlines, skip link, `aria-pressed` on chips, reduced-motion support |
+| Docs drift | README said "daily 23:59 IST"; ISSUES.md described a removed feature set | README schedule corrected; this file rewritten |
+
+## Configuration to set (repository settings, not code)
+
+| Setting | Why |
 | --- | --- |
-| Public static-site JSON manifests bypassed unlisted URLs | Fixed: manifests are stored under `data/site_manifests/`; legacy copies are migrated out of the Pages tree. They are included in state commits so later jobs can rebuild the site. |
-| Pull request workflows could restore plaintext business data from Actions cache | Fixed in current workflows: SQLite/cache data is archived and Fernet-encrypted before cache upload; restore decrypts only when a key is available. |
-| Engagement history could mix businesses | Fixed: new log entries carry a stable business key and predictors filter by it. |
-| Daily dates could use the runner's UTC date instead of the configured business timezone | Fixed. |
-| Feedback processing fetched only the first page of GitHub issues | Fixed: follows pagination links. |
-| Lead scraping budget started after learning/discovery/enrichment | Fixed: budget begins at pipeline start and wraps these phases. |
-| Posts with hidden likes or unknown/immature timestamps could contaminate learning | Fixed: unusable and immature posts are excluded. |
-| Website-supplied URLs could use unsafe schemes | Fixed: published links must be HTTP(S) URLs with a hostname. |
-| Predictor history could prefer the oldest engagement records | Fixed: matching business records are traversed newest-first. |
-| Repeated regenerate feedback could duplicate weight updates/prompts | Fixed: replacement linkage is persisted and negative feedback is applied once. |
-| Failed replacement delivery could close feedback as if successful | Fixed: issue stays open for retry and the draft prompt is removed. |
-| Generated content could ask for a Reel or carousel instead of one image | Fixed: the forge requests one static image, normalizes every model response and refinement to `single image`, clears Reel beats, and adds a one-frame image requirement. The virality gate applies the same rule to alternate forge implementations. |
-| Trend analysis and setup still advertised or provisioned video output despite the single-image product requirement | Fixed: trend radar now only recommends `single image`, user-facing copy describes one still image, and scheduled/CI workflows no longer install Piper/FFmpeg video dependencies. Added a regression test for hostile trend output and workflow configuration. |
-| Successful scheduled workflows spawned a separate skipped “Alert on Pipeline Failure” run | Fixed: removed the `workflow_run` watcher and moved issue creation into failure-only steps in each scheduled workflow. Successful runs no longer create alert runs. |
-| Four workflows passed the encryption key to `actions/checkout`, which ignored the unsupported input | Fixed: the key is now passed to `setup-agent`; added a workflow check to prevent future miswiring. |
-| Private state cache encryption secret was not configured | Fixed: generated and set repository secret `STATE_ENCRYPTION_KEY`; confirmed it appears in GitHub's secret metadata without reading its value. |
-| Legacy private database caches were stored without encryption | Fixed: removed all 81 `agent-db-*` cache entries; other cache namespaces were retained. The database cache starts fresh under the encrypted cache namespace; committed weights and learning ledger remain available. |
+| Secret `FEEDBACK_SIGNING_KEY` and variable `FEEDBACK_ALLOWED_USERS` | Without both, feedback links are inert and the feedback loop does nothing (fails closed) |
+| Variable `BUFFER_DRAFT_MODE=true` (optional) | Switches the daily run from auto-queue to Buffer drafts for manual approval |
 
-## Remaining external verification
+## Known gaps (deliberately not changed)
 
-| Issue | Status |
+| Gap | Why it was left |
 | --- | --- |
-| New encrypted state-cache save and restore | Needs an Actions run after the new `STATE_ENCRYPTION_KEY` was set; existing verified runs predate it. |
-| End-to-end daily workflow execution | Verified: [Actions run 40026910360](https://github.com/yssavaliya/ai-ads/actions/runs/40026910360) completed successfully, including pipeline generation, artifact upload, state persistence step, and site publish. The generated artifact contained only still-image files (`.png`/`.jpg`). State persistence warned that neither encryption key was configured, so private state was not cached. |
-| Alert behavior after removing the success-triggered watcher | Verified: no-pending-feedback runs [40028850918](https://github.com/yssavaliya/ai-ads/actions/runs/40028850918) and [40029267748](https://github.com/yssavaliya/ai-ads/actions/runs/40029267748) succeeded with no separate alert run; the latter also had no ignored encryption-key inputs. CI [40029008201](https://github.com/yssavaliya/ai-ads/actions/runs/40029008201) passed after the workflow corrections. Inline alerts run only after a job starts; GitHub runner or job-start failures cannot be reported from inside that job. |
+| Hub content is public while the repo is public | Product decision: keep the repo public. Make it private (and host the hub elsewhere) if content must not be public |
+| State (`data/`) is committed to `main` by bots; no dedicated state branch | A branch migration needs a live cut-over that cannot be tested locally and risks losing learning state. Mitigated by union merges and the shared concurrency group |
+| Long orchestration functions (`daily_job.run_for_business`, `virality_gate.run`, `lead_job.run`, `process_feedback`) and ~86 broad `except Exception` handlers | Behaviour-preserving splits need dedicated characterisation tests first; tracked as refactoring debt |
+| No pagination on the hub page (118 entries today) | Retention caps growth at 45 days; revisit if the manifest passes ~1 MB |
+| Leads pipeline yield | Diagnostics added; whether Apify/Instagram returns follower data for the niche cannot be verified offline |
+| Learning needs 5 earlier mature comparable posts per business before the first Buffer-metrics update | By design (avoids learning from noise); with one post per day, expect several weeks |
+| Live hosting of the hub (Pages API returns 404) | Cannot be verified from the repo; confirm where `gh-pages` is served |
 
 ## Verification limits
 
-| Check | Status |
-| --- | --- |
-| Targeted prompt tests | Passed outside the sandbox: 10 passed. The sandboxed test invocation cannot create pytest's Windows temp directory (`PermissionError`); run full suite outside sandbox before closing. |
-
-## Current required configuration
-
-Repository secret `STATE_ENCRYPTION_KEY` is configured. It must remain stable across runs so encrypted state can be restored. Existing unencrypted database cache entries were purged; the encrypted database state will be rebuilt by subsequent jobs.
+Workflows were validated with `actionlint` and the test suite, not by running them on GitHub. The first scheduled Daily, Leads and feedback runs after merge are the real test for: the pinned install (`-c requirements.txt`), the scrubbed-environment `pip install`, the token budget on Groq, and the auto-close steps.

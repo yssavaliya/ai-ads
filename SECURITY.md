@@ -12,8 +12,9 @@ Include what you found, how to reproduce it and what you think the impact is.
   written to the repository, logs or the published site.
 - **Business contact data** (e-mails, phone numbers) is redacted before any text is sent to an LLM
   and is never published to the Content Hub. `data/*.json` hold `env:NAME` references, not addresses.
-- **The Content Hub** is protected by an unguessable URL (`SITE_SECRET`), **not** by access control.
-  Anyone with a link can read that business's page. Rotate `SITE_SECRET` to invalidate every link.
+- **The Content Hub is public.** `SITE_SECRET` only makes page URLs hard to guess; it is **not** access control.
+  While the repository is public, the `gh-pages` branch and `data/site_manifests/` (which contain the keyed page path)
+  are public too, so anyone can read every prompt and caption. Make the repository private if that is not acceptable.
 - **Feedback links** are HMAC-signed (`FEEDBACK_SIGNING_KEY`) and only accepted from the users listed
   in `FEEDBACK_ALLOWED_USERS`. With either unset, feedback processing refuses to run.
 - **Scraping** only fetches public http(s) hosts; private, loopback and link-local addresses are refused.
@@ -21,5 +22,5 @@ Include what you found, how to reproduce it and what you think the impact is.
 ## Operational rules
 
 - Rotate any key that has ever appeared in a log, issue or commit.
-- Keep the repository private unless the Content Hub is meant to be public.
+- The Content Hub is public while the repository is public; make the repository private if it must not be.
 - Dependencies are scanned with `pip-audit` in CI and updated by Dependabot.
