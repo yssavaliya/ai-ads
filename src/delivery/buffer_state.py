@@ -109,8 +109,13 @@ class QueueState:
     def scheduled(self) -> int:
         return sum(1 for p in self.posts if str(p.get("status", "")).lower() in WAITING_STATUSES)
 
-    def texts(self) -> list[str]:
-        return [str(p.get("text") or "") for p in self.posts]
+    def texts(self, include_drafts: bool = True) -> list[str]:
+        """Caption texts Buffer holds. A draft being reviewed must not be compared with itself, so the reviewer
+        asks for ``include_drafts=False`` (posts that are already scheduled or sent)."""
+        return [
+            str(p.get("text") or "") for p in self.posts
+            if include_drafts or str(p.get("status", "")).lower() not in DRAFT_STATUSES
+        ]
 
     def due_times(self) -> list[datetime]:
         """When the waiting (scheduled) posts will go out: the slots a new post must keep clear of."""

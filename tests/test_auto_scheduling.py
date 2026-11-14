@@ -381,3 +381,15 @@ def test_generated_posts_query_is_syntactically_balanced():
         q = bs.posts_query(selection, include_times=times)
         assert q.count("{") == q.count("}"), q
         assert q.rstrip().endswith("}") and "assets { " + selection + " }" in q
+
+
+def test_a_draft_is_never_compared_with_itself_when_reviewed():
+    """Real dry run: every fresh draft was held as a 'near-duplicate of a post already in Buffer' (itself)."""
+    queue = bs.QueueState([
+        {"id": "d1", "status": "draft", "text": "Save this breakdown for your next product ad."},
+        {"id": "s1", "status": "scheduled", "text": "Something else entirely", "dueAt": "2026-11-19T04:51:00.000Z"},
+    ])
+    assert queue.texts() == ["Save this breakdown for your next product ad.", "Something else entirely"]
+    assert queue.texts(include_drafts=False) == ["Something else entirely"]
+    d = dr.review_draft(draft(), record(), queue.texts(include_drafts=False), [], NOW)
+    assert d.action == "schedule"

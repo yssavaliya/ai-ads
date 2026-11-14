@@ -96,7 +96,7 @@ def main() -> None:
         try:
             queue = fetch_queue_state(token, channel_id)
             slots = max(0, queue_limit - queue.scheduled)
-            queue_texts, taken = queue.texts(), queue.due_times()
+            queue_texts, taken = queue.texts(include_drafts=False), queue.due_times()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Could not read the queue for %s (%s); scheduling nothing there", channel_id, exc)
             slots, queue_texts, taken = 0, [], []
