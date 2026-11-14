@@ -290,6 +290,46 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-14-119",
+      "title": "From Sketch to Scroll\u2011Stopping Reel",
+      "prompt_id": 119,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "storytelling",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Startup Founder",
+      "caption": "Watch a raw product sketch become a scroll\u2011stopping Reel\n\n\u270f\ufe0f We start with a founder\u2019s quick sketch.\n\ud83d\ude80 AI expands it into a visual hook, adds benefit copy, and builds the final video.\n\u2705 The result is a ready\u2011to\u2011post Reel that grabs attention in seconds.\n\nWhat product would you like to see transformed? DM \"AD\" with your brief and goal.\n\n#AIAds #ProductAds #CreativeAI #Entrepreneur #IndiaBiz #AdCreative #DigitalAds #Reels",
+      "at": "2026-11-14T07:58:07.474180+00:00",
+      "score": 72,
+      "threshold": 70,
+      "below_threshold": false,
+      "window": {
+        "hour": 19,
+        "block": "18:00-20:59",
+        "confidence": "medium",
+        "source": "scraped post performance",
+        "evidence": "18:00-20:59 had the strongest relative engagement across 22 scraped posts (7 in that window, +161% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+        "samples": 22
+      },
+      "schedule_hour": null,
+      "timezone": "Asia/Kolkata",
+      "experiment": {
+        "id": "2026-W46-post_block",
+        "variable": "post_block",
+        "arm": "A",
+        "value": 19
+      },
+      "angle": "30\u2011Minute Reel Blueprint",
+      "scheduled_for": "",
+      "buffer_posts": [
+        {
+          "id": "6af8148fd16af15d4dfe5a33",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
