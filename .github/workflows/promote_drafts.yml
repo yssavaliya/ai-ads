@@ -15,6 +15,10 @@ on:
         description: "Maximum draft age (hours) before deleting as stale"
         type: string
         default: "168"
+      queue_limit:
+        description: "Override the queue capacity for this run (e.g. 10 to preview scheduling in a dry run)"
+        type: string
+        required: false
       dry_run:
         description: "Report what would be scheduled without changing Buffer"
         type: boolean
@@ -35,7 +39,7 @@ jobs:
     env:
       BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
       BUFFER_PROFILE_IDS: ${{ secrets.BUFFER_PROFILE_IDS || secrets.BUFFER_PROFILE_ID }}
-      BUFFER_QUEUE_LIMIT: ${{ vars.BUFFER_QUEUE_LIMIT || '3' }}
+      BUFFER_QUEUE_LIMIT: ${{ inputs.queue_limit || vars.BUFFER_QUEUE_LIMIT || '3' }}
       DRAFT_MIN_AGE_HOURS: ${{ inputs.min_age_hours || vars.DRAFT_MIN_AGE_HOURS || '24' }}
       DRAFT_MAX_AGE_HOURS: ${{ inputs.max_age_hours || vars.DRAFT_MAX_AGE_HOURS || '168' }}
       DRY_RUN: ${{ inputs.dry_run || 'false' }}
