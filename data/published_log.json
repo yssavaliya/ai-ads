@@ -195,6 +195,25 @@
           "status": "scheduled"
         }
       ]
+    },
+    {
+      "id": "2026-11-14-114",
+      "title": "Spec Concept: AI\u2011Enhanced Product Visual for a Smart Mug",
+      "prompt_id": 114,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "social_proof",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Marketing Manager (SME)",
+      "caption": "From bland product photo to scroll\u2011stopping AI visual\n\nBefore: a plain studio shot that blends into the feed.\nAfter: AI\u2011enhanced lighting, a dynamic steam swirl, and a pop of brand\u2011color glow that draws the eye.\n\nWe took a simple brief and applied AI\u2011driven visual tweaks to make the mug instantly memorable.\n\n\ud83d\udd0e Which product in your lineup could use a visual boost? DM \u201cAD\u201d with the product and the audience you want to attract.\n\n#AIAds #ProductAds #CreativeAI #StartupMarketing #SMBMarketing #AdCreative #DigitalAds #Reels #Entrepreneur #IndiaBiz",
+      "at": "2026-11-14T06:24:44.114314+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af7feacd16af15d4df82749",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
