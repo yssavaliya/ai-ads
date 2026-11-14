@@ -98,9 +98,9 @@ jobs:
           BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
           BUFFER_PROFILE_IDS: ${{ secrets.BUFFER_PROFILE_IDS || secrets.BUFFER_PROFILE_ID }}
           BUFFER_NOW: ${{ inputs.post_now || vars.BUFFER_NOW || 'false' }}
-          # Queue automatically after automated claims, media, duplicate, and queue-capacity checks.
-          # Set the repository variable BUFFER_DRAFT_MODE to true to force drafts as an emergency override.
-          BUFFER_DRAFT_MODE: ${{ vars.BUFFER_DRAFT_MODE || 'false' }}
+          # Queue automatically as drafts by default for human review.
+          # Set repository variable BUFFER_DRAFT_MODE to false only to allow direct unattended queueing.
+          BUFFER_DRAFT_MODE: ${{ vars.BUFFER_DRAFT_MODE || 'true' }}
           BUFFER_QUEUE_LIMIT: ${{ vars.BUFFER_QUEUE_LIMIT || '3' }}
           BUFFER_REEL_ONLY: ${{ inputs.reel_only || 'false' }}
           BUFFER_REPLACE_POST_ID: ${{ inputs.replace_buffer_post_id }}

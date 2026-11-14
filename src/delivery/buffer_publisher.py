@@ -100,7 +100,9 @@ class BufferPublisher:
             else getattr(settings, "buffer_now", False)
         )
 
-    def is_configured(self) -> bool:
+    def is_configured(self, business: dict[str, Any] | None = None) -> bool:
+        if business and (business.get("buffer_profile_ids") or business.get("buffer_profile_id")):
+            return bool(self.access_token)
         return bool(self.access_token and self.profile_ids)
 
     def get_public_asset_url(self, relative_asset_path: str) -> str:
@@ -234,13 +236,22 @@ class BufferPublisher:
         prompts: list[dict[str, Any]],
     ) -> bool:
         """Delivery channel interface: pick the top prompt and schedule to Buffer."""
-        if not self.is_configured():
+        if not self.is_configured(business):
             logger.info("Buffer publisher skipped (BUFFER_ACCESS_TOKEN or BUFFER_PROFILE_ID not configured).")
             return True
 
         if not prompts:
             logger.info("No prompts available to deliver to Buffer.")
             return True
+
+        # Resolve target channel: check per-business profile IDs first, fallback to global
+        biz_ids = business.get("buffer_profile_ids") or business.get("buffer_profile_id")
+        if isinstance(biz_ids, str):
+            target_ids = [pid.strip() for pid in biz_ids.split(",") if pid.strip()]
+        elif isinstance(biz_ids, list):
+            target_ids = [str(pid).strip() for pid in biz_ids if str(pid).strip()]
+        else:
+            target_ids = self.profile_ids
 
         # Sort prompts by virality score descending to post the strongest ad of the day
         approved = sorted(
@@ -283,7 +294,12 @@ class BufferPublisher:
         image_url = public_url(image_path) if not video_url else None
 
         try:
-            self.schedule_post(text=caption, image_url=image_url, video_url=video_url)
+            self.schedule_post(
+                text=caption,
+                image_url=image_url,
+                video_url=video_url,
+                profile_ids=target_ids,
+            )
             return True
         except Exception as exc:
             logger.error("Failed to schedule prompt to Buffer: %s", exc)

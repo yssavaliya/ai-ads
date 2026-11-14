@@ -134,15 +134,17 @@ class DailyPipeline:
             # this reviewed fallback is intentionally reusable, and must remain
             # available when the model emits only stills or its Reel fails QA.
             force_reel = os.getenv("FORCE_REEL_ONLY", "").lower() in ("1", "true", "yes")
-            if name.casefold().replace(" ", "") == "aimagixstudio":
+            fallback = self._get_fallback_reel(business)
+            if fallback:
                 if force_reel:
-                    prompts.append(self._aimagix_fallback_reel())
+                    prompts.append(fallback)
                 elif not prompts:
                     # On an ordinary run, use it only when the LLM chain is down.
-                    prompts = [self._aimagix_fallback_reel()]
+                    prompts = [fallback]
                     logger.warning(
-                        "::warning::LLM outage: using the reviewed Aimagix spec-Reel fallback; "
-                        "it remains unscored and must pass the same media and claims checks."
+                        "::warning::LLM outage: using reviewed spec-Reel fallback for %s; "
+                        "it remains unscored and must pass the same media and claims checks.",
+                        name,
                     )
 
             # EXPLORATION (gap #5): with modest probability, generate one extra
@@ -650,6 +652,15 @@ class DailyPipeline:
             return PromptType(value)
         except ValueError:
             return PromptType.EDUCATIONAL
+
+    def _get_fallback_reel(self, business: dict[str, Any]) -> dict[str, Any] | None:
+        """Return a reviewed fallback Reel: from per-business configuration or the default studio spec concept."""
+        if business.get("fallback_reel") and isinstance(business["fallback_reel"], dict):
+            return business["fallback_reel"]
+        name = str(business.get("name") or "").casefold().replace(" ", "")
+        if name in ("aimagixstudio", "aimagix"):
+            return self._aimagix_fallback_reel()
+        return None
 
     @staticmethod
     def _aimagix_fallback_reel() -> dict[str, Any]:

@@ -34,10 +34,11 @@ def encrypt() -> None:
             path = Path(name)
             if path.is_file():
                 archive.add(path, arcname=name, recursive=False)
-        cache_dir = Path("data/cache")
-        if cache_dir.is_dir():
-            for path in sorted(p for p in cache_dir.rglob("*") if p.is_file()):
-                archive.add(path, arcname=path.as_posix(), recursive=False)
+        for folder in ("data/cache", "data/site_manifests"):
+            cache_dir = Path(folder)
+            if cache_dir.is_dir():
+                for path in sorted(p for p in cache_dir.rglob("*") if p.is_file()):
+                    archive.add(path, arcname=path.as_posix(), recursive=False)
     CACHE_FILE.write_bytes(_fernet().encrypt(payload.getvalue()))
 
 
@@ -48,7 +49,9 @@ def decrypt() -> None:
             for member in archive.getmembers():
                 path = PurePosixPath(member.name)
                 if path.is_absolute() or ".." in path.parts or not (
-                    member.name in ALLOWED or member.name.startswith("data/cache/")
+                    member.name in ALLOWED
+                    or member.name.startswith("data/cache/")
+                    or member.name.startswith("data/site_manifests/")
                 ) or not member.isfile():
                     raise SystemExit(f"Refusing unexpected cache entry: {member.name}")
                 destination = Path(*path.parts)

@@ -220,6 +220,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Publish generated creative to Buffer.")
     parser.add_argument("--prompt-id", type=str, help="Specific prompt ID to publish")
     parser.add_argument("--draft", action="store_true", help="Create as a Buffer draft instead of scheduling directly")
+    parser.add_argument("--publish-live", action="store_true", help="Publish directly to live queue, overriding default draft mode")
     parser.add_argument("--now", action="store_true", help="Post immediately to social media")
     parser.add_argument("--token", type=str, help="Override Buffer Access Token")
     parser.add_argument("--profile-id", type=str, help="Override Buffer Profile ID")
@@ -239,7 +240,8 @@ def main() -> None:
         print("Skipping Buffer publication.")
         sys.exit(0)
 
-    is_draft = args.draft or os.getenv("BUFFER_DRAFT_MODE", "").lower() in ("true", "1", "yes")
+    draft_env = os.getenv("BUFFER_DRAFT_MODE", "true").lower()
+    is_draft = not (args.now or args.publish_live) and (args.draft or draft_env not in ("false", "0", "no"))
     is_now = args.now or os.getenv("BUFFER_NOW", "").lower() in ("true", "1", "yes")
 
     publisher = BufferPublisher(

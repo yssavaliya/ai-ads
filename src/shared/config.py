@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # every Groq call "too large" (413). The client sizes max_tokens per call to fit these budgets.
     # Format: "key=value,key=value".
     llm_tpm_limits: str = Field(default="groq=8000", description="provider=tokens-per-minute budget per request")
+    # gpt-oss models spend completion tokens on hidden reasoning; at the default effort a capped request can come
+    # back with EMPTY content (all tokens used thinking). "low" keeps the answer inside the budget. Empty = off.
+    groq_reasoning_effort: str = Field(default="low", description="reasoning_effort for Groq openai/gpt-oss-* models")
     llm_model_output_caps: str = Field(
         default="qwen/qwen3.8-27b=1000", description="model=max output tokens (providers' output-per-minute limits)"
     )
@@ -114,7 +117,7 @@ class Settings(BaseSettings):
     # Buffer (Social publishing)
     buffer_access_token: str | None = Field(default=None, description="Buffer API access token")
     buffer_profile_ids: str | None = Field(default=None, description="Comma-separated Buffer profile IDs (or single ID)")
-    buffer_draft_mode: bool = Field(default=False, description="Whether to create Buffer posts as drafts for review")
+    buffer_draft_mode: bool = Field(default=True, description="Whether to create Buffer posts as drafts for review")
     buffer_now: bool = Field(default=False, description="Whether to post immediately to Buffer channels rather than queueing")
 
     # Concurrency caps (1 = the old strictly sequential behaviour). Independent network work overlaps;

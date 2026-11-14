@@ -80,10 +80,15 @@ class HttpChatClient:
         self._headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", **(headers or {})}
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
 
-    def _create(self, model: str, messages: list[dict[str, str]], temperature: float, max_tokens: int | None = None) -> Any:
+    def _create(
+        self, model: str, messages: list[dict[str, str]], temperature: float, max_tokens: int | None = None,
+        reasoning_effort: str | None = None,
+    ) -> Any:
         payload: dict[str, Any] = {"model": model, "messages": messages, "temperature": temperature}
         if max_tokens:
             payload["max_tokens"] = max_tokens
+        if reasoning_effort:
+            payload["reasoning_effort"] = reasoning_effort
         response = _client_for(self.timeout).post(f"{self.base_url}/chat/completions", json=payload, headers=self._headers)
         if response.status_code >= 400:
             raise ChatHTTPError(response)

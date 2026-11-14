@@ -128,22 +128,22 @@ Generate {count} distinct content prompts that all belong to the business's posi
 When count is 5, include at least 3 Reels and 2 single images so the batch tests discovery and portfolio formats. When count is smaller, prefer a Reel unless a still image is clearly the better demonstration.
 
 Business profile:
-{fence(business_profile, 6000)}
+{fence(business_profile, 2500)}
 
 Audience map:
-{fence(audience_map, 6000)}
+{fence(audience_map, 2500)}
 
 Today's trends & competitor insights:
-{fence(trend_data, 6000)}
+{fence(trend_data, 2500)}
 
 Editorial strategy (a targeting hypothesis and content mandate, NOT evidence for customer, performance, or product claims):
-{fence(business_profile.get("content_strategy", {}), 3000)}
+{fence(business_profile.get("content_strategy", {}), 1500)}
 
 Allowed prompt types:
 {type_descriptions}
 
 Learned weights (dimension::item → weight, higher = more proven with this audience):
-{fence(weights, 4000)}
+{fence(weights, 1500)}
 
 {fence_text(hints_text)}
 
@@ -266,13 +266,13 @@ Critique from the predictor (address ALL points):
 {hints}
 
 Business profile:
-{fence(business_profile, 5000)}
+{fence(business_profile, 2500)}
 
 Audience map:
-{fence(audience_map, 4000)}
+{fence(audience_map, 2000)}
 
 Trends:
-{fence(trend_data, 4000)}
+{fence(trend_data, 2000)}
 
 Respond ONLY with the improved prompt as JSON with the same fields:
 {{

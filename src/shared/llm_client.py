@@ -114,7 +114,7 @@ LABEL_MAX_TOKENS: dict[str, int] = {
     "competitor-discovery": 1500,
     "audience-mapper": 3000,
     "trend-radar": 3000,
-    "prompt-forge": 6000,
+    "prompt-forge": 7000,
     "prompt-forge-refine": 5000,
     "weekly-report": 5000,
 }
@@ -298,6 +298,11 @@ class LLMClient:
                 choice = response.choices[0]
                 content = _THINK_RE.sub("", choice.message.content or "").strip()
                 if not content:
+                    if getattr(choice, "finish_reason", None) == "length":
+                        raise ValueError(
+                            f"empty response: finish_reason=length, the model used all {max_tokens} tokens "
+                            "before writing an answer (reasoning model)"
+                        )
                     raise ValueError("empty response")
                 if getattr(choice, "finish_reason", None) == "length":
                     logger.warning("::warning::[%s] %s/%s hit max_tokens (%d): the answer may be cut off",
@@ -326,11 +331,15 @@ class LLMClient:
         last_exc: Exception | None = None
         for attempt in range(1, max_retries + 1):
             try:
+                extra: dict[str, Any] = {}
+                if model.startswith("openai/gpt-oss") and settings.groq_reasoning_effort:
+                    extra["reasoning_effort"] = settings.groq_reasoning_effort
                 return client.chat.completions.create(
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=temperature,
                     max_tokens=max_tokens or settings.llm_max_tokens,
+                    **extra,
                 )
             except Exception as exc:  # noqa: BLE001 - provider SDK raises many types
                 last_exc = exc

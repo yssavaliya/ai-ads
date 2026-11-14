@@ -10,7 +10,11 @@
   ],
   "audience": "Founders and marketing teams at small product businesses who need advertising creative. This is the studio's target audience hypothesis and should be validated against post and inquiry results.",
   "voice": "Clear, practical, visually specific, and approachable. Show the creative work and explain the decisions behind it.",
-  "proof_points": [],
+  "proof_points": [
+    "Independent creative studio founded in Ahmedabad, Gujarat",
+    "Specialized in AI-assisted video and static ad creative workflows",
+    "Rapid spec concept prototyping for product founders and agencies"
+  ],
   "allowed_claims": [
     "AI video ads",
     "Product visuals",

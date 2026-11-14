@@ -31,13 +31,13 @@ You are a viral social media growth strategist and trend analyst for the Indian 
 Analyze the business profile, audience persona, and competitor patterns to pinpoint scroll-stopping, high-reach content opportunities.
 
 Business profile:
-{fence(business_profile, 5000)}
+{fence(business_profile, 2500)}
 
 Audience content themes:
-{fence(themes, 3000)}
+{fence(themes, 1500)}
 
 Audience pain points & desires:
-{fence(pain_points, 2000)}
+{fence(pain_points, 1200)}
 
 Competitor posts & market signals:
 {fence_text(competitor_summary)}

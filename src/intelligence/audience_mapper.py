@@ -30,7 +30,7 @@ class AudienceMapper:
 You are an audience intelligence analyst. Build a structured audience map for a business.
 
 Business profile:
-{fence(business_profile, 8000)}
+{fence(business_profile, 3500)}
 
 Social data (publicly available):
 {fence_text(social_summary)}
@@ -39,7 +39,7 @@ Competitor activity:
 {fence_text(competitor_summary)}
 
 Previous audience map (use to detect drift, keep what still holds):
-{fence(previous_personas or {}, 3000)}
+{fence(previous_personas or {}, 1500)}
 
 Respond ONLY with JSON:
 {{
