@@ -34,7 +34,7 @@ def posts_query(asset_selection: str, include_times: bool = True) -> str:
     times = "dueAt sentAt " if include_times else ""
     return (
         "query GetPosts($input: PostsInput!, $first: Int) { posts(first: $first, input: $input) { edges { node { "
-        f"id status {times}text channelId createdAt assets {{ {asset_selection} }} }} }} }}"
+        f"id status {times}text channelId createdAt assets {{ {asset_selection} }} }} }} }} }}"
     )
 
 

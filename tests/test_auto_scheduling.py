@@ -373,3 +373,11 @@ def test_fetch_drafts_raises_instead_of_reading_a_schema_error_as_no_drafts(monk
     _fake_graphql(monkeypatch, lambda q, v: {"account": {"organizations": [{"id": "o1"}]}} if "GetOrganizations" in q
                   else {"__type": {"fields": []}} if "AssetFields" in q else {"posts": {"edges": [{"node": {"id": "d1"}}]}})
     assert bs.fetch_drafts("tok2", "chan", client=httpx.Client()) == [{"id": "d1"}]
+
+
+def test_generated_posts_query_is_syntactically_balanced():
+    """Real run: 'Syntax Error: Expected Name, found <EOF>' (one closing brace was missing)."""
+    for selection, times in (("source thumbnail mimeType type", True), ("__typename", False)):
+        q = bs.posts_query(selection, include_times=times)
+        assert q.count("{") == q.count("}"), q
+        assert q.rstrip().endswith("}") and "assets { " + selection + " }" in q
