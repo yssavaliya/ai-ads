@@ -51,6 +51,7 @@ def asset_selection(client: httpx.Client, token: str) -> str:
             selection = " ".join(chosen)
     except Exception as exc:  # noqa: BLE001 - introspection off: fall back to the always-valid selection
         logger.info("Buffer asset schema probe unavailable (%s)", exc)
+    logger.info("Buffer asset selection: %s", selection)
     _ASSET_SELECTION_CACHE[token] = selection
     return selection
 
@@ -144,7 +145,10 @@ def _graphql(client: httpx.Client, token: str, query: str, variables: dict[str, 
         headers={"Authorization": f"Bearer {token}"},
         json={"query": query, "variables": variables or {}},
     )
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        # Buffer answers some GraphQL errors with HTTP 500 and the real reason in the body: keep it.
+        detail = " ".join((resp.text or "")[:400].split())
+        raise RuntimeError(f"Buffer API HTTP {resp.status_code}: {detail}")
     payload = resp.json()
     if payload.get("errors"):
         raise RuntimeError("; ".join(e.get("message", "unknown error") for e in payload["errors"]))
