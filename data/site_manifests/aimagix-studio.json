@@ -6443,6 +6443,85 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-117-thumb.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-14-118",
+   "date": "2026-11-14",
+   "created_at": "2026-11-14T07:01:23",
+   "prompt_id": 118,
+   "hook_type": "framework",
+   "title": "30‑Minute Reel Blueprint – From Brief to Finished Ad",
+   "prompt_type": "storytelling",
+   "score": 82,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "HIGH",
+   "hook": "Turn a product brief into a Reel in 30 minutes",
+   "angle": "Show the exact 3‑step AI prompt workflow that delivers a finished Reel in under 30 minutes, positioning Aimagix Studio as the fastest, budget‑friendly alternative to traditional agencies.",
+   "prompt_text": "Create a Reel that walks a Startup Founder through the exact three‑prompt workflow we use to turn a raw product brief into a scroll‑stopping ad in under 30 minutes. The Reel opens with the hook text overlay and spoken hook, then shows a clean high‑tech desk with a laptop screen (no visible text) as the narrator mentions the first prompt – the hook sentence. Beat two shows a quick cut to a text‑to‑video AI interface (blurred UI, no readable text) while the narrator explains the benefit prompt. Beat three flips to the AI rendering a short video clip of the product in use (generic product mock‑up). Beat four shows the addition of a motion graphics CTA layer in a design tool. Beat five reveals the final Reel playing on a mobile device, emphasizing speed and polish. Beat six ends with a direct invitation to DM \"AD\" with product and advertising goal. Use a clear, conversational tone, short sentences, and keep the visual style minimalistic, cinematic, with soft rim lighting and shallow depth of field. The hook is the opening line; the overlay on each beat is a 4‑word summary. The goal is qualified lead generation from founders seeking fast, affordable ad creative.\n\nAngle: Show the exact 3‑step AI prompt workflow that delivers a finished Reel in under 30 minutes, positioning Aimagix Studio as the fastest, budget‑friendly alternative to traditional agencies.\nAudience_segment: Startup Founder",
+   "caption": "Turn a product brief into a Reel in 30 minutes\n\n🔹 Step 1: Write a 3‑prompt AI script (hook, benefit, CTA)\n🔹 Step 2: Feed the script to our video generator – 10 seconds of render time\n🔹 Step 3: Add a brand‑consistent motion overlay and export\n\n💡 The whole workflow lives in a single AI workspace, so you skip weeks of back‑and‑forth.\n\nGot a product and a goal? DM \"AD\" with the details and we’ll prototype your ad in minutes.\n\n#30MinuteReel #AIAdBlueprint #StartupFounders #ProductAds #CreativeAI #AdCreative #DigitalAds #Entrepreneur #IndiaBiz",
+   "hashtags": [
+    "#30MinuteReel",
+    "#AIAdBlueprint",
+    "#StartupFounders",
+    "#ProductAds",
+    "#CreativeAI",
+    "#AdCreative",
+    "#DigitalAds",
+    "#Entrepreneur"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "reel",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "This prompt closely mirrors the proven 'good' performance patterns (specific workflow, speed focus, clear steps) while avoiding the 'bad' patterns (vague claims, irrelevant hacks). It targets the Startup Founder persona with a high-utility 'blueprint' angle that encourages saves and profile visits. The main weakness is the generic visual description, which could be sharpened with a specific Indian product context to maximize local resonance and differentiation.",
+   "strategy": {
+    "objective": "lead_generation",
+    "persona": "Startup Founder",
+    "problem": "Long lead times and high cost when creating product‑focused ad creative",
+    "trigger": "relief",
+    "angle": "30‑Minute Reel Blueprint",
+    "angle_hook_type": "framework",
+    "angle_score": 94.6,
+    "rationale": "Angle '30‑Minute Reel Blueprint' scored 95/100, strongest on audience fit and usp fit. It beat 'Before‑After AI Sprint' (86) by 8 points. Learned results moved it +3.3 points.",
+    "cta": "DM \"AD\" with your product and advertising goal",
+    "kpis": [
+     "saves",
+     "shares",
+     "profile visits"
+    ],
+    "hypothesis": "If we lead with the '30‑Minute Reel Blueprint' angle (framework hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Long lead times and high cost when creating product‑focused ad creative. Runner-up to test next: 'Before‑After AI Sprint'.",
+    "alternatives": [
+     {
+      "name": "Before‑After AI Sprint",
+      "score": 86.5
+     },
+     {
+      "name": "Contrarian Cost Myth",
+      "score": 65.4
+     }
+    ]
+   },
+   "key_factors": [
+    "Strong alignment with the 'Process' pillar and the specific pain point of speed/cost for Startup Founders.",
+    "Fills a high-value content gap by revealing the 'exact 3-prompt workflow,' which drives saves and shares as a utility asset.",
+    "Clear, compliant CTA ('DM AD') that directly targets the primary buyer persona without making unverified performance claims."
+   ],
+   "risks": [
+    "Visual execution risk: Blurred UIs and generic mock-ups may fail to demonstrate the 'polish' promised, potentially confusing viewers about the actual output quality.",
+    "Lack of Indian cultural localization: The prompt is generic/global; adding a specific Indian product example (e.g., D2C skincare or food) would significantly boost relevance for the local market."
+   ],
+   "warnings": [
+    "Reel render failed (Reel narration is only 47.7s; at least 60s is required); falling back to single image"
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-118.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-118-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
