@@ -119,6 +119,14 @@ LABEL_MAX_TOKENS: dict[str, int] = {
     "weekly-report": 5000,
 }
 MIN_USEFUL_TOKENS = 600  # below this the answer is cut off, so skip the model instead of wasting a call
+# Larger answers need more room: a model whose output cap is smaller (qwen on Groq: 1000) would only truncate them.
+LABEL_MIN_TOKENS: dict[str, int] = {
+    "prompt-forge": 2000,
+    "prompt-forge-refine": 1200,
+    "weekly-report": 2000,
+    "audience-mapper": 1500,
+    "trend-radar": 1500,
+}
 TOKEN_SAFETY_MARGIN = 400
 CHARS_PER_TOKEN = 3.5  # slightly pessimistic for English + JSON (measured ~4)
 
@@ -146,7 +154,7 @@ def completion_budget(provider: str, model: str, prompt: str, label: str | None)
     tpm = _parse_limits(settings.llm_tpm_limits).get(provider)
     if tpm is not None:
         budget = min(budget, tpm - estimate_tokens(prompt) - TOKEN_SAFETY_MARGIN)
-    return budget if budget >= MIN_USEFUL_TOKENS else 0
+    return budget if budget >= LABEL_MIN_TOKENS.get(label or "", MIN_USEFUL_TOKENS) else 0
 
 
 class LLMClient:

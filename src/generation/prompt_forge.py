@@ -244,14 +244,14 @@ Respond ONLY with JSON:
                 "visual_scene": str(v.get("visual_scene", "")),
                 "caption": str(v.get("caption", "")),
                 "prompt_text": str(v.get("prompt_text", "")),
-                "hashtags": [str(h) for h in v.get("hashtags", []) if str(h).startswith("#")],
+                "hashtags": [str(h) for h in (v.get("hashtags") or []) if str(h).startswith("#")],
                 "platform_focus": str(v.get("platform_focus", "both")),
                 "format": str(v.get("format", "single image")),
                 "angle": str(v.get("angle", "")),
                 "audience_segment": str(v.get("audience_segment", "") or ""),
-                "reel_beats": [str(b).strip() for b in v.get("reel_beats", []) if str(b).strip()][:MAX_REEL_SCENES],
-                "reel_overlays": [str(b).strip() for b in v.get("reel_overlays", []) if str(b).strip()][:MAX_REEL_SCENES],
-                "reel_narration": [str(b).strip() for b in v.get("reel_narration", []) if str(b).strip()][:MAX_REEL_SCENES],
+                "reel_beats": [str(b).strip() for b in (v.get("reel_beats") or []) if str(b).strip()][:MAX_REEL_SCENES],
+                "reel_overlays": [str(b).strip() for b in (v.get("reel_overlays") or []) if str(b).strip()][:MAX_REEL_SCENES],
+                "reel_narration": [str(b).strip() for b in (v.get("reel_narration") or []) if str(b).strip()][:MAX_REEL_SCENES],
             }
             for v in data
             if isinstance(v, dict) and v.get("prompt_text")

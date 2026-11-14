@@ -20,6 +20,7 @@ def test_provider_without_a_tpm_limit_keeps_the_label_cap():
 def test_model_output_cap_applies_and_too_small_budgets_skip_the_model():
     # qwen on Groq allows 1000 output tokens/minute: usable for a small answer, not for a forge answer
     assert lc.completion_budget("groq", "qwen/qwen3.8-27b", "p", "virality-predictor") == 1000
+    assert lc.completion_budget("groq", "qwen/qwen3.8-27b", "p", "prompt-forge") == 0  # 1000 would truncate the answer
     assert lc.completion_budget("groq", "x", "y" * 26000, "prompt-forge") == 0  # prompt alone eats the TPM budget
 
 
@@ -153,3 +154,17 @@ def test_prompt_forge_keeps_the_requested_count_when_the_budget_is_unbounded(mon
     with patch.object(forge.llm, "run_json", fake_run_json):
         assert len(forge.generate_variants({"name": "B"}, {}, {}, ["educational"], count=5)) == 5
     assert "Generate 5 distinct" in seen["prompt"]
+
+
+def test_forge_tolerates_null_list_fields_in_the_model_answer(monkeypatch):
+    """Real run: 'NoneType' object is not iterable when the model answered "hashtags": null."""
+    from unittest.mock import patch
+
+    from src.generation import prompt_forge as pf
+
+    forge = pf.PromptForge()
+    answer = [{"prompt_text": "brief", "title": "t", "hashtags": None, "reel_beats": None,
+               "reel_overlays": None, "reel_narration": None}]
+    with patch.object(forge.llm, "run_json", lambda *a, **k: answer):
+        variants = forge.generate_variants({"name": "B"}, {}, {}, ["educational"], count=2)
+    assert len(variants) == 1 and variants[0]["hashtags"] == []
