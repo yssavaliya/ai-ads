@@ -6204,6 +6204,84 @@
     "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-114-thumb.jpg"
    },
    "feedback_links": {}
+  },
+  {
+   "id": "2026-11-14-115",
+   "date": "2026-11-14",
+   "created_at": "2026-11-14T06:40:32",
+   "prompt_id": 115,
+   "hook_type": "framework",
+   "title": "3‑Step Prompt Blueprint for a Scroll‑Stopping Reel",
+   "prompt_type": "educational",
+   "score": 72,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "Use this 3‑step prompt to create scroll‑stopping reels instantly",
+   "angle": "Teach founders a repeatable AI prompt framework that cuts ad creation time from weeks to minutes.",
+   "prompt_text": "Create a single image that teaches founders a reusable 3‑step prompt framework for turning a vague product brief into a scroll‑stopping ad. The single image opens with the hook overlay and spoken line, then walks through each step with quick visual examples: a blank product mockup, the AI‑generated visual, and the final CTA screen. Keep narration conversational, use short sentences, and highlight that the studio can prototype the entire ad in minutes using AI. End with a clear invitation to DM \"AD\" with their product and advertising goal. The goal is to generate qualified DMs from startup founders who feel their ad creation is too slow and expensive.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "Use this 3‑step prompt to create scroll‑stopping reels instantly\n\n🔹 Step 1 – Hook: Identify the single pain point (slow ad creation) and frame it as a relief promise.\n🔹 Step 2 – Visual cue: Pair the hook with a quick AI‑generated product visual that flips from blank to polished.\n🔹 Step 3 – Call‑to‑action: Ask the viewer to DM \"AD\" with their product and ad goal.\n\nWhat’s the biggest bottleneck in your launch timeline?\nDM \"AD\" with your product and the goal you want to hit, and we’ll sketch the first hook together.\n\n#AIAds #ProductAds #CreativeAI #StartupMarketing #SMBMarketing #DigitalAds #Entrepreneur #Reels",
+   "hashtags": [
+    "#AIAds",
+    "#ProductAds",
+    "#CreativeAI",
+    "#StartupMarketing",
+    "#SMBMarketing",
+    "#DigitalAds",
+    "#Entrepreneur",
+    "#Reels"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt targets a high-intent audience with a highly relevant, trending educational topic that fills a specific content gap (prompt engineering for ads). However, the choice of a single static image for a multi-step process limits its scroll-stopping power and saveability compared to a Reel or carousel. The score is moderate because while the topic is strong, the format is less effective for demonstrating the 'process' pillar, and the lack of localized hooks reduces its potential for broad Indian market reach.",
+   "strategy": {
+    "objective": "lead_generation",
+    "persona": "Startup Founder",
+    "problem": "Slow, expensive ad creation that delays product launches",
+    "trigger": "relief",
+    "angle": "3‑Step Prompt Blueprint",
+    "angle_hook_type": "framework",
+    "angle_score": 88.8,
+    "rationale": "Angle '3‑Step Prompt Blueprint' scored 89/100, strongest on audience fit and conversion pull. It beat 'Agency Cost Contrast' (86) by 2 points.",
+    "cta": "DM us with your product and advertising goal",
+    "kpis": [
+     "saves",
+     "shares",
+     "profile visits"
+    ],
+    "hypothesis": "If we highlight AI’s speed vs. agency timelines, then DM requests will increase, because founders are eager to cut lead‑time and cost.",
+    "alternatives": [
+     {
+      "name": "Agency Cost Contrast",
+      "score": 86.3
+     },
+     {
+      "name": "AI Before‑After Transform",
+      "score": 79.5
+     }
+    ]
+   },
+   "key_factors": [
+    "High alignment with the '3-Step Prompt Blueprint' trending topic and the 'Step-by-step AI prompt engineering' content gap.",
+    "Strong utility for the primary audience (Startup Founders) who struggle with slow/expensive ad creation, offering a saveable framework.",
+    "Clear CTA ('DM AD') that directly targets qualified leads, fitting the studio's offer pillar."
+   ],
+   "risks": [
+    "Static image format is suboptimal for a 'process' or 'educational' prompt; Reels are significantly better for demonstrating workflow and retaining attention.",
+    "Lack of Indian cultural localization in the prompt, missing a key content gap for the regional SMB audience.",
+    "Risk of appearing as generic AI advice rather than specific ad-creative expertise if the visual examples are not highly specific to product ads."
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-115.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-14/2026-11-14-115-thumb.jpg"
+   },
+   "feedback_links": {}
   }
  ],
  "weekly": [
