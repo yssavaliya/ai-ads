@@ -117,6 +117,7 @@ LABEL_MAX_TOKENS: dict[str, int] = {
     "prompt-forge": 7000,
     "prompt-forge-refine": 5000,
     "weekly-report": 5000,
+    "campaign-strategist": 1800,
 }
 MIN_USEFUL_TOKENS = 600  # below this the answer is cut off, so skip the model instead of wasting a call
 # Larger answers need more room: a model whose output cap is smaller (qwen on Groq: 1000) would only truncate them.
@@ -126,6 +127,7 @@ LABEL_MIN_TOKENS: dict[str, int] = {
     "weekly-report": 2000,
     "audience-mapper": 1500,
     "trend-radar": 1500,
+    "campaign-strategist": 1000,
 }
 TOKEN_SAFETY_MARGIN = 400
 CHARS_PER_TOKEN = 3.5  # slightly pessimistic for English + JSON (measured ~4)

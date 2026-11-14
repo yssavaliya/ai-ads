@@ -18,6 +18,12 @@ from src.fetch.competitor_finder import CompetitorFinder
 from src.fetch.website_scraper import WebsiteScraper
 from src.generation.virality_gate import ViralityGate, apply_threshold_policy, rank
 from src.intelligence.audience_mapper import AudienceMapper
+from src.intelligence.campaign_strategist import (
+    CampaignStrategist,
+    brief_for_creative,
+    strategy_summary,
+)
+from src.intelligence.research import research_quality
 from src.intelligence.trend_radar import TrendRadar
 from src.learning.bayesian_updater import BayesianUpdater
 from src.shared.brand_facts import load_brand_facts, merge_into_profile, warn_if_empty
@@ -35,6 +41,7 @@ class DailyPipeline:
         self.competitors = CompetitorFinder()
         self.audience = AudienceMapper()
         self.trends = TrendRadar()
+        self.strategist = CampaignStrategist()
         self.gate = ViralityGate()
         self.delivery = get_delivery()
         self.feedback = GithubFeedback()
@@ -108,9 +115,20 @@ class DailyPipeline:
                 business, "trends",
                 lambda: self.trends.scan(profile, audience_map, competitors),
             )
+            logger.info("Research quality for %s: %s", name, research_quality(competitors, social_data))
             weights = self.weights.to_forge_weights(biz.weights_key)
             history = self._load_history(db, biz)
             threshold = int(business.get("virality_threshold") or biz.virality_threshold or settings.virality_threshold)
+            # STRATEGY first (objective, persona, problem, trigger, rubric-scored angles), THEN creative.
+            campaign = None
+            if settings.campaign_strategy_enabled:
+                campaign = self.strategist.plan(profile, audience_map, trend_data, weights, history)
+                if campaign:
+                    logger.info("Campaign strategy for %s: %s", name, campaign["rationale"])
+            gate_kwargs: dict[str, Any] = {}
+            brief_text = brief_for_creative(campaign)
+            if brief_text:
+                gate_kwargs["campaign_brief"] = brief_text
             prompts = self.gate.run(
                 profile,
                 audience_map,
@@ -119,7 +137,12 @@ class DailyPipeline:
                 weights,
                 history=history,
                 threshold=threshold,
+                **gate_kwargs,
             )
+            summary = strategy_summary(campaign)
+            if summary:
+                for p in prompts:
+                    p.setdefault("strategy", summary)
 
             # NOVELTY (#2): don't re-send a prompt we already sent in the last
             # 14 days — replace near-duplicates so the feed stays fresh.

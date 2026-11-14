@@ -49,6 +49,7 @@ class ViralityGate:
         weights: dict[str, Any] | None = None,
         history: list[dict[str, Any]] | None = None,
         threshold: int | None = None,
+        campaign_brief: str = "",
     ) -> list[dict[str, Any]]:
         """Returns up to 3 prompts that meet the threshold (diverse types),
         or the best available ones. Learned `weights` bias selection toward
@@ -65,6 +66,7 @@ class ViralityGate:
 
         for attempt in range(1, self.max_attempts + 1):
             try:
+                forge_kwargs: dict[str, Any] = {"campaign_brief": campaign_brief} if campaign_brief else {}
                 variants = self.forge.generate_variants(
                     business_profile=business_profile,
                     audience_map=audience_map,
@@ -73,6 +75,7 @@ class ViralityGate:
                     weights=weights,
                     improvement_hints=[*claim_hints, *hints],
                     count=5,
+                    **forge_kwargs,
                 )
             except Exception as exc:
                 # Forge is honest (raises on bad LLM output); we don't fake

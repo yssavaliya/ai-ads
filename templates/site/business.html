@@ -101,6 +101,20 @@
           <p class="pre" id="pt-{{ e.id }}">{{ e.prompt_text }}</p>
         </details>
 
+        {% if e.strategy %}
+        <details>
+          <summary>🎯 Campaign strategy</summary>
+          <p class="small"><strong>Objective:</strong> {{ e.strategy.objective }}{% if e.strategy.persona %} · <strong>Persona:</strong> {{ e.strategy.persona }}{% endif %}{% if e.strategy.trigger %} · <strong>Trigger:</strong> {{ e.strategy.trigger }}{% endif %}</p>
+          {% if e.strategy.problem %}<p><strong>Problem addressed:</strong> {{ e.strategy.problem }}</p>{% endif %}
+          {% if e.strategy.angle %}<p><strong>Chosen angle:</strong> {{ e.strategy.angle }}{% if e.strategy.angle_score %} ({{ e.strategy.angle_score|round|int }}/100){% endif %}</p>{% endif %}
+          {% if e.strategy.rationale %}<p class="small">{{ e.strategy.rationale }}</p>{% endif %}
+          {% if e.strategy.alternatives %}<p class="small muted">Considered: {% for a in e.strategy.alternatives %}{{ a.name }} ({{ a.score|round|int }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+          {% if e.strategy.cta %}<p class="small"><strong>Next step for the viewer:</strong> {{ e.strategy.cta }}</p>{% endif %}
+          {% if e.strategy.kpis %}<p class="small"><strong>Measured by:</strong> {{ e.strategy.kpis|join(', ') }}</p>{% endif %}
+          {% if e.strategy.hypothesis %}<p class="small muted"><strong>Test:</strong> {{ e.strategy.hypothesis }}</p>{% endif %}
+        </details>
+        {% endif %}
+
         {% if e.reasoning or e.key_factors or e.risks or e.angle %}
         <details>
           <summary>📈 Why it should work</summary>

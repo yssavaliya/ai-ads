@@ -112,6 +112,7 @@ class PromptForge:
         weights: dict[str, Any] | None = None,
         improvement_hints: list[str] | None = None,
         count: int = 5,
+        campaign_brief: str = "",
     ) -> list[dict[str, Any]]:
         """Generate N prompt variants. If improvement_hints given, focus on them."""
         weights = weights or {}
@@ -125,6 +126,8 @@ class PromptForge:
             if improvement_hints
             else "No previous feedback."
         )
+
+        brief_block = (fence_text(campaign_brief, 1400) + "\n\n") if campaign_brief else ""
 
         def build(count: int) -> str:
             return f"""
@@ -144,7 +147,7 @@ Today's trends & competitor insights:
 Editorial strategy (a targeting hypothesis and content mandate, NOT evidence for customer, performance, or product claims):
 {fence(business_profile.get("content_strategy", {}), 1500)}
 
-Allowed prompt types:
+{brief_block}Allowed prompt types:
 {type_descriptions}
 
 Learned weights (dimension::item → weight, higher = more proven with this audience):

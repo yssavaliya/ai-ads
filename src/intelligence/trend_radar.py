@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Any
 
+from src.intelligence.research import TREND_PROVENANCE, summarize_competitors
 from src.shared.llm_client import LLMClient, extract_json_text, fence, fence_text
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,8 @@ Audience pain points & desires:
 Competitor posts & market signals:
 {fence_text(competitor_summary)}
 
+{TREND_PROVENANCE}
+
 Focus on what ACTUALLY drives virality on Instagram in 2026:
 1. High-save triggers: Step-by-step blueprints, swipe files, prompt structures, ROI metrics.
 2. High-share triggers: Relatable contrarian takes, hard truths, shocking before/after transformations.
@@ -73,14 +76,4 @@ Respond ONLY with JSON:
 
     @staticmethod
     def _summarize_competitors(competitor_posts: list[dict[str, Any]]) -> str:
-        if not competitor_posts:
-            return "No competitor data available."
-        lines = []
-        for comp in competitor_posts[:5]:
-            posts = comp.get("top_posts", [])
-            captions = [p.get("caption", "") for p in posts if p.get("caption")]
-            lines.append(
-                f"- {comp.get('name', comp.get('handle', '?'))}: "
-                + " || ".join(captions[:4])[:2000]
-            )
-        return "\n".join(lines) or "No competitor data available."
+        return summarize_competitors(competitor_posts)

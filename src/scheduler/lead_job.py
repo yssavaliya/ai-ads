@@ -128,6 +128,14 @@ class LeadPipeline:
         scored_leads: list[dict[str, Any]] = []
         structurally_ineligible: list[dict[str, Any]] = []
         rejection_reasons: dict[str, int] = {}
+        # Competition level: how many other businesses of the same niche this search surfaced in the area.
+        niche_counts: dict[str, int] = {}
+        for c in candidates:
+            if c.get("niche"):
+                niche_counts[c["niche"]] = niche_counts.get(c["niche"], 0) + 1
+        for c in candidates:
+            if c.get("niche"):
+                c["niche_competitors"] = niche_counts[c["niche"]] - 1
         for candidate in candidates:
             if time.monotonic() > deadline:
                 logger.warning(
@@ -167,6 +175,10 @@ class LeadPipeline:
                 "opportunity_score": assessment["score"],
                 "opportunity_reasons": assessment["reasons"],
                 "followers": assessment["followers"],
+                "opportunity_breakdown": assessment.get("breakdown") or {},
+                "opportunity_decision": assessment.get("decision") or "",
+                "why_target": assessment.get("why_target") or "",
+                "data_gaps": assessment.get("data_gaps") or [],
             }
             scored_leads.append(lead)
 

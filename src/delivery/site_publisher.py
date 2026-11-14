@@ -321,6 +321,7 @@ class SitePublisher:
                 "platform_focus": p.get("platform_focus") or "",
                 "audience_segment": p.get("audience_segment") or "",
                 "reasoning": p.get("reasoning") or "",
+                "strategy": p.get("strategy") or {},
                 "key_factors": list(p.get("key_factors") or []),
                 "risks": list(p.get("risks") or []),
                 "warnings": list(p.get("warnings") or []),
@@ -394,6 +395,13 @@ class SitePublisher:
                 "followers": lead.get("followers") or lead.get("follower_count") or 0,
                 "opportunity_score": lead.get("opportunity_score"),
                 "reasons": [redact_text(str(r)) for r in (lead.get("opportunity_reasons") or [])],
+                "why_target": redact_text(lead.get("why_target") or ""),
+                "decision": lead.get("opportunity_decision") or "",
+                "breakdown": {
+                    k: {"points": v.get("points"), "max": v.get("max"), "note": redact_text(str(v.get("note") or ""))}
+                    for k, v in (lead.get("opportunity_breakdown") or {}).items() if isinstance(v, dict)
+                },
+                "data_gaps": [redact_text(str(g)) for g in (lead.get("data_gaps") or [])],
                 "prompt_error": redact_text(lead.get("prompt_error") or ""),
                 "prompts": lead_prompts,
             })

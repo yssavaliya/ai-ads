@@ -130,6 +130,9 @@ class Settings(BaseSettings):
     # Virality
     virality_threshold: int = Field(default=75, description="Minimum virality score (0-100)")
     below_threshold_policy: str = Field(default="flag", description="flag | block: what to do with prompts under the quality bar")
+    campaign_strategy_enabled: bool = Field(
+        default=True, description="Run the campaign-strategy stage (objective, angles, rubric) before creative generation"
+    )
     max_regeneration_attempts: int = Field(default=5, description="Max prompt regeneration attempts")
 
     # Paths

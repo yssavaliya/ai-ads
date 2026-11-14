@@ -24,6 +24,9 @@
           {% if lead.website_url %}· <a href="{{ lead.website_url }}" target="_blank" rel="noopener">website</a>{% endif %}
         </p>
         <p class="banner warn small">Contact details are deliberately not published here — reach out via the Instagram profile or the business website.</p>
+        {% if lead.why_target %}<p class="small"><strong>Why target:</strong> {{ lead.why_target }}</p>{% endif %}
+        {% if lead.breakdown %}<details><summary class="small">Score breakdown</summary><ul class="small">{% for name, b in lead.breakdown.items() %}<li>{{ name|replace('_', ' ') }}: {{ b.points|round|int }}/{{ b.max }} — {{ b.note }}</li>{% endfor %}</ul></details>{% endif %}
+        {% if lead.data_gaps %}<p class="small muted">Not measured: {{ lead.data_gaps|join('; ') }}</p>{% endif %}
         {% if lead.reasons %}<ul class="small">{% for r in lead.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
         {% if lead.prompt_error %}<p class="banner warn small">⚠️ Sample prompts could not be generated: {{ lead.prompt_error }}</p>{% endif %}
         {% for p in lead.prompts %}

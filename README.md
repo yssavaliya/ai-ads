@@ -40,6 +40,8 @@ Mon/Wed/Fri 18:00 IST (12:30 UTC cron; GitHub may start scheduled runs hours lat
   2. Fetch social data + competitor posts (Apify free tier / instaloader)
   3. Audience Mapper → personas, pain points, themes
   4. Trend Radar → today's topics, hashtags, gaps, viral patterns
+  4b. Campaign Strategy: objective, persona, customer problem, emotional trigger, CTA and KPIs; three angles
+     rated on a fixed rubric, winner chosen in code (see docs/agency-workflow.md; CAMPAIGN_STRATEGY_ENABLED=false disables)
   5. Virality Gate: generate → predict → if score < 75, refine with hints → repeat
   6. Creative Forge → render single images or assemble vertical MP4 Reels from scene beats with FFmpeg
   7. Publish the finished assets to the Content Hub (GitHub Pages) with 👍/👎/🔄/📎 feedback buttons
