@@ -271,6 +271,25 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-14-112",
+      "title": "A Product Ad Starts With One Clear Idea",
+      "prompt_id": 112,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "educational",
+      "format": "reel",
+      "hook_type": "",
+      "audience_segment": "Founders and marketing teams at small product businesses",
+      "caption": "A clearly labeled spec concept: one product, one useful idea, and visual choices that support it. Have a product in mind? DM AD with the product and your advertising goal.\n\n#ProductAd #CreativeStudio #AIAdvertising #AimagixStudio",
+      "at": "2026-11-14T07:01:39.116349+00:00",
+      "buffer_posts": [
+        {
+          "id": "6af8075378196a0a974806bc",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
