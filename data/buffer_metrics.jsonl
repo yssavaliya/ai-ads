@@ -37,3 +37,4 @@
 {"buffer_post_id": "6af805b381e1228421eba62b", "checked_at": "2026-11-14T17:58:31.824355+00:00", "error": "Post not found for id: 6af805b381e1228421eba62b", "type": "error"}
 {"buffer_post_id": "6af8075378196a0a974806bc", "checked_at": "2026-11-14T17:58:31.824355+00:00", "error": "Post not found for id: 6af8075378196a0a974806bc", "type": "error"}
 {"buffer_post_id": "6af8148fd16af15d4dfe5a33", "checked_at": "2026-11-14T17:58:31.824355+00:00", "due_at": "2026-11-26T04:51:00.000Z", "metrics_updated_at": "2026-11-14T07:58:07.346Z", "sent_at": null, "status": "scheduled", "type": "check"}
+{"buffer_post_id": "6af76cd64b28296eb110c90e", "checked_at": "2026-11-15T06:25:17.734350+00:00", "due_at": "2026-11-25T13:23:00.000Z", "metrics_updated_at": "2026-11-13T20:02:30.510Z", "sent_at": null, "status": "scheduled", "type": "check"}
