@@ -6623,6 +6623,82 @@
  ],
  "weekly": [
   {
+   "date": "2026-11-15",
+   "report": {
+    "top_performing": [
+     {
+      "prompt": "Reel: 3‑prompt workflow for scroll‑stopping ads",
+      "score": 82,
+      "feedback": "none",
+      "why": "High virality score; combines storytelling format with a clear, actionable workflow that resonates with Startup Founders. The hook‑first structure and fast‑paced visual cuts match the audience’s preference for quick, practical insights."
+     },
+     {
+      "prompt": "Single image: 3‑step prompt framework (educational)",
+      "score": 72,
+      "feedback": "none",
+      "why": "Strong educational content presented as a single image – the format with the highest proven weight. Uses a before‑after hook that consistently drives engagement among founders."
+     },
+     {
+      "prompt": "Storytelling single image: sketch‑to‑AI transformation",
+      "score": 72,
+      "feedback": "none",
+      "why": "Marries storytelling with a visual before‑after narrative, leveraging the proven “storytelling” and “single image” weights while showcasing the studio’s process."
+     }
+    ],
+    "audience_insights": [
+     "Startup Founders respond best to concise, framework‑driven educational content (weight 0.67) and to storytelling that visualises a transformation.",
+     "Creative Agency decision‑makers are a niche but high‑value segment; a single hit suggests they can be cultivated with more agency‑focused case studies."
+    ],
+    "competitor_moves": [
+     "Competitors are increasing short‑form video reels that showcase AI‑generated ad mock‑ups in under 30 seconds, emphasizing speed over depth.",
+     "Several studios are publishing carousel posts that break down a single “before‑after” ad into step‑by‑step slides, driving higher swipe‑through rates."
+    ],
+    "content_pillars": [
+     {
+      "pillar": "Framework Education",
+      "rationale": "Educational posts with a repeatable 3‑step prompt framework have a 0.67 success weight and consistently hit the virality threshold.",
+      "suggested_frequency": "2x/week"
+     },
+     {
+      "pillar": "Transformation Storytelling",
+      "rationale": "Storytelling reels and single images that visualise a sketch‑to‑final ad journey leverage the high storytelling weight (0.67) and the before‑after hook (0.75).",
+      "suggested_frequency": "1‑2x/week"
+     },
+     {
+      "pillar": "Social Proof / Spec Concepts",
+      "rationale": "Single‑image spec concepts with clear before‑after labeling validate the studio’s capability and attract both founders and agencies.",
+      "suggested_frequency": "1x/week"
+     }
+    ],
+    "calendar": [
+     "Mon: Educational carousel – 3‑step prompt framework (static images).",
+     "Tue: Reel – Quick 30‑sec walkthrough of the 3‑prompt workflow.",
+     "Wed: Social‑proof single image – Smart‑mug before/after spec concept.",
+     "Thu: Storytelling single image – Sketch‑to‑AI transformation for an Indian snack.",
+     "Fri: Educational single image – “The 1 Prompt Structure Agencies Hide” (framework hook).",
+     "Sat: Community engagement – Q&A sticker in Stories answering founder workflow questions."
+    ],
+    "recommendations": [
+     "Add a strong before‑after visual hook to every educational post; it carries the highest proven weight (0.75).",
+     "Keep captions concise and include a clear CTA (e.g., “DM for a free 30‑sec ad mock‑up”) to convert curiosity into leads.",
+     "Test carousel formats for the framework pillar to increase dwell time and algorithmic favorability.",
+     "Include a subtle “Spec Concept” badge on all transformation posts to maintain transparency and avoid claim issues."
+    ],
+    "risk_alerts": [
+     "Avoid absolute performance claims (e.g., “will double sales”) – the studio’s policy requires spec labeling only.",
+     "Monitor for over‑use of AI‑generated content without clear human oversight disclosure, which could trigger platform policy flags."
+    ],
+    "results": {
+     "conversions": [
+      "No leads have been logged against any post yet. Use the 'Got a lead?' link on a post when someone enquires."
+     ],
+     "experiments": [
+      "post_block: insufficient (matured posts 0/0)"
+     ]
+    }
+   }
+  },
+  {
    "date": "2026-11-08",
    "report": {
     "top_performing": [
