@@ -1,6 +1,271 @@
 {
  "digests": [
   {
+   "date": "2026-11-16",
+   "leads": [
+    {
+     "name": "MK DECOR",
+     "instagram_handle": "mkdecor_wallpaper_ahmedabad",
+     "website_url": "http://www.mkdecor.co.in",
+     "niche": "educational",
+     "followers": 5596,
+     "opportunity_score": 92,
+     "reasons": [
+      "5596 followers (sweet spot)",
+      "active: 12 recent posts",
+      "low engagement rate (0.42%) — needs content help",
+      "sells directly (5 buying signals in captions)",
+      "has website (full profile available)",
+      "visual product category (ads show results quickly)",
+      "has social handle"
+     ],
+     "why_target": "",
+     "campaign": {
+      "objective": "awareness",
+      "persona": "general",
+      "problem": "Finding educational décor that makes learning spaces inspiring",
+      "trigger": "aspiration",
+      "angle": "Curiosity wall",
+      "angle_hook_type": "curiosity_gap",
+      "angle_score": 42.5,
+      "rationale": "Angle 'Curiosity wall' scored 42/100, strongest on claim safety and producibility. It beat 'Learning space makeover' (39) by 4 points.",
+      "cta": "follow the page for design ideas",
+      "hypothesis": "If we lead with the 'Curiosity wall' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Finding educational décor that makes learning spaces inspiring. Runner-up to test next: 'Learning space makeover'.",
+      "kpis": [
+       "saves",
+       "shares",
+       "profile visits"
+      ],
+      "alternatives": [
+       {
+        "name": "Learning space makeover",
+        "score": 38.8
+       },
+       {
+        "name": "Design ROI for schools",
+        "score": 27.5
+       }
+      ]
+     },
+     "decision": "",
+     "breakdown": {},
+     "data_gaps": [],
+     "prompt_error": "",
+     "prompts": [
+      {
+       "title": "From Blank Hallway to Luxe Feature Wall",
+       "prompt_type": "storytelling",
+       "score": 58,
+       "prompt_text": "Develop a single‑image post for the First‑Time Home Buyer persona (22‑35, Ahmedabad). The image must show a stark before‑and‑after comparison of a hallway, using a split‑screen layout that is visually striking without any overlaid text. The left side displays the bland, white‑wall hallway; the right side reveals the same space after applying a bold vertical‑stripe wallpaper, subtle LED accent lighting, and a small decorative runner rug. The caption follows a before‑after hook, lists three concrete design steps, and ends with a CTA inviting DMs with \"AD\" for a free spec concept. Use the brand’s educational tone and include eight hashtags mixing hyper‑niche, industry, and broad discovery tags. This post targets saves and profile visits by offering a clear, replicable makeover blueprint.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+       "caption": "See how a dull hallway becomes a luxe feature in 3 steps\n\n🟢 Step 1: Choose a bold, vertically‑striped wallpaper that adds height.\n🟢 Step 2: Apply our zero‑damage paste technique—no wall damage, easy removal.\n🟢 Step 3: Add simple LED strip lighting to highlight the pattern.\n\nThe transformation is instant, budget‑friendly, and perfect for first‑time home buyers.\n\n💌 Want a spec concept for your own space? DM \"AD\" with your brief and we’ll design the look.\n\n#HallwayMakeover #BeforeAfter #WallpaperDIY #InteriorDesignIndia #DIYTips #HomeMakeover #BudgetRenovation #EcoFriendlyLiving",
+       "asset": {
+        "type": "image",
+        "image": "assets/leads/2026-11-16/2026-11-16-lead0-0.jpg",
+        "thumb": "assets/leads/2026-11-16/2026-11-16-lead0-0-thumb.jpg"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Gujarat Decor",
+     "instagram_handle": "gujarat_decor33",
+     "website_url": "https://www.gujaratdecor.com/",
+     "niche": "educational",
+     "followers": 1604,
+     "opportunity_score": 92,
+     "reasons": [
+      "1604 followers (sweet spot)",
+      "active: 12 recent posts",
+      "low engagement rate (2.40%) — needs content help",
+      "sells directly (5 buying signals in captions)",
+      "has website (full profile available)",
+      "visual product category (ads show results quickly)",
+      "has social handle"
+     ],
+     "why_target": "",
+     "campaign": {
+      "objective": "awareness",
+      "persona": "General Home Decor Enthusiast (Inferred)",
+      "problem": "Lack of inspiration for home decor ideas and uncertainty about what styles suit their space.",
+      "trigger": "aspiration",
+      "angle": "Common Mistake Fix",
+      "angle_hook_type": "contrarian",
+      "angle_score": 72.5,
+      "rationale": "Angle 'Common Mistake Fix' scored 72/100, strongest on claim safety and audience fit. It beat 'The 5-Second Refresh' (64) by 9 points.",
+      "cta": "Follow for daily decor tips",
+      "hypothesis": "If we lead with the 'Common Mistake Fix' angle (contrarian hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Lack of inspiration for home decor ideas and uncertainty about what styles suit their space.. Runner-up to test next: 'The 5-Second Refresh'.",
+      "kpis": [
+       "saves",
+       "shares",
+       "profile visits"
+      ],
+      "alternatives": [
+       {
+        "name": "The 5-Second Refresh",
+        "score": 63.7
+       },
+       {
+        "name": "Style Quiz Teaser",
+        "score": 60.0
+       }
+      ]
+     },
+     "decision": "",
+     "breakdown": {},
+     "data_gaps": [],
+     "prompt_error": "All LLM providers failed for audience-mapper. Chain: groq: openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.8-27b. Add another free key (GROQ_API_KEY, GEMINI_API_KEY, CEREBRAS_API_KEY, OPENROUTER_A",
+     "prompts": []
+    },
+    {
+     "name": "green bakery",
+     "instagram_handle": "new_green_bakery_ahmedabad",
+     "website_url": "",
+     "niche": "bakery",
+     "followers": 1051,
+     "opportunity_score": 72,
+     "reasons": [
+      "1051 followers",
+      "active: 12 recent posts",
+      "low engagement rate (1.76%) — needs content help",
+      "sells directly (2 buying signals in captions)",
+      "visual product category (ads show results quickly)",
+      "has social handle"
+     ],
+     "why_target": "green bakery scores 72/100. Strongest: activity (12 recent posts); engagement gap (low engagement rate (1.76%) — needs content help). Weakest: reachability (no contact email found).",
+     "campaign": {
+      "objective": "engagement",
+      "persona": "Ahmedabad bakery enthusiasts",
+      "problem": "Finding tasty, environmentally‑friendly baked goods that feel special and locally made",
+      "trigger": "belonging",
+      "angle": "Behind‑the‑Scenes Green Bake",
+      "angle_hook_type": "curiosity_gap",
+      "angle_score": 71.2,
+      "rationale": "Angle 'Behind‑the‑Scenes Green Bake' scored 71/100, strongest on claim safety and producibility. It beat 'Local Love Challenge' (65) by 6 points.",
+      "cta": "follow the Instagram page",
+      "hypothesis": "If we lead with the 'Behind‑the‑Scenes Green Bake' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Finding tasty, environmentally‑friendly baked goods that feel special and locally made. Runner-up to test next: 'Local Love Challenge'.",
+      "kpis": [
+       "saves",
+       "shares",
+       "profile visits"
+      ],
+      "alternatives": [
+       {
+        "name": "Local Love Challenge",
+        "score": 65.0
+       },
+       {
+        "name": "Eco‑Fact Flash",
+        "score": 63.7
+       }
+      ]
+     },
+     "decision": "target",
+     "breakdown": {
+      "audience_size": {
+       "points": 11.0,
+       "max": 15,
+       "note": "1051 followers"
+      },
+      "activity": {
+       "points": 15.0,
+       "max": 15,
+       "note": "12 recent posts"
+      },
+      "engagement_gap": {
+       "points": 25.0,
+       "max": 25,
+       "note": "low engagement rate (1.76%) — needs content help"
+      },
+      "buying_intent": {
+       "points": 6.0,
+       "max": 15,
+       "note": "2 selling signals in captions/bio"
+      },
+      "content_potential": {
+       "points": 10.0,
+       "max": 15,
+       "note": "visual product category; no website"
+      },
+      "reachability": {
+       "points": 2.0,
+       "max": 10,
+       "note": "no contact email found"
+      },
+      "competition": {
+       "points": 3.0,
+       "max": 5,
+       "note": "6 similar local businesses found"
+      }
+     },
+     "data_gaps": [
+      "no contact email"
+     ],
+     "prompt_error": "",
+     "prompts": []
+    },
+    {
+     "name": "INTERIOR WALA HOME DECOR STUDIO AHMEDABAD",
+     "instagram_handle": "interior_wala_home_decorstudio",
+     "website_url": "",
+     "niche": "home decor",
+     "followers": 1076,
+     "opportunity_score": 68,
+     "reasons": [
+      "1076 followers",
+      "active: 12 recent posts",
+      "low engagement rate (0.09%) — needs content help",
+      "visual product category (ads show results quickly)",
+      "has social handle"
+     ],
+     "why_target": "INTERIOR WALA HOME DECOR STUDIO AHMEDABAD scores 68/100. Strongest: activity (12 recent posts); engagement gap (low engagement rate (0.09%) — needs content help). Weakest: buying intent (0 selling signals in captions/bio).",
+     "campaign": {},
+     "decision": "maybe",
+     "breakdown": {
+      "audience_size": {
+       "points": 11.0,
+       "max": 15,
+       "note": "1076 followers"
+      },
+      "activity": {
+       "points": 15.0,
+       "max": 15,
+       "note": "12 recent posts"
+      },
+      "engagement_gap": {
+       "points": 25.0,
+       "max": 25,
+       "note": "low engagement rate (0.09%) — needs content help"
+      },
+      "buying_intent": {
+       "points": 0.0,
+       "max": 15,
+       "note": "0 selling signals in captions/bio"
+      },
+      "content_potential": {
+       "points": 10.0,
+       "max": 15,
+       "note": "visual product category; no website"
+      },
+      "reachability": {
+       "points": 2.0,
+       "max": 10,
+       "note": "no contact email found"
+      },
+      "competition": {
+       "points": 5.0,
+       "max": 5,
+       "note": "1 similar local businesses found"
+      }
+     },
+     "data_gaps": [
+      "no contact email"
+     ],
+     "prompt_error": "All LLM providers failed for audience-mapper. Chain: groq: openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.8-27b. Add another free key (GROQ_API_KEY, GEMINI_API_KEY, CEREBRAS_API_KEY, OPENROUTER_A",
+     "prompts": []
+    }
+   ]
+  },
+  {
    "date": "2026-11-09",
    "leads": []
   },

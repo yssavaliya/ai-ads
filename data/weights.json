@@ -53,5 +53,17 @@
         "hits": 1
       }
     }
+  },
+  "mk-decor": {
+    "topics": {},
+    "formats": {},
+    "audience_segments": {},
+    "hook_types": {}
+  },
+  "green-bakery": {
+    "topics": {},
+    "formats": {},
+    "audience_segments": {},
+    "hook_types": {}
   }
 }
