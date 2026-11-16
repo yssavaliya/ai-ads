@@ -2,17 +2,33 @@
   "active": {
     "arms": {
       "A": {
-        "value": 19
+        "value": "single image"
       },
       "B": {
-        "value": 9
+        "value": "reel"
       }
     },
-    "id": "2026-W46-post_block",
-    "started": "2026-11-14",
-    "variable": "post_block",
-    "week": "2026-W46"
+    "id": "2026-W47-format",
+    "started": "2026-11-17",
+    "variable": "format",
+    "week": "2026-W47"
   },
+  "history": [
+    {
+      "arms": {
+        "A": {
+          "value": 19
+        },
+        "B": {
+          "value": 9
+        }
+      },
+      "id": "2026-W46-post_block",
+      "started": "2026-11-14",
+      "variable": "post_block",
+      "week": "2026-W46"
+    }
+  ],
   "results": {
     "2026-W46-post_block": {
       "arms": {
