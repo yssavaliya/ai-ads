@@ -330,6 +330,41 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-17-122",
+      "title": "Product Visual Transformation",
+      "prompt_id": 122,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "social_proof",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Startup Founder",
+      "caption": "From plain product to ad\u2011ready visual \u2013 see the transformation in one spec concept.\n\nRaw photo: basic lighting, no branding.\nAd\u2011ready: AI\u2011enhanced lighting, dynamic angle, brand\u2011neutral backdrop.\n\nWhat product do you want to showcase? DM us \"AD\" with your brief and let\u2019s create a spec concept together.\n\n#AIVideoAds #ProductVisuals #AdCreative #StartupGrowth #ReelTips #CreativeWorkflow #PromptEngineering\n\n#AIVideoAds #ProductVisuals #AdCreative #StartupGrowth #ReelTips #CreativeWorkflow #PromptEngineering #AIAds",
+      "at": "2026-11-16T22:29:50.205110+00:00",
+      "score": 75,
+      "threshold": 70,
+      "below_threshold": false,
+      "window": {
+        "hour": 22,
+        "block": "21:00-23:59",
+        "confidence": "medium",
+        "source": "scraped post performance",
+        "evidence": "21:00-23:59 had the strongest relative engagement across 32 scraped posts (8 in that window, +356% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+        "samples": 32
+      },
+      "schedule_hour": null,
+      "timezone": "Asia/Kolkata",
+      "experiment": {},
+      "angle": "AI ROI Blueprint",
+      "scheduled_for": "",
+      "buffer_posts": [
+        {
+          "id": "6afb83de4b26315855a3cedc",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
