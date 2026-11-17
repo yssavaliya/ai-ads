@@ -45,6 +45,22 @@
       "note": "needs 4 matured posts per arm",
       "status": "insufficient",
       "variable": "post_block"
+    },
+    "2026-W47-format": {
+      "arms": {
+        "A": {
+          "value": "single image"
+        },
+        "B": {
+          "value": "reel"
+        }
+      },
+      "id": "2026-W47-format",
+      "n_a": 0,
+      "n_b": 0,
+      "note": "needs 4 matured posts per arm",
+      "status": "insufficient",
+      "variable": "format"
     }
   }
 }
