@@ -365,6 +365,46 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-19-123",
+      "title": "From Brief to Spec Ad in 60 Seconds",
+      "prompt_id": 123,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "social_proof",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Startup Founder",
+      "caption": "From Brief to Spec Ad in 60 Seconds\n\nLeft: the raw product brief \u2013 simple, no fluff.\nRight: the finished spec ad \u2013 hook, benefit, visual, CTA.\n\nWe turned a 30\u2011second idea into a full\u2011funnel concept using our AI workflow. No brand names, no client secrets\u2014just the craft.\n\nGot a brief? DM us \"AD\" and let\u2019s prototype yours. #AIAds #PromptEngineering #VideoAutomation #FounderTips #CreativeAI #AdCreative #GrowthHacking\n\n#AIAds #PromptEngineering #VideoAutomation #FounderTips #CreativeAI #AdCreative #GrowthHacking #StartupFounder",
+      "at": "2026-11-18T20:51:30.965511+00:00",
+      "score": 72,
+      "threshold": 70,
+      "below_threshold": false,
+      "window": {
+        "hour": 22,
+        "block": "21:00-23:59",
+        "confidence": "medium",
+        "source": "scraped post performance",
+        "evidence": "21:00-23:59 had the strongest relative engagement across 32 scraped posts (8 in that window, +534% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+        "samples": 32
+      },
+      "schedule_hour": null,
+      "timezone": "Asia/Kolkata",
+      "experiment": {
+        "id": "2026-W47-format",
+        "variable": "format",
+        "arm": "A",
+        "value": "single image"
+      },
+      "angle": "5\u2011Prompt Full\u2011Funnel",
+      "scheduled_for": "",
+      "buffer_posts": [
+        {
+          "id": "6afe0fd214a4c3f433405726",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
