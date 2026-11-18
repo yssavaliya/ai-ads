@@ -6816,6 +6816,105 @@
     "posted": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23122%20%5BPOSTED%20%F0%9F%93%8E%5D%20t%3Acdd991ff29e8484f89a145bdda3ce363.12e1fee63f2bf0dbb4ce&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20Product%20Visual%20Transformation%0A%2A%2APrompt%20ID%3A%2A%2A%20122%0A%0A%2A%2AInstagram%20post%20URL%2A%2A%20%28paste%20the%20link%20to%20the%20post%20you%20published%29%3A%0A%0Ahttps%3A%2F%2Fwww.instagram.com%2Fp%2F...%0A%0A_The%20learner%20will%20attribute%20this%20post%27s%20engagement%20to%20the%20exact%20asset._",
     "lead": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23122%20%5BLEAD%20%F0%9F%93%A9%5D%20t%3Acdd991ff29e8484f89a145bdda3ce363.ff4b4fb45752be0da48c&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20Product%20Visual%20Transformation%0A%2A%2APrompt%20ID%3A%2A%2A%20122%0A%0ASomeone%20enquired%20because%20of%20this%20post.%20Optional%20lines%20%28delete%20if%20unknown%29%3A%0A%0AType%3A%20lead%0AValue%3A%200%0A%0A_Logged%20as%20a%20conversion%20for%20this%20exact%20creative%3A%20it%20counts%20toward%20angle%2C%20hook%20and%20format%20results._"
    }
+  },
+  {
+   "id": "2026-11-19-123",
+   "date": "2026-11-19",
+   "created_at": "2026-11-18T20:51:16",
+   "prompt_id": 123,
+   "hook_type": "before_after",
+   "title": "From Brief to Spec Ad in 60 Seconds",
+   "prompt_type": "social_proof",
+   "score": 72,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "See a product brief transform into a finished spec ad in 60 seconds",
+   "angle": "Show a clear before‑after of a product brief becoming a finished spec ad to illustrate speed and quality.",
+   "prompt_text": "This single‑image post demonstrates the before‑after transformation that is the hallmark of Aimagix Studio’s AI‑assisted creative process. The left side displays a generic product brief—just a title, a feature list, and a target audience—without any visual elements. The right side shows the finished spec ad, complete with a hook, a benefit statement, visual style, and CTA—all produced in under an hour. The image is designed to be immediately shareable and saveable: it tells a visual story of speed and quality without any text clutter. The caption reiterates the process, invites a DM with the product brief, and uses a concise, industry‑relevant hashtag set to maximize discoverability among founders and marketers. This aligns with the editorial strategy’s pillar of spec product ads while keeping the content transparent and compliant.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "From Brief to Spec Ad in 60 Seconds\n\nLeft: the raw product brief – simple, no fluff.\nRight: the finished spec ad – hook, benefit, visual, CTA.\n\nWe turned a 30‑second idea into a full‑funnel concept using our AI workflow. No brand names, no client secrets—just the craft.\n\nGot a brief? DM us \"AD\" and let’s prototype yours. #AIAds #PromptEngineering #VideoAutomation #FounderTips #CreativeAI #AdCreative #GrowthHacking\n\n#AIAds #PromptEngineering #VideoAutomation #FounderTips #CreativeAI #AdCreative #GrowthHacking #StartupFounder",
+   "hashtags": [
+    "#AIAds",
+    "#PromptEngineering",
+    "#VideoAutomation",
+    "#FounderTips",
+    "#CreativeAI",
+    "#AdCreative",
+    "#GrowthHacking",
+    "#StartupFounder"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "post_time_evidence": {
+    "hour": 22,
+    "block": "21:00-23:59",
+    "confidence": "medium",
+    "source": "scraped post performance",
+    "evidence": "21:00-23:59 had the strongest relative engagement across 32 scraped posts (8 in that window, +534% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+    "samples": 32
+   },
+   "experiment": {
+    "id": "2026-W47-format",
+    "variable": "format",
+    "arm": "A",
+    "value": "single image"
+   },
+   "schedule_hour": null,
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "This prompt effectively leverages the 'Process' pillar by visualizing the transformation from brief to ad, which resonates with the Startup Founder and Marketing Manager personas who value speed and clarity. It aligns well with the 'good' past performance examples that highlight specific workflows and speed. However, it lacks the specificity of a named product category, which reduces its immediate relatability and 'spec' credibility compared to a post featuring a recognizable product type. The static format is safe but less dynamic than the Reels preferred by the audience map.",
+   "strategy": {
+    "objective": "lead_generation",
+    "persona": "Startup Founder",
+    "problem": "Long lead times and high cost to create high‑impact ad creative",
+    "trigger": "relief",
+    "angle": "5‑Prompt Full‑Funnel",
+    "angle_hook_type": "framework",
+    "angle_score": 90.8,
+    "rationale": "Angle '5‑Prompt Full‑Funnel' scored 91/100, strongest on audience fit and usp fit. It beat '70% Cost Cut Blueprint' (79) by 12 points. Learned results moved it +3.3 points.",
+    "cta": "DM us with your product and advertising goal",
+    "kpis": [
+     "saves",
+     "shares",
+     "profile visits"
+    ],
+    "hypothesis": "If we lead with the '5‑Prompt Full‑Funnel' angle (framework hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Long lead times and high cost to create high‑impact ad creative. Runner-up to test next: '70% Cost Cut Blueprint'.",
+    "alternatives": [
+     {
+      "name": "70% Cost Cut Blueprint",
+      "score": 78.8
+     },
+     {
+      "name": "TikTok Ban Contrarian",
+      "score": 75.5
+     }
+    ]
+   },
+   "key_factors": [
+    "Strong alignment with the 'Process' and 'Spec Product Ad' pillars, directly addressing the founder pain point of speed and clarity.",
+    "High save/share potential due to the 'before-after' visual format, which is a proven viral pattern for creative workflows.",
+    "Clear CTA ('DM AD') and specific audience targeting (founders/marketers) increase the likelihood of qualified inquiries over casual likes."
+   ],
+   "risks": [
+    "Lack of a specific product category in the prompt makes the visual generic; without a recognizable product (e.g., skincare, SaaS dashboard), the 'spec' aspect is weak and may not stop the scroll.",
+    "The prompt describes a static image but the business profile emphasizes 'AI video ads'; a static before/after may underperform compared to a Reel showing the generation process, which is a preferred content format for the target audience.",
+    "Risk of appearing as a generic 'AI tool' post rather than a 'creative studio' service if the visual style isn't distinctly branded or high-end."
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-19/2026-11-19-123.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-19/2026-11-19-123-thumb.jpg"
+   },
+   "feedback_links": {
+    "good": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23123%20%5BGOOD%20%F0%9F%91%8D%5D%20t%3Ae735298aa16e445d83dd0561b9edf8cc.e73f8f68081f26f471e4&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20From%20Brief%20to%20Spec%20Ad%20in%2060%20Seconds%0A%2A%2APrompt%20ID%3A%2A%2A%20123%0A%2A%2AFeedback%3A%2A%2A%20GOOD%20%F0%9F%91%8D",
+    "bad": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23123%20%5BBAD%20%F0%9F%91%8E%5D%20t%3Ae735298aa16e445d83dd0561b9edf8cc.00e07a28d61b52d73d5e&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20From%20Brief%20to%20Spec%20Ad%20in%2060%20Seconds%0A%2A%2APrompt%20ID%3A%2A%2A%20123%0A%2A%2AFeedback%3A%2A%2A%20BAD%20%F0%9F%91%8E",
+    "regenerate": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23123%20%5BREGENERATE%20%F0%9F%94%84%5D%20t%3Ae735298aa16e445d83dd0561b9edf8cc.93b7b9335bef0c69a51c&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20From%20Brief%20to%20Spec%20Ad%20in%2060%20Seconds%0A%2A%2APrompt%20ID%3A%2A%2A%20123%0A%2A%2AFeedback%3A%2A%2A%20REGENERATE%20%F0%9F%94%84",
+    "posted": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23123%20%5BPOSTED%20%F0%9F%93%8E%5D%20t%3Ae735298aa16e445d83dd0561b9edf8cc.daceb43648fb292c1e5a&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20From%20Brief%20to%20Spec%20Ad%20in%2060%20Seconds%0A%2A%2APrompt%20ID%3A%2A%2A%20123%0A%0A%2A%2AInstagram%20post%20URL%2A%2A%20%28paste%20the%20link%20to%20the%20post%20you%20published%29%3A%0A%0Ahttps%3A%2F%2Fwww.instagram.com%2Fp%2F...%0A%0A_The%20learner%20will%20attribute%20this%20post%27s%20engagement%20to%20the%20exact%20asset._",
+    "lead": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23123%20%5BLEAD%20%F0%9F%93%A9%5D%20t%3Ae735298aa16e445d83dd0561b9edf8cc.7ad8129d088c1f7703b2&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20From%20Brief%20to%20Spec%20Ad%20in%2060%20Seconds%0A%2A%2APrompt%20ID%3A%2A%2A%20123%0A%0ASomeone%20enquired%20because%20of%20this%20post.%20Optional%20lines%20%28delete%20if%20unknown%29%3A%0A%0AType%3A%20lead%0AValue%3A%200%0A%0A_Logged%20as%20a%20conversion%20for%20this%20exact%20creative%3A%20it%20counts%20toward%20angle%2C%20hook%20and%20format%20results._"
+   }
   }
  ],
  "weekly": [
