@@ -5,3 +5,4 @@
 {"type": "update", "ts": "2026-11-14T06:54:22", "business": "aimagix-studio", "feedback": "good", "prompt_type": "educational", "format": "single image", "audience_segment": "Startup Founder", "hook_type": "framework", "source": "auto"}
 {"type": "update", "ts": "2026-11-14T06:54:22", "business": "aimagix-studio", "feedback": "good", "prompt_type": "educational", "format": "single image", "audience_segment": "Creative Agency Decision‑Maker", "hook_type": "curiosity_gap", "source": "auto"}
 {"type": "update", "ts": "2026-11-20T20:12:27", "business": "aimagix-studio", "feedback": "bad", "prompt_type": "educational", "format": "single image", "audience_segment": "Startup Founder", "hook_type": "curiosity_gap", "source": "auto"}
+{"type": "update", "ts": "2026-11-20T20:40:51", "business": "aimagix-studio", "feedback": "bad", "prompt_type": "storytelling", "format": "single image", "audience_segment": "Startup Founder", "hook_type": "contrarian", "source": "auto"}
