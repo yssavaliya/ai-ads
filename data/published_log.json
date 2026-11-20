@@ -405,6 +405,41 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-21-124",
+      "title": "AI\u2011Powered Product Ad Transformation",
+      "prompt_id": 124,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "educational",
+      "format": "single image",
+      "hook_type": "before_after",
+      "audience_segment": "Startup Founder",
+      "caption": "\ud83d\ude80 Watch a raw product mockup turn into a scroll\u2011stopping ad in 30 seconds \u2013 all powered by AI.\n\nStep 1\ufe0f\u20e3: Start with a simple product brief \u2013 a health supplement in a plain white box.\nStep 2\ufe0f\u20e3: Feed the brief into our AI workflow \u2013 we generate a hook, script, and storyboard in minutes.\nStep 3\ufe0f\u20e3: Refine the visual style \u2013 we choose vibrant colors and clean typography that match the brand voice.\n\nWhat\u2019s the secret? Rapid AI prototyping that cuts lead time from weeks to days.\n\nGot a product idea? DM us \u201cAD\u201d with your brief and let\u2019s prototype a spec ad together. #AIAds #ProductVisuals #CreativeAutomation #StartupFounder #MarketingManager #IndieFounder #ReelsGrowth\n\n#AIAds #ProductVisuals #CreativeAutomation #StartupFounder #MarketingManager #IndieFounder #ReelsGrowth #AIWorkflow",
+      "at": "2026-11-20T20:43:17.036982+00:00",
+      "score": 58,
+      "threshold": 70,
+      "below_threshold": true,
+      "window": {
+        "hour": 22,
+        "block": "21:00-23:59",
+        "confidence": "medium",
+        "source": "scraped post performance",
+        "evidence": "21:00-23:59 had the strongest relative engagement across 32 scraped posts (8 in that window, +440% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+        "samples": 32
+      },
+      "schedule_hour": null,
+      "timezone": "Asia/Kolkata",
+      "experiment": {},
+      "angle": "AI Before\u2011After",
+      "scheduled_for": "",
+      "buffer_posts": [
+        {
+          "id": "6b00b0e4d425f1473a1197d4",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
