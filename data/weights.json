@@ -7,8 +7,8 @@
         "hits": 1
       },
       "educational": {
-        "weight": 0.5714285714285714,
-        "trials": 5,
+        "weight": 0.5,
+        "trials": 6,
         "hits": 3
       }
     },
@@ -17,6 +17,11 @@
         "weight": 0.5555555555555556,
         "trials": 7,
         "hits": 4
+      },
+      "reel": {
+        "weight": 0.3333333333333333,
+        "trials": 1,
+        "hits": 0
       }
     },
     "audience_segments": {
@@ -29,6 +34,11 @@
         "weight": 0.6666666666666666,
         "trials": 1,
         "hits": 1
+      },
+      "Founders and marketing teams at small product businesses": {
+        "weight": 0.3333333333333333,
+        "trials": 1,
+        "hits": 0
       }
     },
     "hook_types": {
