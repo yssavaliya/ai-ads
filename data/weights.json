@@ -7,8 +7,8 @@
         "hits": 1
       },
       "educational": {
-        "weight": 0.5,
-        "trials": 6,
+        "weight": 0.4444444444444444,
+        "trials": 7,
         "hits": 3
       }
     },
@@ -19,8 +19,8 @@
         "hits": 4
       },
       "reel": {
-        "weight": 0.3333333333333333,
-        "trials": 1,
+        "weight": 0.25,
+        "trials": 2,
         "hits": 0
       }
     },
@@ -36,8 +36,8 @@
         "hits": 1
       },
       "Founders and marketing teams at small product businesses": {
-        "weight": 0.3333333333333333,
-        "trials": 1,
+        "weight": 0.25,
+        "trials": 2,
         "hits": 0
       }
     },
