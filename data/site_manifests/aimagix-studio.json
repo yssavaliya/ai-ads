@@ -7018,6 +7018,78 @@
  ],
  "weekly": [
   {
+   "date": "2026-11-22",
+   "report": {
+    "top_performing": [
+     {
+      "prompt": "Founder cost‑savings hook",
+      "score": 88,
+      "feedback": "none",
+      "why": "High virality driven by a concrete 80% cost‑saving claim and a step‑by‑step demo that resonates with startup founders seeking speed and budget efficiency."
+     },
+     {
+      "prompt": "Before‑after visual proof",
+      "score": 75,
+      "feedback": "none",
+      "why": "The before‑after transformation taps the strongest hook type (before_after weight 0.75) and showcases tangible results, which aligns with the audience’s desire for quick visual validation."
+     }
+    ],
+    "audience_insights": [
+     "Creative Agency decision‑makers responded best (weight 0.67) – prioritize messaging that speaks to agency workflow acceleration.",
+     "Startup founders remain a solid secondary segment (weight 0.5) – keep cost‑saving and speed narratives but add agency‑focused language."
+    ],
+    "competitor_moves": [
+     "Competitor X launched a weekly Reel series demonstrating AI‑generated ad concepts in under 15 seconds, gaining traction with the ‘quick‑win’ hook.",
+     "Competitor Y introduced a carousel post format that breaks down the three creative decisions (hook, visual style, CTA), driving higher carousel engagement than single images."
+    ],
+    "content_pillars": [
+     {
+      "pillar": "AI‑Powered Quick Wins",
+      "rationale": "Leverages the proven before_after hook and the audience’s appetite for rapid, cost‑effective results.",
+      "suggested_frequency": "2x/week"
+     },
+     {
+      "pillar": "Agency Workflow Hacks",
+      "rationale": "Targets the high‑performing Creative Agency segment with framework‑style content that maps AI tools onto agency pipelines.",
+      "suggested_frequency": "1x/week"
+     },
+     {
+      "pillar": "Educational Deep Dives",
+      "rationale": "Maintains the educational prompt type weight (0.5) while introducing more granular tutorials to boost authority.",
+      "suggested_frequency": "1x/week"
+     }
+    ],
+    "calendar": [
+     "Mon: Single‑image before_after case study (founder focus)",
+     "Tue: Reel – 15‑second AI workflow demo (agency focus)",
+     "Wed: Carousel – 3‑step framework for ad creation (educational)",
+     "Thu: Single‑image testimonial/social proof from a client agency",
+     "Fri: Storytelling post – founder interview on time‑to‑market gains",
+     "Sat: Community Q&A sticker (collect prompts for next week) "
+    ],
+    "recommendations": [
+     "Blend hook types – combine before_after with a curiosity_gap teaser in the caption to lift engagement.",
+     "Introduce Reels to diversify format weight (current reel weight 0.33, low trials) and capture algorithmic favor.",
+     "Add micro‑video snippets of the AI interface to reinforce the ‘real‑time’ narrative.",
+     "Test carousel format for educational content to increase dwell time."
+    ],
+    "risk_alerts": [
+     "Over‑reliance on single‑image posts may saturate the audience; diversify formats to avoid algorithmic fatigue.",
+     "Virality threshold is high (70); ensure at least 70% of new prompts incorporate the top‑performing hook (before_after) and clear ROI messaging.",
+     "Monitor for content fatigue around cost‑saving claims – rotate messaging themes every 3‑4 weeks."
+    ],
+    "results": {
+     "conversions": [
+      "No leads have been logged against any post yet. Use the 'Got a lead?' link on a post when someone enquires."
+     ],
+     "experiments": [
+      "post_block: insufficient (matured posts 0/0)",
+      "format: insufficient (matured posts 0/0)"
+     ]
+    }
+   }
+  },
+  {
    "date": "2026-11-15",
    "report": {
     "top_performing": [
