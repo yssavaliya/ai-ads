@@ -2,8 +2,8 @@
   "aimagix-studio": {
     "topics": {
       "storytelling": {
-        "weight": 0.5,
-        "trials": 2,
+        "weight": 0.4,
+        "trials": 3,
         "hits": 1
       },
       "educational": {
@@ -19,15 +19,15 @@
         "hits": 4
       },
       "reel": {
-        "weight": 0.25,
-        "trials": 2,
+        "weight": 0.2,
+        "trials": 3,
         "hits": 0
       }
     },
     "audience_segments": {
       "Startup Founder": {
-        "weight": 0.5,
-        "trials": 6,
+        "weight": 0.4444444444444444,
+        "trials": 7,
         "hits": 3
       },
       "Creative Agency Decision‑Maker": {
@@ -53,8 +53,8 @@
         "hits": 0
       },
       "framework": {
-        "weight": 0.6666666666666666,
-        "trials": 1,
+        "weight": 0.5,
+        "trials": 2,
         "hits": 1
       },
       "curiosity_gap": {
