@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-16T11:56:57.213051",
+  "generated_at": "2026-11-23T13:33:18.983096",
   "leads": [
     {
       "name": "MK DECOR",
@@ -8,65 +8,65 @@
       "niche": "educational",
       "opportunity_score": 92,
       "opportunity_reasons": [
-        "5596 followers (sweet spot)",
+        "5716 followers (sweet spot)",
         "active: 12 recent posts",
-        "low engagement rate (0.42%) — needs content help",
+        "low engagement rate (0.44%) — needs content help",
         "sells directly (5 buying signals in captions)",
         "has website (full profile available)",
         "visual product category (ads show results quickly)",
         "has social handle"
       ],
-      "followers": 5596,
+      "followers": 5716,
       "campaign": {
         "objective": "awareness",
-        "persona": "general",
-        "problem": "Finding educational décor that makes learning spaces inspiring",
-        "trigger": "aspiration",
-        "angle": "Curiosity wall",
+        "persona": "general Instagram followers interested in educational décor",
+        "problem": "Finding visually engaging, educational wall décor that sparks curiosity in learners",
+        "trigger": "curiosity",
+        "angle": "Curiosity Gap",
         "angle_hook_type": "curiosity_gap",
-        "angle_score": 42.5,
-        "rationale": "Angle 'Curiosity wall' scored 42/100, strongest on claim safety and producibility. It beat 'Learning space makeover' (39) by 4 points.",
-        "cta": "follow the page for design ideas",
+        "angle_score": 65.0,
+        "rationale": "Angle 'Curiosity Gap' scored 65/100, strongest on claim safety and producibility. It beat 'Before‑After' (64) by 1 points.",
+        "cta": "Visit the profile to see the full collection",
         "kpis": [
           "saves",
           "shares",
           "profile visits"
         ],
-        "hypothesis": "If we lead with the 'Curiosity wall' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Finding educational décor that makes learning spaces inspiring. Runner-up to test next: 'Learning space makeover'.",
+        "hypothesis": "If we lead with the 'Curiosity Gap' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Finding visually engaging, educational wall décor that sparks curiosity in learners. Runner-up to test next: 'Before‑After'.",
         "alternatives": [
           {
-            "name": "Learning space makeover",
-            "score": 38.8
+            "name": "Before‑After",
+            "score": 63.7
           },
           {
-            "name": "Design ROI for schools",
-            "score": 27.5
+            "name": "Framework",
+            "score": 55.0
           }
         ]
       },
       "prompts": [
         {
-          "prompt_type": "storytelling",
+          "prompt_type": "social_proof",
           "hook_type": "before_after",
-          "title": "From Blank Hallway to Luxe Feature Wall",
-          "hook": "See how a dull hallway becomes a luxe feature in 3 steps",
-          "visual_scene": "A narrow hallway with plain white walls and generic lighting. The scene is captured from a low angle, showing the length of the space. No text or signage is visible; only the architectural details and the subtle play of shadows.",
-          "caption": "See how a dull hallway becomes a luxe feature in 3 steps\n\n🟢 Step 1: Choose a bold, vertically‑striped wallpaper that adds height.\n🟢 Step 2: Apply our zero‑damage paste technique—no wall damage, easy removal.\n🟢 Step 3: Add simple LED strip lighting to highlight the pattern.\n\nThe transformation is instant, budget‑friendly, and perfect for first‑time home buyers.\n\n💌 Want a spec concept for your own space? DM \"AD\" with your brief and we’ll design the look.\n\n#HallwayMakeover #BeforeAfter #WallpaperDIY #InteriorDesignIndia #DIYTips #HomeMakeover #BudgetRenovation #EcoFriendlyLiving",
-          "prompt_text": "Develop a single‑image post for the First‑Time Home Buyer persona (22‑35, Ahmedabad). The image must show a stark before‑and‑after comparison of a hallway, using a split‑screen layout that is visually striking without any overlaid text. The left side displays the bland, white‑wall hallway; the right side reveals the same space after applying a bold vertical‑stripe wallpaper, subtle LED accent lighting, and a small decorative runner rug. The caption follows a before‑after hook, lists three concrete design steps, and ends with a CTA inviting DMs with \"AD\" for a free spec concept. Use the brand’s educational tone and include eight hashtags mixing hyper‑niche, industry, and broad discovery tags. This post targets saves and profile visits by offering a clear, replicable makeover blueprint.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+          "title": "Cafe Ambience Makeover",
+          "hook": "From bland to boutique: see the wallpaper transformation",
+          "visual_scene": "A sleek, minimal café interior with a plain light‑gray wall; the same wall is later shown with a rich, textured wallpaper pattern, warm pendant lighting, and a few potted plants. The photo is taken with a 50mm lens, f/1.8, shallow depth of field, no signage or text visible.",
+          "caption": "From bland to boutique: see the wallpaper transformation\n\n🟦 Before – a generic wall that blends into the background.\n🟩 After – a curated pattern that adds depth, brand personality, and a cozy vibe.\n\nThe spec concept highlights how a single wallcovering choice can reshape customer perception. Want a similar lift for your shop? DM \"AD\" with your space details and I’ll sketch a quick concept.\n\n#WallpaperDIY #InteriorTrends #DesignBlueprint #CafeDesign #ShopMakeover #CreativeStudio #WallCovering #BrandAmbience #RenovationInspo",
+          "prompt_text": "This single‑image post serves the Small Business Owner (Cafe/Shop) persona, who seeks a distinctive ambience to attract customers. The visual shows a clear before‑after comparison in the same frame, leveraging the high‑weight hook_type \"before_after\" to catch the eye and encourage saves. The caption briefly explains the design decision – using texture and pattern to create brand personality – and ends with a focused CTA inviting DMs with the keyword \"AD\" for a free spec concept. By presenting a real‑world retail setting, the post demonstrates MK DECOR’s ability to elevate commercial spaces without overstating any guarantees, driving profile visits and qualified inquiries.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
           "hashtags": [
-            "#HallwayMakeover",
-            "#BeforeAfter",
             "#WallpaperDIY",
-            "#InteriorDesignIndia",
-            "#DIYTips",
-            "#HomeMakeover",
-            "#BudgetRenovation",
-            "#EcoFriendlyLiving"
+            "#InteriorTrends",
+            "#DesignBlueprint",
+            "#CafeDesign",
+            "#ShopMakeover",
+            "#CreativeStudio",
+            "#WallCovering",
+            "#BrandAmbience"
           ],
           "platform_focus": "instagram",
           "format": "single image",
-          "angle": "Show a concrete before‑after transformation to inspire budget‑friendly makeovers for new homeowners.",
-          "audience_segment": "First‑Time Home Buyer",
+          "angle": "Showcase a tangible before‑after that proves a single wallpaper can redefine a commercial interior.",
+          "audience_segment": "Small Business Owner (Cafe/Shop)",
           "reel_beats": [],
           "reel_overlays": [],
           "reel_narration": [],
@@ -74,30 +74,32 @@
           "virality_label": "MEDIUM",
           "virality_probability": 0.42,
           "key_factors": [
-            "Strong before‑after hook aligns with trending contrarian and before‑after patterns",
-            "Clear, actionable design steps and CTA target profile visits and inquiries",
-            "Visual split‑screen is scroll‑stopping and encourages saves for future reference"
+            "Clear before‑after visual that aligns with the Small Business Owner persona’s need for instant ambience proof",
+            "Hook type “before_after” is a proven high‑engagement pattern on Instagram Reels/Posts",
+            "Targeted CTA (DM with “AD”) drives qualified inquiries rather than generic likes",
+            "Use of texture and pattern in caption ties directly to MK DECOR’s core product offering"
           ],
           "risks": [
-            "No direct product showcase (wallpaper brand not highlighted) may dilute ad‑creative offer",
-            "High reliance on a single image may limit engagement compared to multi‑post carousels",
-            "Potential cultural mismatch if LED lighting or runner rug styles are not locally resonant"
+            "Audience may perceive the post as a generic before‑after without explicit brand differentiation",
+            "DM‑based CTA limits immediate shareability; users may ignore the prompt if they’re not ready to message",
+            "Lack of interactive AR or durability metrics (content gaps) could reduce long‑term save/share potential",
+            "Small follower base may dampen initial reach, making virality dependent on paid amplification"
           ],
-          "reasoning": "The prompt leverages proven before‑after virality and offers a concrete makeover blueprint, which fits the First‑Time Home Buyer persona. However, the lack of explicit product branding and the single‑image format reduce its potential to convert saves into sales, keeping the score in the medium range.",
+          "reasoning": "The prompt leverages a strong visual hook and a clear value proposition for commercial spaces, matching the Small Business Owner persona. However, it lacks the interactive or data‑driven elements that currently fill content gaps, and the DM CTA may reduce organic shareability. Overall, it has moderate potential for buyer‑interest but would benefit from added engagement levers.",
           "improvement_hints": [
-            "Add a subtle brand logo or watermark to reinforce the studio’s offer",
-            "Include a short carousel of the wallpaper samples or a quick 15‑second Reel to boost engagement",
-            "Use local color palettes or Gujarati motifs in the runner rug to increase cultural relevance",
-            "Add a swipe‑up link or link‑in‑bio CTA for instant booking of a free spec concept"
+            "Add a quick overlay of a durability rating or a 48‑hour delivery badge to address content gaps and boost trust.",
+            "Include a short, eye‑catching caption hook (e.g., “Stop waiting weeks—see instant transformation!”) to improve scroll‑stopper effect.",
+            "Encourage saves by adding a subtle “Save for your next café makeover” prompt or a swipe‑up link to a visualizer tool.",
+            "Use a branded AR filter or a mini‑video clip of the installation process to increase shareability and engagement."
           ],
           "generation_attempt": 1,
-          "_combined": 59.044,
+          "_combined": 57.664,
           "threshold": 75,
           "below_threshold": true,
           "warnings": [
             "Below your quality bar (58/100, bar 75) - review before posting."
           ],
-          "asset_path": "logs/assets/mk-decor-from-blank-hallway-to-luxe-feature-wall-0-final.png",
+          "asset_path": "logs/assets/mk-decor-cafe-ambience-makeover-0-final.png",
           "asset_type": "image",
           "thumbnail": null
         }
@@ -110,39 +112,39 @@
       "niche": "educational",
       "opportunity_score": 92,
       "opportunity_reasons": [
-        "1604 followers (sweet spot)",
+        "1606 followers (sweet spot)",
         "active: 12 recent posts",
-        "low engagement rate (2.40%) — needs content help",
+        "low engagement rate (2.33%) — needs content help",
         "sells directly (5 buying signals in captions)",
         "has website (full profile available)",
         "visual product category (ads show results quickly)",
         "has social handle"
       ],
-      "followers": 1604,
+      "followers": 1606,
       "campaign": {
         "objective": "awareness",
-        "persona": "General Home Decor Enthusiast (Inferred)",
-        "problem": "Lack of inspiration for home decor ideas and uncertainty about what styles suit their space.",
+        "persona": "General Homeowner",
+        "problem": "Uncertainty about design trends and lack of visual inspiration for home decor",
         "trigger": "aspiration",
-        "angle": "Common Mistake Fix",
-        "angle_hook_type": "contrarian",
-        "angle_score": 72.5,
-        "rationale": "Angle 'Common Mistake Fix' scored 72/100, strongest on claim safety and audience fit. It beat 'The 5-Second Refresh' (64) by 9 points.",
-        "cta": "Follow for daily decor tips",
+        "angle": "Trend Spotlight",
+        "angle_hook_type": "curiosity_gap",
+        "angle_score": 65.0,
+        "rationale": "Angle 'Trend Spotlight' scored 65/100, strongest on claim safety and producibility. It beat 'The Transformation Reveal' (59) by 6 points.",
+        "cta": "Follow for daily decor inspiration",
         "kpis": [
           "saves",
           "shares",
           "profile visits"
         ],
-        "hypothesis": "If we lead with the 'Common Mistake Fix' angle (contrarian hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Lack of inspiration for home decor ideas and uncertainty about what styles suit their space.. Runner-up to test next: 'The 5-Second Refresh'.",
+        "hypothesis": "If we lead with the 'Trend Spotlight' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Uncertainty about design trends and lack of visual inspiration for home decor. Runner-up to test next: 'The Transformation Reveal'.",
         "alternatives": [
           {
-            "name": "The 5-Second Refresh",
-            "score": 63.7
+            "name": "The Transformation Reveal",
+            "score": 58.7
           },
           {
-            "name": "Style Quiz Teaser",
-            "score": 60.0
+            "name": "Behind the Lens",
+            "score": 50.0
           }
         ]
       },
@@ -151,156 +153,63 @@
     },
     {
       "name": "green bakery",
-      "website_url": "",
       "instagram_handle": "new_green_bakery_ahmedabad",
-      "linkedin_handle": "",
-      "niche": "bakery",
-      "location": "Ahmedabad",
-      "follower_count": 1051,
-      "found_via": "instagram-search",
-      "niche_competitors": 6,
+      "website_url": "",
+      "niche": "educational",
       "opportunity_score": 72,
       "opportunity_reasons": [
-        "1051 followers",
+        "1049 followers",
         "active: 12 recent posts",
         "low engagement rate (1.76%) — needs content help",
         "sells directly (2 buying signals in captions)",
         "visual product category (ads show results quickly)",
         "has social handle"
       ],
-      "followers": 1051,
-      "opportunity_breakdown": {
-        "audience_size": {
-          "points": 11.0,
-          "max": 15,
-          "note": "1051 followers"
-        },
-        "activity": {
-          "points": 15.0,
-          "max": 15,
-          "note": "12 recent posts"
-        },
-        "engagement_gap": {
-          "points": 25.0,
-          "max": 25,
-          "note": "low engagement rate (1.76%) — needs content help"
-        },
-        "buying_intent": {
-          "points": 6.0,
-          "max": 15,
-          "note": "2 selling signals in captions/bio"
-        },
-        "content_potential": {
-          "points": 10.0,
-          "max": 15,
-          "note": "visual product category; no website"
-        },
-        "reachability": {
-          "points": 2.0,
-          "max": 10,
-          "note": "no contact email found"
-        },
-        "competition": {
-          "points": 3.0,
-          "max": 5,
-          "note": "6 similar local businesses found"
-        }
-      },
-      "opportunity_decision": "target",
-      "why_target": "green bakery scores 72/100. Strongest: activity (12 recent posts); engagement gap (low engagement rate (1.76%) — needs content help). Weakest: reachability (no contact email found).",
-      "data_gaps": [
-        "no contact email"
-      ],
+      "followers": 1049,
       "campaign": {
-        "objective": "engagement",
-        "persona": "Ahmedabad bakery enthusiasts",
-        "problem": "Finding tasty, environmentally‑friendly baked goods that feel special and locally made",
-        "trigger": "belonging",
-        "angle": "Behind‑the‑Scenes Green Bake",
+        "objective": "awareness",
+        "persona": "Local Food Enthusiast",
+        "problem": "Lack of trust in new local bakeries due to no visible proof of quality or origin",
+        "trigger": "curiosity",
+        "angle": "The Freshness Reveal",
         "angle_hook_type": "curiosity_gap",
-        "angle_score": 71.2,
-        "rationale": "Angle 'Behind‑the‑Scenes Green Bake' scored 71/100, strongest on claim safety and producibility. It beat 'Local Love Challenge' (65) by 6 points.",
-        "cta": "follow the Instagram page",
+        "angle_score": 66.2,
+        "rationale": "Angle 'The Freshness Reveal' scored 66/100, strongest on claim safety and producibility. It beat 'The First Slice' (62) by 4 points.",
+        "cta": "Follow for daily bakes",
         "kpis": [
           "saves",
           "shares",
           "profile visits"
         ],
-        "hypothesis": "If we lead with the 'Behind‑the‑Scenes Green Bake' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Finding tasty, environmentally‑friendly baked goods that feel special and locally made. Runner-up to test next: 'Local Love Challenge'.",
+        "hypothesis": "If we lead with the 'The Freshness Reveal' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Lack of trust in new local bakeries due to no visible proof of quality or origin. Runner-up to test next: 'The First Slice'.",
         "alternatives": [
           {
-            "name": "Local Love Challenge",
-            "score": 65.0
+            "name": "The First Slice",
+            "score": 62.5
           },
           {
-            "name": "Eco‑Fact Flash",
-            "score": 63.7
+            "name": "Behind the Green",
+            "score": 58.7
           }
         ]
       },
-      "prompts": []
+      "prompts": [],
+      "prompt_error": "All LLM providers failed for audience-mapper. Chain: groq: openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.8-27b. Add another free key (GROQ_API_KEY, GEMINI_API_KEY, CEREBRAS_API_KEY, OPENROUTER_A"
     },
     {
       "name": "INTERIOR WALA HOME DECOR STUDIO AHMEDABAD",
-      "website_url": "",
       "instagram_handle": "interior_wala_home_decorstudio",
-      "linkedin_handle": "",
-      "niche": "home decor",
-      "location": "Ahmedabad",
-      "follower_count": 1076,
-      "found_via": "instagram-search",
-      "niche_competitors": 1,
-      "opportunity_score": 68,
+      "website_url": "",
+      "niche": "educational",
+      "opportunity_score": 66,
       "opportunity_reasons": [
-        "1076 followers",
+        "1082 followers",
         "active: 12 recent posts",
-        "low engagement rate (0.09%) — needs content help",
+        "low engagement rate (0.18%) — needs content help",
         "visual product category (ads show results quickly)",
         "has social handle"
       ],
-      "followers": 1076,
-      "opportunity_breakdown": {
-        "audience_size": {
-          "points": 11.0,
-          "max": 15,
-          "note": "1076 followers"
-        },
-        "activity": {
-          "points": 15.0,
-          "max": 15,
-          "note": "12 recent posts"
-        },
-        "engagement_gap": {
-          "points": 25.0,
-          "max": 25,
-          "note": "low engagement rate (0.09%) — needs content help"
-        },
-        "buying_intent": {
-          "points": 0.0,
-          "max": 15,
-          "note": "0 selling signals in captions/bio"
-        },
-        "content_potential": {
-          "points": 10.0,
-          "max": 15,
-          "note": "visual product category; no website"
-        },
-        "reachability": {
-          "points": 2.0,
-          "max": 10,
-          "note": "no contact email found"
-        },
-        "competition": {
-          "points": 5.0,
-          "max": 5,
-          "note": "1 similar local businesses found"
-        }
-      },
-      "opportunity_decision": "maybe",
-      "why_target": "INTERIOR WALA HOME DECOR STUDIO AHMEDABAD scores 68/100. Strongest: activity (12 recent posts); engagement gap (low engagement rate (0.09%) — needs content help). Weakest: buying intent (0 selling signals in captions/bio).",
-      "data_gaps": [
-        "no contact email"
-      ],
+      "followers": 1082,
       "prompts": [],
       "prompt_error": "All LLM providers failed for audience-mapper. Chain: groq: openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.8-27b. Add another free key (GROQ_API_KEY, GEMINI_API_KEY, CEREBRAS_API_KEY, OPENROUTER_A"
     }
