@@ -75,6 +75,22 @@
       "note": "needs 4 matured posts per arm",
       "status": "insufficient",
       "variable": "format"
+    },
+    "2026-W48-hook_type": {
+      "arms": {
+        "A": {
+          "value": "before_after"
+        },
+        "B": {
+          "value": "contrarian"
+        }
+      },
+      "id": "2026-W48-hook_type",
+      "n_a": 0,
+      "n_b": 0,
+      "note": "needs 4 matured posts per arm",
+      "status": "insufficient",
+      "variable": "hook_type"
     }
   }
 }
