@@ -2,16 +2,16 @@
   "active": {
     "arms": {
       "A": {
-        "value": "single image"
+        "value": "before_after"
       },
       "B": {
-        "value": "reel"
+        "value": "contrarian"
       }
     },
-    "id": "2026-W47-format",
-    "started": "2026-11-17",
-    "variable": "format",
-    "week": "2026-W47"
+    "id": "2026-W48-hook_type",
+    "started": "2026-11-24",
+    "variable": "hook_type",
+    "week": "2026-W48"
   },
   "history": [
     {
@@ -27,6 +27,20 @@
       "started": "2026-11-14",
       "variable": "post_block",
       "week": "2026-W46"
+    },
+    {
+      "arms": {
+        "A": {
+          "value": "single image"
+        },
+        "B": {
+          "value": "reel"
+        }
+      },
+      "id": "2026-W47-format",
+      "started": "2026-11-17",
+      "variable": "format",
+      "week": "2026-W47"
     }
   ],
   "results": {
