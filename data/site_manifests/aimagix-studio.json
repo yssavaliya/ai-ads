@@ -7110,6 +7110,105 @@
     "posted": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23126%20%5BPOSTED%20%F0%9F%93%8E%5D%20t%3A2351e3acbb9c4ef0b78271b7488c4bba.d229a78f733bfb53c12b&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20From%20Brief%20to%20Reel%20in%20Minutes%0A%2A%2APrompt%20ID%3A%2A%2A%20126%0A%0A%2A%2AInstagram%20post%20URL%2A%2A%20%28paste%20the%20link%20to%20the%20post%20you%20published%29%3A%0A%0Ahttps%3A%2F%2Fwww.instagram.com%2Fp%2F...%0A%0A_The%20learner%20will%20attribute%20this%20post%27s%20engagement%20to%20the%20exact%20asset._",
     "lead": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23126%20%5BLEAD%20%F0%9F%93%A9%5D%20t%3A2351e3acbb9c4ef0b78271b7488c4bba.479e13eea154d5997f18&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%20From%20Brief%20to%20Reel%20in%20Minutes%0A%2A%2APrompt%20ID%3A%2A%2A%20126%0A%0ASomeone%20enquired%20because%20of%20this%20post.%20Optional%20lines%20%28delete%20if%20unknown%29%3A%0A%0AType%3A%20lead%0AValue%3A%200%0A%0A_Logged%20as%20a%20conversion%20for%20this%20exact%20creative%3A%20it%20counts%20toward%20angle%2C%20hook%20and%20format%20results._"
    }
+  },
+  {
+   "id": "2026-11-26-127",
+   "date": "2026-11-26",
+   "created_at": "2026-11-25T21:58:00",
+   "prompt_id": 127,
+   "hook_type": "curiosity_gap",
+   "title": "30‑Sec AI Launch Blueprint",
+   "prompt_type": "educational",
+   "score": 55,
+   "below_threshold": true,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "30‑Sec AI ad that triples launch clicks – see the script!",
+   "angle": "Show a clear, step‑by‑step AI ad creation process that founders can replicate.",
+   "prompt_text": "This single image walks viewers through a 30‑second AI‑generated product launch ad, starting with a concise hook that addresses the pain point of founders needing fast, high‑impact creative. The visual showcases a minimal studio setup to keep focus on the creative process, not the tech. The narration explains how the hook was chosen, how the benefit is highlighted, and why a muted teal background keeps the product in focus. The CTA invites founders to DM “AD” with their product and goal, positioning the studio as a quick‑turn, AI‑assisted partner. The hook taps into curiosity by promising a concrete script, while the educational angle provides a clear, actionable breakdown of the creative decisions, making the single image useful for saving and sharing.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "30‑Sec AI ad that triples launch clicks – see the script!\n\nWe start with a bare product brief: a compact smart‑watch for health‑savvy founders. \n\n1️⃣ Hook: “Track your day, not just time.” – instantly connects with the founder’s goal of efficiency.\n2️⃣ Benefit: Highlight the health‑tracking feature in a single, clear frame.\n3️⃣ Visual: Use a muted teal background to keep focus on the watch’s display.\n\nWant a script that works for your product? DM me \"AD\" with your brief and goal, and we’ll draft the first 30‑second AI ad together.\n\n#AIAds #PromptEngineering #ProductVisuals #CreativeAutomation #StartupMarketing #AdTech #ReelsGrowth #AIAds",
+   "hashtags": [
+    "#AIAds",
+    "#PromptEngineering",
+    "#ProductVisuals",
+    "#CreativeAutomation",
+    "#StartupMarketing",
+    "#AdTech",
+    "#ReelsGrowth",
+    "#AIAds"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "post_time_evidence": {
+    "hour": 22,
+    "block": "21:00-23:59",
+    "confidence": "medium",
+    "source": "scraped post performance",
+    "evidence": "21:00-23:59 had the strongest relative engagement across 32 scraped posts (9 in that window, +225% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+    "samples": 32
+   },
+   "experiment": {},
+   "schedule_hour": null,
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt aligns well with the studio’s positioning and audience, echoing proven winners that emphasize quick, AI‑driven workflows and a clear CTA. However, the single‑image format may dilute the dynamic nature of a 30‑second ad, and the hook could be stronger by promising an actual script. The lack of Indian cultural references also limits relevance for the target market. Overall, it is a solid, medium‑potential post.",
+   "strategy": {
+    "objective": "lead_generation",
+    "persona": "Startup Founder",
+    "problem": "Founders need high‑impact ad creative fast but face slow, expensive agency turn‑arounds.",
+    "trigger": "relief",
+    "angle": "30‑sec AI launch boost",
+    "angle_hook_type": "curiosity_gap",
+    "angle_score": 91.3,
+    "rationale": "Angle '30‑sec AI launch boost' scored 91/100, strongest on audience fit and usp fit. It beat '5‑prompt viral formula' (71) by 20 points.",
+    "cta": "DM us your product and advertising goal",
+    "kpis": [
+     "saves",
+     "shares",
+     "profile visits"
+    ],
+    "hypothesis": "If we lead with the '30‑sec AI launch boost' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Founders need high‑impact ad creative fast but face slow, expensive agency turn‑arounds.. Runner-up to test next: '5‑prompt viral formula'.",
+    "alternatives": [
+     {
+      "name": "5‑prompt viral formula",
+      "score": 71.2
+     },
+     {
+      "name": "Agency vs AI ROI",
+      "score": 58.5
+     }
+    ]
+   },
+   "key_factors": [
+    "Clear hook that addresses founder pain points",
+    "Explicit labeling as a spec concept",
+    "Direct CTA to DM “AD”",
+    "Educational breakdown of creative decisions",
+    "Single static image aligns with platform preference"
+   ],
+   "risks": [
+    "Static image may not capture the dynamic 30‑second ad concept",
+    "Hook relies on curiosity but lacks a concrete promise of a script",
+    "Potentially too text‑heavy for quick scroll‑stopping",
+    "Missing localized Indian cultural cues"
+   ],
+   "warnings": [
+    "Below your quality bar (55/100, bar 70) - review before posting."
+   ],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-26/2026-11-26-127.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-26/2026-11-26-127-thumb.jpg"
+   },
+   "feedback_links": {
+    "good": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23127%20%5BGOOD%20%F0%9F%91%8D%5D%20t%3Ae6acf108ff0644d8852e010ed896e0c8.f9a83e86ac1410d35858&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%2030%E2%80%91Sec%20AI%20Launch%20Blueprint%0A%2A%2APrompt%20ID%3A%2A%2A%20127%0A%2A%2AFeedback%3A%2A%2A%20GOOD%20%F0%9F%91%8D",
+    "bad": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23127%20%5BBAD%20%F0%9F%91%8E%5D%20t%3Ae6acf108ff0644d8852e010ed896e0c8.33e540026ae1b9122a7e&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%2030%E2%80%91Sec%20AI%20Launch%20Blueprint%0A%2A%2APrompt%20ID%3A%2A%2A%20127%0A%2A%2AFeedback%3A%2A%2A%20BAD%20%F0%9F%91%8E",
+    "regenerate": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23127%20%5BREGENERATE%20%F0%9F%94%84%5D%20t%3Ae6acf108ff0644d8852e010ed896e0c8.aa80f5e69a85d1ca7fe1&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%2030%E2%80%91Sec%20AI%20Launch%20Blueprint%0A%2A%2APrompt%20ID%3A%2A%2A%20127%0A%2A%2AFeedback%3A%2A%2A%20REGENERATE%20%F0%9F%94%84",
+    "posted": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23127%20%5BPOSTED%20%F0%9F%93%8E%5D%20t%3Ae6acf108ff0644d8852e010ed896e0c8.6eb5072d8346c56534bb&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%2030%E2%80%91Sec%20AI%20Launch%20Blueprint%0A%2A%2APrompt%20ID%3A%2A%2A%20127%0A%0A%2A%2AInstagram%20post%20URL%2A%2A%20%28paste%20the%20link%20to%20the%20post%20you%20published%29%3A%0A%0Ahttps%3A%2F%2Fwww.instagram.com%2Fp%2F...%0A%0A_The%20learner%20will%20attribute%20this%20post%27s%20engagement%20to%20the%20exact%20asset._",
+    "lead": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23127%20%5BLEAD%20%F0%9F%93%A9%5D%20t%3Ae6acf108ff0644d8852e010ed896e0c8.2f516b1945aec78ec029&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%2030%E2%80%91Sec%20AI%20Launch%20Blueprint%0A%2A%2APrompt%20ID%3A%2A%2A%20127%0A%0ASomeone%20enquired%20because%20of%20this%20post.%20Optional%20lines%20%28delete%20if%20unknown%29%3A%0A%0AType%3A%20lead%0AValue%3A%200%0A%0A_Logged%20as%20a%20conversion%20for%20this%20exact%20creative%3A%20it%20counts%20toward%20angle%2C%20hook%20and%20format%20results._"
+   }
   }
  ],
  "weekly": [
