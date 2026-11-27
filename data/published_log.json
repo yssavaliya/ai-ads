@@ -440,6 +440,41 @@
           "status": "draft"
         }
       ]
+    },
+    {
+      "id": "2026-11-28-128",
+      "title": "5\u2011Word Prompt Blueprint Demo",
+      "prompt_id": 128,
+      "business_name": "Aimagix Studio",
+      "prompt_type": "educational",
+      "format": "single image",
+      "hook_type": "curiosity_gap",
+      "audience_segment": "Startup Founder",
+      "caption": "The 5\u2011word prompt that triples reel engagement\n\nIn this demo we take a single sentence brief and turn it into a full\u2011funnel ad in under a minute. The hook, the benefit, the visual style, and the CTA all emerge from the same 5\u2011word prompt.\n\nWant to see how this works for your product? DM us your brief and the goal with the word \"AD\" and we\u2019ll craft a spec concept in minutes.\n\n#AIVideoAds #PromptEngineering #AdCreativeHack #SMBMarketing #AIAds #ReelBlueprint #CreativeAutomation #ProductLaunch",
+      "at": "2026-11-27T21:36:41.317558+00:00",
+      "score": 70,
+      "threshold": 70,
+      "below_threshold": false,
+      "window": {
+        "hour": 22,
+        "block": "21:00-23:59",
+        "confidence": "medium",
+        "source": "scraped post performance",
+        "evidence": "21:00-23:59 had the strongest relative engagement across 32 scraped posts (9 in that window, +279% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+        "samples": 32
+      },
+      "schedule_hour": null,
+      "timezone": "Asia/Kolkata",
+      "experiment": {},
+      "angle": "5\u2011Word Prompt Blueprint",
+      "scheduled_for": "",
+      "buffer_posts": [
+        {
+          "id": "6b09f7e92ea34800c2980efb",
+          "channel_id": "6ae249e62f1f5ed6480116ab",
+          "status": "draft"
+        }
+      ]
     }
   ]
 }
