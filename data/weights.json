@@ -7,8 +7,8 @@
         "hits": 1
       },
       "educational": {
-        "weight": 0.4444444444444444,
-        "trials": 7,
+        "weight": 0.4,
+        "trials": 8,
         "hits": 3
       },
       "promotional": {
@@ -19,8 +19,8 @@
     },
     "formats": {
       "single image": {
-        "weight": 0.5,
-        "trials": 8,
+        "weight": 0.45454545454545453,
+        "trials": 9,
         "hits": 4
       },
       "reel": {
@@ -31,8 +31,8 @@
     },
     "audience_segments": {
       "Startup Founder": {
-        "weight": 0.4,
-        "trials": 8,
+        "weight": 0.36363636363636365,
+        "trials": 9,
         "hits": 3
       },
       "Creative Agency Decision‑Maker": {
@@ -66,6 +66,11 @@
         "weight": 0.5,
         "trials": 2,
         "hits": 1
+      },
+      "roi_proof": {
+        "weight": 0.3333333333333333,
+        "trials": 1,
+        "hits": 0
       }
     }
   },
