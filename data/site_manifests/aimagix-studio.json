@@ -7209,6 +7209,103 @@
     "posted": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23127%20%5BPOSTED%20%F0%9F%93%8E%5D%20t%3Ae6acf108ff0644d8852e010ed896e0c8.6eb5072d8346c56534bb&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%2030%E2%80%91Sec%20AI%20Launch%20Blueprint%0A%2A%2APrompt%20ID%3A%2A%2A%20127%0A%0A%2A%2AInstagram%20post%20URL%2A%2A%20%28paste%20the%20link%20to%20the%20post%20you%20published%29%3A%0A%0Ahttps%3A%2F%2Fwww.instagram.com%2Fp%2F...%0A%0A_The%20learner%20will%20attribute%20this%20post%27s%20engagement%20to%20the%20exact%20asset._",
     "lead": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23127%20%5BLEAD%20%F0%9F%93%A9%5D%20t%3Ae6acf108ff0644d8852e010ed896e0c8.2f516b1945aec78ec029&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%2030%E2%80%91Sec%20AI%20Launch%20Blueprint%0A%2A%2APrompt%20ID%3A%2A%2A%20127%0A%0ASomeone%20enquired%20because%20of%20this%20post.%20Optional%20lines%20%28delete%20if%20unknown%29%3A%0A%0AType%3A%20lead%0AValue%3A%200%0A%0A_Logged%20as%20a%20conversion%20for%20this%20exact%20creative%3A%20it%20counts%20toward%20angle%2C%20hook%20and%20format%20results._"
    }
+  },
+  {
+   "id": "2026-11-28-128",
+   "date": "2026-11-28",
+   "created_at": "2026-11-27T21:36:23",
+   "prompt_id": 128,
+   "hook_type": "curiosity_gap",
+   "title": "5‑Word Prompt Blueprint Demo",
+   "prompt_type": "educational",
+   "score": 70,
+   "below_threshold": false,
+   "threshold": 70,
+   "label": "MEDIUM",
+   "hook": "The 5‑word prompt that triples reel engagement",
+   "angle": "Show a quick, AI‑powered workflow that turns a brief into a finished ad using a 5‑word prompt.",
+   "prompt_text": "This single image follows the campaign brief’s winning angle: a curiosity‑gap hook that promises a quick, AI‑powered workflow. The creator starts with a plain product brief, then reveals how a single 5‑word prompt can generate a hook, a benefit line, a visual storyboard, and a CTA—all in under 60 seconds. The narration explains each creative choice, emphasizing the speed and clarity that founders need when they lack in‑house design expertise. The final CTA invites founders to DM the studio with their product and goal, using the keyword \"AD\" to trigger a direct conversation. The single image balances visual proof with practical instruction, aligning with the studio’s positioning as an AI‑assisted creative partner.\n\nVisual deliverable: create exactly one finished static image, with the complete composition in a single frame.",
+   "caption": "The 5‑word prompt that triples reel engagement\n\nIn this demo we take a single sentence brief and turn it into a full‑funnel ad in under a minute. The hook, the benefit, the visual style, and the CTA all emerge from the same 5‑word prompt.\n\nWant to see how this works for your product? DM us your brief and the goal with the word \"AD\" and we’ll craft a spec concept in minutes.\n\n#AIVideoAds #PromptEngineering #AdCreativeHack #SMBMarketing #AIAds #ReelBlueprint #CreativeAutomation #ProductLaunch",
+   "hashtags": [
+    "#AIVideoAds",
+    "#PromptEngineering",
+    "#AdCreativeHack",
+    "#SMBMarketing",
+    "#AIAds",
+    "#ReelBlueprint",
+    "#CreativeAutomation",
+    "#ProductLaunch"
+   ],
+   "first_comment": "💬 What product should we turn into the next ad concept?\n\nDM @aimagix.studio 'AD' with your product and goal.",
+   "recommended_post_time": "Today at 10:00 PM Asia/Kolkata",
+   "post_time_evidence": {
+    "hour": 22,
+    "block": "21:00-23:59",
+    "confidence": "medium",
+    "source": "scraped post performance",
+    "evidence": "21:00-23:59 had the strongest relative engagement across 32 scraped posts (9 in that window, +279% vs other windows). Competitor posts count half; local times assume the business's timezone.",
+    "samples": 32
+   },
+   "experiment": {},
+   "schedule_hour": null,
+   "format": "single image",
+   "video_duration_seconds": null,
+   "platform_focus": "instagram",
+   "audience_segment": "Startup Founder",
+   "reasoning": "The prompt mirrors proven winners that emphasize speed, AI workflow, and a clear CTA. It satisfies the studio’s positioning and audience needs, but the static format and generic hook slightly reduce its viral edge compared to dynamic Reels or highly localized content.",
+   "strategy": {
+    "objective": "lead_generation",
+    "persona": "Startup Founder",
+    "problem": "Limited in‑house design expertise and long lead times from traditional agencies make it hard to launch high‑impact ad creative quickly and affordably.",
+    "trigger": "relief",
+    "angle": "5‑Word Prompt Blueprint",
+    "angle_hook_type": "curiosity_gap",
+    "angle_score": 85.0,
+    "rationale": "Angle '5‑Word Prompt Blueprint' scored 85/100, strongest on audience fit and novelty. It beat 'Cost‑cut ROI' (80) by 4 points.",
+    "cta": "DM us your product brief and advertising goal",
+    "kpis": [
+     "saves",
+     "shares",
+     "profile visits"
+    ],
+    "hypothesis": "If we lead with the '5‑Word Prompt Blueprint' angle (curiosity gap hook), then saves per reach will beat this account's recent baseline, because it speaks directly to: Limited in‑house design expertise and long lead times from traditional agencies make it hard to launch high‑impact ad cr. Runner-up to test next: 'Cost‑cut ROI'.",
+    "alternatives": [
+     {
+      "name": "Cost‑cut ROI",
+      "score": 80.5
+     },
+     {
+      "name": "Brief‑to‑Ad Transformation",
+      "score": 73.2
+     }
+    ]
+   },
+   "key_factors": [
+    "Clear spec‑concept labeling and hook that promises a 5‑word prompt workflow",
+    "Alignment with audience pain points (speed, lack of in‑house design)",
+    "Strong platform fit (static image with instructional overlay)",
+    "High scroll‑stopping potential due to curiosity‑gap hook",
+    "Direct CTA to DM with keyword “AD” for immediate inquiry"
+   ],
+   "risks": [
+    "Single image may lack the dynamic visual proof that Reels or carousel posts often generate",
+    "Hook relies on a generic “5‑word prompt” promise that could be perceived as vague",
+    "Potential for the image to be mistaken as a generic ad template rather than a spec concept",
+    "Limited cultural localization could reduce relevance for Indian founders"
+   ],
+   "warnings": [],
+   "asset": {
+    "type": "image",
+    "image": "assets/aimagix-studio-b804b6c865/2026-11-28/2026-11-28-128.jpg",
+    "thumb": "assets/aimagix-studio-b804b6c865/2026-11-28/2026-11-28-128-thumb.jpg"
+   },
+   "feedback_links": {
+    "good": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23128%20%5BGOOD%20%F0%9F%91%8D%5D%20t%3A408f2c26e35846959a0b6a30a4e4d05f.624135066e7b16d6eb68&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%205%E2%80%91Word%20Prompt%20Blueprint%20Demo%0A%2A%2APrompt%20ID%3A%2A%2A%20128%0A%2A%2AFeedback%3A%2A%2A%20GOOD%20%F0%9F%91%8D",
+    "bad": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23128%20%5BBAD%20%F0%9F%91%8E%5D%20t%3A408f2c26e35846959a0b6a30a4e4d05f.30e220f2eb62a437b287&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%205%E2%80%91Word%20Prompt%20Blueprint%20Demo%0A%2A%2APrompt%20ID%3A%2A%2A%20128%0A%2A%2AFeedback%3A%2A%2A%20BAD%20%F0%9F%91%8E",
+    "regenerate": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23128%20%5BREGENERATE%20%F0%9F%94%84%5D%20t%3A408f2c26e35846959a0b6a30a4e4d05f.70c0661e052badfae536&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%205%E2%80%91Word%20Prompt%20Blueprint%20Demo%0A%2A%2APrompt%20ID%3A%2A%2A%20128%0A%2A%2AFeedback%3A%2A%2A%20REGENERATE%20%F0%9F%94%84",
+    "posted": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23128%20%5BPOSTED%20%F0%9F%93%8E%5D%20t%3A408f2c26e35846959a0b6a30a4e4d05f.fd5dd4022d290bf81aee&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%205%E2%80%91Word%20Prompt%20Blueprint%20Demo%0A%2A%2APrompt%20ID%3A%2A%2A%20128%0A%0A%2A%2AInstagram%20post%20URL%2A%2A%20%28paste%20the%20link%20to%20the%20post%20you%20published%29%3A%0A%0Ahttps%3A%2F%2Fwww.instagram.com%2Fp%2F...%0A%0A_The%20learner%20will%20attribute%20this%20post%27s%20engagement%20to%20the%20exact%20asset._",
+    "lead": "https://github.com/yssavaliya/ai-ads/issues/new?title=%5Bcontent-intel-feedback%5D%20prompt%20%23128%20%5BLEAD%20%F0%9F%93%A9%5D%20t%3A408f2c26e35846959a0b6a30a4e4d05f.2d189cf4b6677c480866&body=%2A%2ABusiness%3A%2A%2A%20Aimagix%20Studio%0A%2A%2APrompt%3A%2A%2A%205%E2%80%91Word%20Prompt%20Blueprint%20Demo%0A%2A%2APrompt%20ID%3A%2A%2A%20128%0A%0ASomeone%20enquired%20because%20of%20this%20post.%20Optional%20lines%20%28delete%20if%20unknown%29%3A%0A%0AType%3A%20lead%0AValue%3A%200%0A%0A_Logged%20as%20a%20conversion%20for%20this%20exact%20creative%3A%20it%20counts%20toward%20angle%2C%20hook%20and%20format%20results._"
+   }
   }
  ],
  "weekly": [
