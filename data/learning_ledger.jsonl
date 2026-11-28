@@ -11,3 +11,4 @@
 {"type": "update", "ts": "2026-11-23T23:52:05", "business": "aimagix-studio", "feedback": "bad", "prompt_type": "storytelling", "format": "reel", "audience_segment": "Startup Founder", "hook_type": "framework", "source": "auto"}
 {"type": "update", "ts": "2026-11-26T21:29:27", "business": "aimagix-studio", "feedback": "bad", "prompt_type": "promotional", "format": "single image", "audience_segment": "Startup Founder", "hook_type": "before_after", "source": "auto"}
 {"type": "update", "ts": "2026-11-27T21:14:44", "business": "aimagix-studio", "feedback": "bad", "prompt_type": "educational", "format": "single image", "audience_segment": "Startup Founder", "hook_type": "roi_proof", "source": "auto"}
+{"type": "update", "ts": "2026-11-28T07:44:19", "business": "aimagix-studio", "feedback": "bad", "prompt_type": "educational", "format": "single image", "audience_segment": "Startup Founder", "hook_type": "curiosity_gap", "source": "auto"}
